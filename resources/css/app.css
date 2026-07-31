@@ -4,9 +4,92 @@
 @source '../../storage/framework/views/*.php';
 @source "../**/*.blade.php";
 @source "../**/*.js";
-@source "../**/*.vue";
 
+/*
+| نظام تصميم "علم العقارية"
+| القيم مستخرَجة رسمياً من Figma (get_variable_defs):
+|   Secondary/900 = #111033 (الكحلي) · Secondary/Gold/500 = #FBD300 (الذهبي) · Gray scale رسمي
+|   الخطوط: IBM Plex Sans Arabic (عربي/أساسي) + Satoshi (لاتيني display)
+*/
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* ===== الخطوط ===== */
+    --font-sans: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --font-display: 'Satoshi', 'IBM Plex Sans Arabic', ui-sans-serif, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+
+    /* ===== Primary — الكحلي (أساسه Secondary/900 = #111033) ===== */
+    --color-primary-50: #f3f2fc;
+    --color-primary-100: #e5e4f7;
+    --color-primary-200: #c4c1ec;
+    --color-primary-300: #9995d9;
+    --color-primary-400: #6b67c0;
+    --color-primary-500: #4642a0;
+    --color-primary-600: #343180;
+    --color-primary-700: #262463;
+    --color-primary-800: #1b1a4a;
+    --color-primary-900: #111033;   /* ← الكحلي الرسمي */
+    --color-primary-950: #0b0a24;
+
+    /* ===== Accent — الذهبي (أساسه Secondary/Gold/500 = #FBD300) ===== */
+    --color-accent-50: #fffce5;
+    --color-accent-100: #fef7cc;
+    --color-accent-200: #fef099;
+    --color-accent-300: #fde666;
+    --color-accent-400: #fcdd33;
+    --color-accent-500: #fbd300;   /* ← الذهبي الرسمي */
+    --color-accent-600: #e0bc00;
+    --color-accent-700: #b89700;
+    --color-accent-800: #8f7400;
+    --color-accent-900: #6b5600;
+
+    /* ===== Gray — سكيل رسمي من Figma ===== */
+    --color-gray-50: #f5f7fa;
+    --color-gray-100: #e9eaf0;
+    --color-gray-200: #ced1d9;
+    --color-gray-300: #b7bac7;
+    --color-gray-400: #a1a5b3;
+    --color-gray-500: #8c94a3;
+    --color-gray-600: #6e7485;
+    --color-gray-700: #4e5566;
+    --color-gray-800: #363b47;
+    --color-gray-900: #1d2026;
+
+    /* ===== ألوان دلالية (Semantic) ===== */
+    --color-success: #1f9d57;
+    --color-success-soft: #e4f5ec;
+    --color-warning: #b5842a;
+    --color-warning-soft: #f8efdc;
+    --color-danger: #d6342c;
+    --color-danger-soft: #fbe9e8;
+    --color-info: #3b4cb5;
+    --color-info-soft: #e9ebf9;
+
+    /* ===== خلفيات النظام ===== */
+    --color-sidebar: #111033;   /* القائمة الجانبية = الكحلي */
+    --color-ink: #1d2026;       /* لون النص الأساسي = Gray/900 */
+
+    /* ===== أنصاف أقطار ===== */
+    --radius-card: 0.875rem;
+    --radius-field: 0.625rem;
+}
+
+/* ===== أساسيات RTL ===== */
+@layer base {
+    html {
+        direction: rtl;
+    }
+
+    body {
+        font-family: var(--font-sans);
+        color: var(--color-ink);
+        background-color: var(--color-gray-50);
+    }
+
+    * {
+        min-width: 0;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
 }
