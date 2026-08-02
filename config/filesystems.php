@@ -41,7 +41,8 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // مسار نسبي: الصور تعمل على أي دومين/بورت بلا اعتماد على APP_URL
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

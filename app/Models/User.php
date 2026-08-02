@@ -6,21 +6,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Concerns\InteractsWithWebImages;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Translatable\HasTranslations;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, HasTranslations;
+    use InteractsWithWebImages;
 
     protected $fillable = [
         'name', 'email', 'password',
-        'phone', 'civil_id', 'avatar', 'job_title', 'status',
+        'phone', 'civil_id', 'job_title', 'status',
         'is_agent', 'bio', 'languages', 'response_time', 'preferences',
+        'rating', 'reviews_count',
     ];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->imageUrl('avatar');
+    }
 
     /** حقول قابلة للترجمة (spatie translatable) */
     public array $translatable = ['bio'];
@@ -38,6 +47,8 @@ class User extends Authenticatable
             'is_agent' => 'boolean',
             'languages' => 'array',
             'preferences' => 'array',
+            'rating' => 'decimal:2',
+            'reviews_count' => 'integer',
             // ملاحظة: bio مُدار بواسطة HasTranslations — بدون cast
         ];
     }
@@ -66,6 +77,17 @@ class User extends Authenticatable
     public function reviews(): MorphMany
     {
         return $this->morphMany(Review::class, 'reviewable');
+    }
+
+    /** يعيد حساب المتوسط وعدد التقييمات المنشورة — يُستدعى بعد أي تغيير عليها */
+    public function refreshRating(): void
+    {
+        $published = $this->reviews()->published();
+
+        $this->forceFill([
+            'reviews_count' => $published->count(),
+            'rating' => ($avg = $published->avg('rating')) ? round((float) $avg, 2) : null,
+        ])->save();
     }
 
     /** هل هو وكيل ظاهر بالموقع؟ */

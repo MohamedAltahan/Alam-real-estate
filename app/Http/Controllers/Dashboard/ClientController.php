@@ -23,8 +23,11 @@ class ClientController extends Controller
 
     public function index(Request $request): View
     {
+        $filters = $request->only('search', 'stage_id', 'agent_id', 'type_id');
+
         return view('dashboard.clients.index', [
-            'clients' => $this->clients->paginate($request->only('search', 'stage_id', 'agent_id', 'type_id')),
+            'clients' => $this->clients->paginate($filters),
+            'stageCounts' => $this->clients->stageCounts($filters),
             'stages' => $this->clients->stages(),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'types' => ClientType::where('is_active', true)->get(),

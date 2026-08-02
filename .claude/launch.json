@@ -1,0 +1,25 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "alam",
+            "runtimeExecutable": "powershell",
+            "runtimeArgs": [
+                "-NoProfile",
+                "-Command",
+                "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environment]::GetEnvironmentVariable('Path','User'); php artisan serve --port=8123"
+            ],
+            "port": 8123
+        },
+        {
+            "name": "alam-lan",
+            "runtimeExecutable": "powershell",
+            "runtimeArgs": [
+                "-NoProfile",
+                "-Command",
+                "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environment]::GetEnvironmentVariable('Path','User'); php artisan serve --host=0.0.0.0 --port=8124"
+            ],
+            "port": 8124
+        }
+    ]
+}

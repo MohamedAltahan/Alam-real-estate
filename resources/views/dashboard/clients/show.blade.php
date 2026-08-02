@@ -54,21 +54,21 @@
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         @can('clients.edit')
-                            <button @click="editOpen = true" class="inline-flex items-center gap-1.5 rounded-field border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+                            <button @click="editOpen = true" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
                                 تعديل
                             </button>
                         @endcan
                         @if ($client->phone)
                             <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $client->phone) }}" target="_blank"
-                               class="inline-flex items-center gap-1.5 rounded-field bg-success/10 text-success hover:bg-success/20 text-sm px-3 py-2 font-medium">واتساب</a>
+                               class="inline-flex items-center gap-1.5 rounded-full bg-success/10 text-success hover:bg-success/20 text-sm px-3 py-2 font-medium">واتساب</a>
                         @endif
                     </div>
                 </div>
 
                 <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-gray-100 text-sm">
-                    <div><dt class="text-gray-400 text-xs mb-0.5">الهاتف</dt><dd class="text-ink font-medium" dir="ltr">{{ $client->phone }}</dd></div>
-                    <div><dt class="text-gray-400 text-xs mb-0.5">البريد</dt><dd class="text-ink font-medium truncate" dir="ltr">{{ $client->email ?: '—' }}</dd></div>
+                    <div><dt class="text-gray-400 text-xs mb-0.5">الهاتف</dt><dd class="text-ink font-medium"><span dir="ltr">{{ $client->phone }}</span></dd></div>
+                    <div><dt class="text-gray-400 text-xs mb-0.5">البريد</dt><dd class="text-ink font-medium truncate"><span dir="ltr">{{ $client->email ?: '—' }}</span></dd></div>
                     <div><dt class="text-gray-400 text-xs mb-0.5">المنطقة</dt><dd class="text-ink font-medium">{{ $client->area?->name ?: '—' }}</dd></div>
                     <div><dt class="text-gray-400 text-xs mb-0.5">الوكيل</dt><dd class="text-ink font-medium">{{ $client->agent?->name ?: '—' }}</dd></div>
                     <div><dt class="text-gray-400 text-xs mb-0.5">المصدر</dt><dd class="text-ink font-medium">{{ $client->source?->name ?: '—' }}</dd></div>
@@ -105,7 +105,7 @@
                         <textarea name="notes" rows="2" placeholder="اكتب اللي تم في المكالمة أو المقابلة..."
                                   class="w-full mt-3 rounded-field border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-primary-500"></textarea>
                         <div class="flex justify-end mt-3">
-                            <button class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">تسجيل التواصل</button>
+                            <button class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">تسجيل التواصل</button>
                         </div>
                     </form>
                 @endcan
@@ -147,7 +147,7 @@
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>
                             </span>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-ink" dir="ltr">{{ $p->reference_code }}</p>
+                                <p class="text-sm font-semibold text-ink"><span dir="ltr">{{ $p->reference_code }}</span></p>
                                 <p class="text-xs text-gray-400">{{ $p->pivot->relation ?: 'مرتبط' }}@if($p->status) · {{ $p->status->name }}@endif</p>
                             </div>
                             @can('clients.edit')
@@ -176,7 +176,7 @@
                             <option value="عاين">عاين</option>
                             <option value="حجز">حجز</option>
                         </select>
-                        <button class="w-full rounded-field bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 text-sm">ربط عقار</button>
+                        <button class="w-full rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 text-sm">ربط عقار</button>
                     </form>
                 @endcan
             </div>
@@ -198,8 +198,8 @@
                         @include('dashboard.clients._form', ['client' => $client])
                     </div>
                     <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
-                        <button type="button" @click="editOpen = false" class="rounded-field px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button>
-                        <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ التعديلات</button>
+                        <button type="button" @click="editOpen = false" class="rounded-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button>
+                        <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ التعديلات</button>
                     </div>
                 </form>
             </div>

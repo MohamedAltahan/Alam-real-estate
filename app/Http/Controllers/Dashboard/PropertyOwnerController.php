@@ -14,8 +14,9 @@ class PropertyOwnerController extends Controller
     public function index(Request $request): View
     {
         $owners = PropertyOwner::query()
-            ->with('area')
+            ->with(['area', 'latestProperty.agent'])
             ->withCount('properties')
+            ->withSum('properties', 'price')
             ->when($request->search, fn ($q, $s) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")))
             ->latest()

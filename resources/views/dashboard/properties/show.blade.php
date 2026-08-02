@@ -12,7 +12,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> العودة للعقارات
         </a>
         @can('properties.edit')
-            <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-field border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+            <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> تعديل
             </a>
         @endcan
@@ -23,12 +23,12 @@
             {{-- الصورة والعنوان --}}
             <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
                 <div class="aspect-[16/9] bg-gray-100 grid place-items-center text-gray-300">
-                    @if ($property->cover_image)<img src="{{ Storage::url($property->cover_image) }}" class="w-full h-full object-cover" alt="">
+                    @if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">
                     @else <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>@endif
                 </div>
                 <div class="p-6">
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-xs text-gray-400" dir="ltr">{{ $property->reference_code }}</span>
+                        <span class="text-xs text-gray-400"><span dir="ltr">{{ $property->reference_code }}</span></span>
                         @if ($property->status)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $property->status->color }}; background-color: {{ $property->status->color }}1a;">{{ $property->status->name }}</span>@endif
                         @if ($property->is_featured)<span class="rounded-full bg-accent-100 text-accent-800 px-2.5 py-1 text-xs font-medium">مميّز</span>@endif
                     </div>
@@ -74,7 +74,7 @@
                         <select name="rating" class="rounded-field border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-primary-500">
                             @for ($i = 5; $i >= 1; $i--)<option value="{{ $i }}">{{ $i }} نجوم</option>@endfor
                         </select>
-                        <button class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">إضافة تقييم</button>
+                        <button class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">إضافة تقييم</button>
                         <textarea name="comment" rows="2" placeholder="التعليق (اختياري)" class="sm:col-span-3 rounded-field border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-primary-500"></textarea>
                     </form>
                 @endcan
@@ -122,11 +122,11 @@
                 </div>
             @endif
 
-            @if ($property->images->count())
+            @if (count($property->gallery_urls))
                 <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                    <h3 class="font-bold text-ink mb-3">المعرض ({{ $property->images->count() }})</h3>
+                    <h3 class="font-bold text-ink mb-3">المعرض ({{ count($property->gallery_urls) }})</h3>
                     <div class="grid grid-cols-3 gap-2">
-                        @foreach ($property->images as $img)<img src="{{ Storage::url($img->path) }}" class="aspect-square object-cover rounded-lg" alt="">@endforeach
+                        @foreach ($property->gallery_urls as $url)<img src="{{ $url }}" class="aspect-square object-cover rounded-lg" alt="">@endforeach
                     </div>
                 </div>
             @endif

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Dashboard\ClientController;
 use App\Http\Controllers\Dashboard\ContactRequestController;
+use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\MarketingSourceController;
 use App\Http\Controllers\Dashboard\PermissionMatrixController;
 use App\Http\Controllers\Dashboard\PropertyController;
@@ -9,27 +10,36 @@ use App\Http\Controllers\Dashboard\PropertyOwnerController;
 use App\Http\Controllers\Dashboard\RoleController;
 use App\Http\Controllers\Dashboard\SupervisorController;
 use App\Http\Controllers\Dashboard\WebsiteController;
-use App\Models\Client;
+use App\Http\Controllers\Site\SiteController;
 use App\Models\ContactRequest;
-use App\Models\Property;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+// ===== الموقع العام =====
+Route::get('/', [SiteController::class, 'home'])->name('site.home');
+Route::get('/locale/{locale}', [SiteController::class, 'switchLocale'])->name('site.locale');
+Route::get('/properties', [SiteController::class, 'properties'])->name('site.properties');
+Route::get('/properties/{property}', [SiteController::class, 'property'])->name('site.property');
+Route::get('/agents/{agent}', [SiteController::class, 'agent'])->name('site.agent');
+Route::get('/about', [SiteController::class, 'about'])->name('site.about');
+Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
+Route::post('/contact', [SiteController::class, 'storeContact'])->name('site.contact.store');
+Route::get('/list-property', [SiteController::class, 'listProperty'])->name('site.list-property');
+Route::post('/list-property', [SiteController::class, 'storeListProperty'])->name('site.list-property.store');
+Route::get('/faq', [SiteController::class, 'faq'])->name('site.faq');
+Route::get('/terms', [SiteController::class, 'terms'])->name('site.terms');
+Route::get('/privacy', [SiteController::class, 'privacy'])->name('site.privacy');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard.index', [
-            'stats' => [
-                'properties' => Property::count(),
-                'clients' => Client::count(),
-                'requests' => ContactRequest::where('is_read', false)->count(),
-                'agents' => User::where('is_agent', true)->count(),
-            ],
-        ]);
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::prefix('dashboard')->name('dashboard.')->group(function () {
+
+        // تعليم كل الإشعارات كمقروءة (من القائمة المنسدلة في الشريط العلوي)
+        Route::post('notifications/read-all', function () {
+            ContactRequest::unread()->update(['is_read' => true]);
+
+            return back();
+        })->name('notifications.read-all');
 
         // ===== إدارة العملاء =====
         Route::middleware('can:clients.view')->group(function () {
@@ -71,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:contact_requests.view')->group(function () {
             Route::get('requests', [ContactRequestController::class, 'index'])->name('requests.index');
             Route::put('requests/{contactRequest}/contacted', [ContactRequestController::class, 'markContacted'])->name('requests.contacted');
+            Route::post('requests/{contactRequest}/convert', [ContactRequestController::class, 'convert'])->name('requests.convert');
             Route::delete('requests/{contactRequest}', [ContactRequestController::class, 'destroy'])->name('requests.destroy');
         });
 

@@ -87,7 +87,8 @@ class DatabaseSeeder extends Seeder
             'bathrooms' => 5,
             'area_size' => 450,
             'block' => '6', 'street' => '671', 'building' => '6',
-            'video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            // فيديو Blender مفتوح — التضمين مسموح (dQw4w9WgXcQ تضمينه معطّل)
+            'video_url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
             'is_featured' => true,
         ]);
 
@@ -95,7 +96,7 @@ class DatabaseSeeder extends Seeder
         $property->amenities()->attach(Amenity::take(5)->pluck('id')->all());
 
         // صورة
-        $property->images()->create(['path' => 'properties/demo-1.jpg', 'sort_order' => 0, 'is_cover' => true]);
+        // الصور تُضاف من DemoContentSeeder عبر media library
 
         // تقييم للعقار + تقييم للوكيل (polymorphic)
         $property->reviews()->create([

@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
+use App\Concerns\InteractsWithWebImages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
 
-class Property extends Model
+class Property extends Model implements HasMedia
 {
     use HasTranslations;
+    use InteractsWithWebImages;
 
     protected $table = 'properties';
 
@@ -20,7 +23,7 @@ class Property extends Model
         'area_id', 'category_id', 'unit_type_id', 'purpose', 'price', 'price_period',
         'status_id', 'owner_id', 'agent_id', 'bedrooms', 'bathrooms', 'area_size',
         'block', 'street', 'building', 'latitude', 'longitude',
-        'video_url', 'cover_image', 'is_featured', 'rating', 'reviews_count',
+        'video_url', 'is_featured', 'rating', 'reviews_count',
     ];
 
     /** حقول قابلة للترجمة AR/EN */
@@ -70,11 +73,6 @@ class Property extends Model
         return $this->belongsTo(User::class, 'agent_id');
     }
 
-    public function images(): HasMany
-    {
-        return $this->hasMany(PropertyImage::class)->orderBy('sort_order');
-    }
-
     public function amenities(): BelongsToMany
     {
         return $this->belongsToMany(Amenity::class, 'property_amenity');
@@ -92,6 +90,42 @@ class Property extends Model
         return $this->belongsToMany(Client::class, 'client_property')
             ->withPivot('relation', 'notes')
             ->withTimestamps();
+    }
+
+    // ===== Accessors =====
+
+    /** معرّف فيديو يوتيوب (للتشغيل داخل الموقع بدل التحويل لليوتيوب) */
+    public function getVideoIdAttribute(): ?string
+    {
+        return \App\Support\Video::youtubeId($this->video_url);
+    }
+
+    /** غلاف العقار (media library) */
+    public function getCoverUrlAttribute(): ?string
+    {
+        return $this->imageUrl('cover');
+    }
+
+    /** كل صور العقار: الغلاف أولاً ثم المعرض */
+    public function getGalleryUrlsAttribute(): array
+    {
+        $conv = self::WEB_CONVERSION;
+        $url = fn ($m) => $m->hasGeneratedConversion($conv) ? $m->getUrl($conv) : $m->getUrl();
+
+        return $this->getMedia('cover')->merge($this->getMedia('gallery'))->map($url)->values()->all();
+    }
+
+    /** صورة الفيديو من يوتيوب — أدقّ من صورة غلاف العقار في قسم الفيديوهات */
+    public function getVideoThumbAttribute(): ?string
+    {
+        return $this->video_id ? "https://img.youtube.com/vi/{$this->video_id}/hqdefault.jpg" : null;
+    }
+
+    /** العقارات التي لها فيديو يوتيوب صالح */
+    public function scopeWithVideo($query)
+    {
+        // ملاحظة أوراكل: النص الفارغ = NULL، لذا whereNotNull وحده يكفي
+        return $query->whereNotNull('video_url');
     }
 
     // ===== Scopes =====

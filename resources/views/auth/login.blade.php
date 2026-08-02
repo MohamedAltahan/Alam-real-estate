@@ -3,12 +3,16 @@
 @section('title', 'تسجيل الدخول')
 
 @section('content')
-<div class="min-h-screen relative flex items-center justify-center p-4 font-sans overflow-hidden"
-     style="background: radial-gradient(130% 130% at 50% 0%, #1b1a4a 0%, #111033 52%, #0b0a24 100%);">
+<div class="min-h-screen relative isolate flex items-center justify-center p-4 font-sans overflow-hidden bg-primary-950">
 
-    {{-- توهّج خفيف يوحي بغروب مدينة الكويت (بديل مؤقت للصورة الحقيقية) --}}
-    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
-         style="background: radial-gradient(60% 80% at 50% 100%, rgba(251,211,0,.10) 0%, transparent 70%);"></div>
+    {{-- خلفية: أبراج الكويت --}}
+    <img src="{{ asset('images/kuwait-login.jpg') }}" alt=""
+         class="absolute inset-0 -z-10 w-full h-full object-cover object-center">
+
+    {{-- طبقات التلوين بالأزرق الكحلي للهوية (نفس تركيبة الهيرو سكشن) --}}
+    <div class="absolute inset-0 -z-10 bg-primary-900/60 mix-blend-multiply"></div>
+    <div class="absolute inset-0 -z-10 bg-primary-900/15"></div>
+    <div class="absolute inset-0 -z-10 bg-gradient-to-b from-primary-950/70 via-transparent to-primary-950/80"></div>
 
     <div class="relative w-full max-w-md bg-white rounded-card shadow-2xl p-8 sm:p-10">
         <p class="text-accent-600 font-semibold text-sm mb-2">لوحة الإدارة</p>
@@ -61,8 +65,7 @@
 
             <div class="flex items-center justify-between">
                 <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-                    <input type="checkbox" name="remember"
-                           class="rounded border-gray-300 text-primary-900 focus:ring-primary-500/30">
+                    <input type="checkbox" name="remember">
                     تذكّرني
                 </label>
                 <a href="{{ route('password.request') }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">

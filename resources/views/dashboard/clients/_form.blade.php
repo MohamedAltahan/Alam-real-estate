@@ -1,7 +1,8 @@
 @php $client = $client ?? null; @endphp
 
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div class="sm:col-span-2">
+{{-- عشرة حقول في عمودين = خمسة أسطر، كل سطر فيه حقلان --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+    <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">الاسم <span class="text-danger">*</span></label>
         <input name="name" value="{{ old('name', $client?->name) }}" required
                class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
@@ -79,8 +80,8 @@
         @error('rating')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
     </div>
 
-    <div class="sm:col-span-2">
+    <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">ملاحظات</label>
-        <textarea name="notes" rows="2" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">{{ old('notes', $client?->notes) }}</textarea>
+        <textarea name="notes" rows="1" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm resize-y focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">{{ old('notes', $client?->notes) }}</textarea>
     </div>
 </div>

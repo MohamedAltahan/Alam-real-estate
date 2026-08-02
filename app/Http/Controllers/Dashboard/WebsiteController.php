@@ -7,19 +7,16 @@ use App\Models\Area;
 use App\Models\Faq;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\Models\Property;
 use App\Models\Setting;
 use App\Models\Testimonial;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class WebsiteController extends Controller
 {
-    /** عدد الخانات الثابتة للأقسام المتكررة */
-    private const AREA_SLOTS = 5;
-    private const VIDEO_SLOTS = 4;
-    private const WHY_SLOTS = 4;
-
     private const HOME_SECTIONS = ['hero', 'featured', 'areas', 'videos', 'why_us', 'testimonials', 'cta'];
 
     private const ABOUT_SECTIONS = ['hero', 'story', 'values', 'team'];
@@ -38,19 +35,26 @@ class WebsiteController extends Controller
 
     public function index(): View
     {
+        $home = $this->homePage();
+        $aboutPage = $this->aboutPage();
+
         return view('dashboard.website.index', [
-            'sections' => $this->loadSections($this->homePage(), self::HOME_SECTIONS),
-            'about' => $this->loadSections($this->aboutPage(), self::ABOUT_SECTIONS),
+            'sections' => $this->loadSections($home, self::HOME_SECTIONS),
+            'about' => $this->loadSections($aboutPage, self::ABOUT_SECTIONS),
+            // نماذج الأقسام نفسها — منها تُقرأ الصور (media library)
+            'homeSecs' => $this->sectionModels($home, self::HOME_SECTIONS),
+            'aboutSecs' => $this->sectionModels($aboutPage, self::ABOUT_SECTIONS),
             'seoPages' => $this->seoPages(),
             'terms' => $this->legalBody('terms'),
             'privacy' => $this->legalBody('privacy'),
             'offersHeader' => $this->listingHeader('offers'),
             'propsHeader' => $this->listingHeader('properties'),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
+            // العقارات المرشَّحة لقسم الفيديوهات (لها رابط يوتيوب فقط)
+            'videoPool' => Property::withVideo()->latest()->get(['id', 'reference_code', 'title', 'video_url']),
             'faqs' => Faq::orderBy('sort_order')->get(),
             'testimonials' => Testimonial::orderBy('sort_order')->get(),
             'settings' => $this->currentSettings(),
-            'slots' => ['areas' => self::AREA_SLOTS, 'videos' => self::VIDEO_SLOTS, 'why' => self::WHY_SLOTS],
         ]);
     }
 
@@ -59,17 +63,17 @@ class WebsiteController extends Controller
     {
         abort_unless($request->user()->can('website.edit'), 403);
 
-        $home = $this->homePage();
-        $old = fn ($key) => optional($home->sections()->where('key', $key)->first())->getTranslation('content', 'ar', false) ?: [];
+        $this->validateImages($request);
 
-        // --- Hero ---
+        $home = $this->homePage();
+
+        // --- Hero: صور متعدّدة بلا حد (media library) ---
         $h = $request->input('hero', []);
-        $heroImages = $old('hero')['images'] ?? [];
-        foreach ($request->file('hero.images', []) as $f) {
-            $heroImages[] = $f->store('website', 'public');
-        }
-        $this->put($home, 'hero', 0,
-            shared: ['images' => $heroImages, 'stats' => [
+        $hero = $this->section($home, 'hero', 0);
+        $this->syncMedia($request, $hero, 'images', 'hero.images', (array) $request->input('hero.images_removed', []));
+
+        $this->fill($hero,
+            shared: ['stats' => [
                 'properties' => $h['stat_properties'] ?? '', 'clients' => $h['stat_clients'] ?? '', 'areas' => $h['stat_areas'] ?? '',
             ]],
             ar: ['badge' => $h['badge_ar'] ?? '', 'title' => $h['title_ar'] ?? '', 'subtitle' => $h['subtitle_ar'] ?? '', 'description' => $h['description_ar'] ?? ''],
@@ -78,66 +82,69 @@ class WebsiteController extends Controller
 
         // --- Featured ---
         $ft = $request->input('featured', []);
-        $this->put($home, 'featured', 1,
-            shared: ['image' => $this->img($request, 'featured.image', $old('featured')['image'] ?? null)],
+        $featured = $this->section($home, 'featured', 1);
+        $this->syncMedia($request, $featured, 'image', 'featured.image', (array) $request->input('featured.image_removed', []), single: true);
+
+        $this->fill($featured, shared: [],
             ar: ['title' => $ft['title_ar'] ?? '', 'description' => $ft['description_ar'] ?? ''],
             en: ['title' => $ft['title_en'] ?? '', 'description' => $ft['description_en'] ?? '']
         );
 
-        // --- Areas ---
+        // --- Areas: بنود ديناميكية بلا حد، صورة كل بند في مجموعة مستقلة ---
         $ar = $request->input('areas', []);
+        $areas = $this->section($home, 'areas', 2);
         $areaItems = [];
-        $oldAreas = $old('areas')['items'] ?? [];
-        foreach (range(0, self::AREA_SLOTS - 1) as $i) {
-            $it = $request->input("area_items.$i", []);
+
+        foreach ((array) $request->input('area_items', []) as $uid => $it) {
             if (empty($it['area_id'])) {
                 continue;
             }
+            // اسم المجموعة = المعرّف نفسه بعد التنقية (idempotent — لا تُضاف البادئة مرّتين)
+            $collection = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $uid);
+            $collection = str_starts_with($collection, 'area-') ? $collection : 'area-'.$collection;
+            $this->syncMedia($request, $areas, $collection, "area_items.$uid.image", (array) ($it['image_removed'] ?? []), single: true);
+
             $areaItems[] = [
                 'area_id' => $it['area_id'],
                 'count' => $it['count'] ?? '',
-                'image' => $this->img($request, "area_items.$i.image", $oldAreas[$i]['image'] ?? null),
+                'collection' => $collection,
             ];
         }
-        $this->put($home, 'areas', 2,
-            shared: ['items' => $areaItems],
+
+        $this->pruneCollections($areas, array_column($areaItems, 'collection'), 'area-');
+
+        $this->fill($areas, shared: ['items' => $areaItems],
             ar: ['title' => $ar['title_ar'] ?? '', 'description' => $ar['description_ar'] ?? ''],
             en: ['title' => $ar['title_en'] ?? '', 'description' => $ar['description_en'] ?? '']
         );
 
-        // --- Videos ---
+        // --- Videos: اختيار وترتيب من عقارات لها رابط يوتيوب (فارغ = أحدث ٨ تلقائياً) ---
         $vd = $request->input('videos', []);
-        $videoItems = [];
-        $oldVideos = $old('videos')['items'] ?? [];
-        foreach (range(0, self::VIDEO_SLOTS - 1) as $i) {
-            $it = $request->input("video_items.$i", []);
-            if (empty($it['youtube_url']) && empty($it['title_ar'])) {
-                continue;
-            }
-            $videoItems[] = [
-                'youtube_url' => $it['youtube_url'] ?? '',
-                'title' => ['ar' => $it['title_ar'] ?? '', 'en' => $it['title_en'] ?? ''],
-                'image' => $this->img($request, "video_items.$i.image", $oldVideos[$i]['image'] ?? null),
-            ];
-        }
+        $picked = collect((array) ($vd['items'] ?? []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        // نتجاهل أي عقار فقد فيديوه أو حُذف منذ الاختيار
+        $valid = Property::withVideo()->whereIn('id', $picked)->pluck('id')->all();
+
         $this->put($home, 'videos', 3,
-            shared: ['items' => $videoItems],
+            shared: ['items' => $picked->filter(fn ($id) => in_array($id, $valid, true))->values()->all()],
             ar: ['title' => $vd['title_ar'] ?? '', 'description' => $vd['description_ar'] ?? ''],
             en: ['title' => $vd['title_en'] ?? '', 'description' => $vd['description_en'] ?? '']
         );
 
-        // --- Why us ---
+        // --- Why us: بنود ديناميكية بلا حد ---
         $wy = $request->input('why', []);
         $whyItems = [];
-        $oldWhy = $old('why_us')['items'] ?? [];
-        foreach (range(0, self::WHY_SLOTS - 1) as $i) {
-            $it = $request->input("why_items.$i", []);
-            if (empty($it['title_ar']) && empty($it['number'])) {
+        foreach ((array) $request->input('why_items', []) as $it) {
+            if (blank($it['title_ar'] ?? null) && blank($it['number'] ?? null)) {
                 continue;
             }
             $whyItems[] = [
                 'number' => $it['number'] ?? '',
-                'icon' => $it['icon'] ?? ($oldWhy[$i]['icon'] ?? ''),
+                'icon' => $it['icon'] ?? '',
                 'title' => ['ar' => $it['title_ar'] ?? '', 'en' => $it['title_en'] ?? ''],
                 'description' => ['ar' => $it['description_ar'] ?? '', 'en' => $it['description_en'] ?? ''],
             ];
@@ -158,8 +165,10 @@ class WebsiteController extends Controller
 
         // --- CTA ---
         $ct = $request->input('cta', []);
-        $this->put($home, 'cta', 6,
-            shared: ['image' => $this->img($request, 'cta.image', $old('cta')['image'] ?? null)],
+        $cta = $this->section($home, 'cta', 6);
+        $this->syncMedia($request, $cta, 'image', 'cta.image', (array) $request->input('cta.image_removed', []), single: true);
+
+        $this->fill($cta, shared: [],
             ar: ['badge' => $ct['badge_ar'] ?? '', 'title' => $ct['title_ar'] ?? '', 'description' => $ct['description_ar'] ?? ''],
             en: ['badge' => $ct['badge_en'] ?? '', 'title' => $ct['title_en'] ?? '', 'description' => $ct['description_en'] ?? '']
         );
@@ -172,8 +181,11 @@ class WebsiteController extends Controller
     {
         abort_unless($request->user()->can('website.edit'), 403);
 
+        $request->validate(['about_story.image' => PageSection::imageRules()], [
+            'max' => 'حجم الصورة يتجاوز الحد المسموح (٦ ميجابايت).',
+        ]);
+
         $page = $this->aboutPage();
-        $old = fn ($key) => optional($page->sections()->where('key', $key)->first())->getTranslation('content', 'ar', false) ?: [];
 
         // Hero
         $h = $request->input('about_hero', []);
@@ -181,20 +193,24 @@ class WebsiteController extends Controller
             ar: ['badge' => $h['badge_ar'] ?? '', 'title' => $h['title_ar'] ?? '', 'description' => $h['description_ar'] ?? ''],
             en: ['badge' => $h['badge_en'] ?? '', 'title' => $h['title_en'] ?? '', 'description' => $h['description_en'] ?? '']);
 
-        // Story (+ 2 stats)
+        // Story (+ إحصاءات ديناميكية)
         $st = $request->input('about_story', []);
-        $oldStats = $old('story')['stats'] ?? [];
         $stats = [];
-        foreach ([0, 1] as $i) {
-            $it = $request->input("story_stats.$i", []);
+        foreach ((array) $request->input('story_stats', []) as $it) {
+            if (blank($it['number'] ?? null) && blank($it['title_ar'] ?? null)) {
+                continue;
+            }
             $stats[] = [
                 'number' => $it['number'] ?? '',
                 'title' => ['ar' => $it['title_ar'] ?? '', 'en' => $it['title_en'] ?? ''],
                 'description' => ['ar' => $it['description_ar'] ?? '', 'en' => $it['description_en'] ?? ''],
             ];
         }
-        $this->put($page, 'story', 1,
-            shared: ['image' => $this->img($request, 'about_story.image', $old('story')['image'] ?? null), 'stats' => $stats],
+
+        $story = $this->section($page, 'story', 1);
+        $this->syncMedia($request, $story, 'image', 'about_story.image', (array) $request->input('about_story.image_removed', []), single: true);
+
+        $this->fill($story, shared: ['stats' => $stats],
             ar: ['title' => $st['title_ar'] ?? '', 'description' => $st['description_ar'] ?? ''],
             en: ['title' => $st['title_en'] ?? '', 'description' => $st['description_en'] ?? '']);
 
@@ -429,15 +445,82 @@ class WebsiteController extends Controller
 
     private function put(Page $page, string $key, int $order, array $shared, array $ar, array $en): void
     {
-        $s = $page->sections()->firstOrCreate(['key' => $key], ['sort_order' => $order]);
+        $this->fill($this->section($page, $key, $order), $shared, $ar, $en);
+    }
+
+    private function section(Page $page, string $key, int $order): PageSection
+    {
+        return $page->sections()->firstOrCreate(['key' => $key], ['sort_order' => $order]);
+    }
+
+    /** نماذج الأقسام (مع صورها) لعرضها في الفورم — [key => PageSection] */
+    private function sectionModels(Page $page, array $keys): array
+    {
+        $out = [];
+        foreach ($keys as $i => $key) {
+            $out[$key] = $this->section($page, $key, $i)->load('media');
+        }
+
+        return $out;
+    }
+
+    private function fill(PageSection $s, array $shared, array $ar, array $en): void
+    {
         $s->setTranslation('content', 'ar', array_merge($shared, $ar));
         $s->setTranslation('content', 'en', array_merge($shared, $en));
         $s->save();
     }
 
-    private function img(Request $request, string $field, ?string $existing): ?string
+    /**
+     * تحقّق موحّد من كل حقول الصور: صورة صالحة · ٦ ميجابايت كحد أقصى.
+     * القاعدة نفسها مطبَّقة على السيرفر حتى لو تجاوز أحدهم ضغط المتصفح.
+     */
+    private function validateImages(Request $request): void
     {
-        return $request->hasFile($field) ? $request->file($field)->store('website', 'public') : $existing;
+        $rules = PageSection::imageRules();
+
+        $request->validate([
+            'hero.images.*' => $rules,
+            'featured.image' => $rules,
+            'cta.image' => $rules,
+            'area_items.*.image' => $rules,
+        ], [
+            'max' => 'حجم الصورة يتجاوز الحد المسموح (٦ ميجابايت).',
+            'image' => 'الملف المرفوع ليس صورة صالحة.',
+            'mimetypes' => 'الصيغ المسموحة: jpg · png · webp فقط.',
+        ]);
+    }
+
+    /**
+     * مزامنة مجموعة صور: حذف المحدَّد ثم إضافة المرفوع الجديد.
+     * المفرد (single) يستبدل الصورة القديمة تلقائياً.
+     */
+    private function syncMedia(Request $request, PageSection $section, string $collection, string $field, array $removedIds, bool $single = false): void
+    {
+        foreach (array_filter($removedIds) as $id) {
+            $section->media()->where('id', $id)->first()?->delete();
+        }
+
+        $files = $request->hasFile($field)
+            ? Arr::wrap($request->file($field))
+            : [];
+
+        foreach ($files as $file) {
+            if ($single) {
+                $section->clearMediaCollection($collection);
+            }
+            $section->addMedia($file)->toMediaCollection($collection);
+        }
+    }
+
+    /** حذف مجموعات صور البنود التي أُزيلت من القائمة (تنظيف القرص) */
+    private function pruneCollections(PageSection $section, array $keep, string $prefix): void
+    {
+        $section->media()
+            ->where('collection_name', 'like', $prefix.'%')
+            ->whereNotIn('collection_name', $keep ?: ['__none__'])
+            ->get()
+            ->each->delete();
     }
 
     private function currentSettings(): array

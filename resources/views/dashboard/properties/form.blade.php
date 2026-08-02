@@ -108,7 +108,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 @foreach ($amenities as $a)
                     <label class="flex items-center gap-2 rounded-field border border-gray-100 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
-                        <input type="checkbox" name="amenities[]" value="{{ $a->id }}" @checked(in_array($a->id, (array) $selectedAmenities)) class="rounded border-gray-300 text-primary-900 focus:ring-primary-500/30">
+                        <input type="checkbox" name="amenities[]" value="{{ $a->id }}" @checked(in_array($a->id, (array) $selectedAmenities))>
                         {{ $a->name }}
                     </label>
                 @endforeach
@@ -121,13 +121,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">الصورة الرئيسية</label>
-                    @if ($property->exists && $property->cover_image)<img src="{{ Storage::url($property->cover_image) }}" class="w-24 h-24 object-cover rounded-field mb-2" alt="">@endif
-                    <input type="file" name="cover_image" accept="image/*" class="w-full text-sm text-gray-500 file:me-3 file:rounded-field file:border-0 file:bg-primary-50 file:text-primary-700 file:px-3 file:py-2 file:text-sm">
-                    @error('cover_image')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                    <x-cms.dropzone label="" name="cover" :media="$property->exists ? $property->getFirstMedia('cover') : null" />
+                    @error('cover')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">معرض الصور (متعدد)</label>
-                    <input type="file" name="gallery[]" accept="image/*" multiple class="w-full text-sm text-gray-500 file:me-3 file:rounded-field file:border-0 file:bg-primary-50 file:text-primary-700 file:px-3 file:py-2 file:text-sm">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">معرض الصور (بلا حد)</label>
+                    <x-cms.dropzone label="" name="gallery" multiple
+                                    :media="$property->exists ? $property->getMedia('gallery') : []" />
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">رابط فيديو يوتيوب</label>
@@ -135,15 +135,15 @@
                     @error('video_url')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
                 <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $property->is_featured)) class="rounded border-gray-300 text-primary-900 focus:ring-primary-500/30">
+                    <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $property->is_featured))>
                     عقار مميّز (يظهر في المقدّمة)
                 </label>
             </div>
         </div>
 
         <div class="flex items-center justify-end gap-3">
-            <a href="{{ route('dashboard.properties.index') }}" class="rounded-field px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</a>
-            <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">{{ $property->exists ? 'حفظ التعديلات' : 'إضافة العقار' }}</button>
+            <a href="{{ route('dashboard.properties.index') }}" class="rounded-full px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</a>
+            <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">{{ $property->exists ? 'حفظ التعديلات' : 'إضافة العقار' }}</button>
         </div>
     </form>
 </div>

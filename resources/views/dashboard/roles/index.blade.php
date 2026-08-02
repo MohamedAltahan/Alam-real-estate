@@ -13,7 +13,7 @@
             <p class="text-sm text-gray-500">تحكّم في مجموعات الصلاحيات لكل فريق</p>
         </div>
         @can('roles.create')
-            <button @click="startAdd()" class="inline-flex items-center gap-2 rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2.5 text-sm transition">
+            <button @click="startAdd()" class="inline-flex items-center gap-2 rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2.5 text-sm transition">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 إضافة دور
             </button>
@@ -35,17 +35,17 @@
                     @endif
                 </div>
                 <h3 class="mt-4 font-bold text-ink">{{ $r->description ?: $r->name }}</h3>
-                <p class="text-xs text-gray-400" dir="ltr">{{ $r->name }}</p>
+                <p class="text-xs text-gray-400"><span dir="ltr">{{ $r->name }}</span></p>
                 <div class="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100 text-sm">
                     <span class="text-gray-600"><span class="font-bold text-ink tabular-nums">{{ $r->permissions_count }}</span> صلاحية</span>
                     <span class="text-gray-600"><span class="font-bold text-ink tabular-nums">{{ $r->users_count }}</span> مستخدم</span>
                     <div class="ms-auto flex items-center gap-1">
                         @can('roles.edit')
-                            <button @click='startEdit(@json($editData))' class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="تعديل"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+                            <button @click='startEdit(@json($editData))' class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="تعديل"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
                         @endcan
                         @can('roles.delete')
                             @if ($r->name !== 'super-admin')
-                                <button @click="startDelete('{{ route('dashboard.roles.destroy', $r) }}', @js($r->description ?: $r->name))" class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-danger hover:bg-danger/10" title="حذف"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+                                <button @click="startDelete('{{ route('dashboard.roles.destroy', $r) }}', @js($r->description ?: $r->name))" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف"><x-icon.trash /></button>
                             @endif
                         @endcan
                     </div>
@@ -73,21 +73,21 @@
                 <p class="text-xs text-gray-400">لتحديد صلاحيات هذا الدور، افتح شاشة «الصلاحيات».</p>
             </div>
             <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
-                <button type="button" @click="$dispatch('close-modal', 'role-form')" class="rounded-field px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button>
-                <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm" x-text="mode === 'edit' ? 'حفظ' : 'إضافة'"></button>
+                <button type="button" @click="$dispatch('close-modal', 'role-form')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm" x-text="mode === 'edit' ? 'حفظ' : 'إضافة'"></button>
             </div>
         </form>
     </x-modal>
 
     <x-modal name="role-delete" maxWidth="md">
         <div class="p-6 text-center">
-            <span class="grid place-items-center w-12 h-12 rounded-full bg-danger/10 text-danger mx-auto mb-4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span>
+            <span class="grid place-items-center w-12 h-12 rounded-full bg-danger/10 text-danger mx-auto mb-4"><x-icon.trash size="24" /></span>
             <h3 class="font-bold text-ink mb-1">حذف الدور</h3>
             <p class="text-sm text-gray-500 mb-6">هل أنت متأكد من حذف دور "<span x-text="delName" class="font-semibold text-ink"></span>"؟</p>
             <form :action="delAction" method="POST" class="flex items-center justify-center gap-3">
                 @csrf @method('DELETE')
-                <button type="button" @click="$dispatch('close-modal', 'role-delete')" class="rounded-field px-4 py-2.5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-100">إلغاء</button>
-                <button type="submit" class="rounded-field bg-danger hover:bg-danger/90 text-white font-semibold px-5 py-2.5 text-sm">نعم، احذف</button>
+                <button type="button" @click="$dispatch('close-modal', 'role-delete')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-100">إلغاء</button>
+                <button type="submit" class="rounded-full bg-danger hover:bg-danger/90 text-white font-semibold px-5 py-2.5 text-sm">نعم، احذف</button>
             </form>
         </div>
     </x-modal>

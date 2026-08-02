@@ -10,10 +10,27 @@
         'terms' => 'الشروط والأحكام', 'privacy' => 'سياسة الخصوصية', 'footer' => 'الفوتر',
     ];
     $s = fn ($sec, $loc, $field, $def = '') => data_get($sections, "$sec.$loc.$field", $def);
-    $heroImages = $s('hero', 'ar', 'images', []);
     $areaItems = $s('areas', 'ar', 'items', []);
-    $videoItems = $s('videos', 'ar', 'items', []);
     $whyItems = $s('why_us', 'ar', 'items', []);
+
+    // بنود المناطق للمكرِّر — مع صورة كل بند من مجموعتها
+    $areaRows = collect($areaItems)->values()->map(fn ($it, $i) => [
+        'uid' => $it['collection'] ?? 'area-'.$i,
+        'area_id' => (string) ($it['area_id'] ?? ''),
+        'count' => (string) ($it['count'] ?? ''),
+    ])->all();
+
+    $whyRows = collect($whyItems)->values()->map(fn ($it) => [
+        'uid' => 'w'.uniqid(),
+        'number' => (string) ($it['number'] ?? ''),
+        'icon' => (string) ($it['icon'] ?? ''),
+        'title_ar' => (string) data_get($it, 'title.ar', ''),
+        'title_en' => (string) data_get($it, 'title.en', ''),
+        'description_ar' => (string) data_get($it, 'description.ar', ''),
+        'description_en' => (string) data_get($it, 'description.en', ''),
+    ])->all();
+
+    $inputCls = 'w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white';
     $sectionCard = 'rounded-card bg-white border border-gray-100 shadow-sm p-5 space-y-4';
     $fileCls = 'w-full text-sm text-gray-500 file:me-3 file:rounded-field file:border-0 file:bg-primary-50 file:text-primary-700 file:px-3 file:py-1.5 file:text-sm';
     $numCls = 'w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white';
@@ -31,7 +48,7 @@
     {{-- التبويبات --}}
     <div class="flex flex-wrap gap-2 mb-5">
         @foreach ($tabs as $k => $label)
-            <button @click="tab = '{{ $k }}'" :class="tab === '{{ $k }}' ? 'bg-primary-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'" class="rounded-field px-4 py-2 text-sm font-medium transition">{{ $label }}</button>
+            <button @click="tab = '{{ $k }}'" :class="tab === '{{ $k }}' ? 'bg-primary-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'" class="rounded-full px-4 py-2 text-sm font-medium transition">{{ $label }}</button>
         @endforeach
     </div>
 
@@ -53,11 +70,8 @@
                     <div><label class="block text-xs font-medium text-gray-500 mb-1">عدد العملاء</label><input name="hero[stat_clients]" value="{{ data_get($sections, 'hero.ar.stats.clients') }}" placeholder="1,200+" class="{{ $numCls }}"></div>
                     <div><label class="block text-xs font-medium text-gray-500 mb-1">عدد المناطق</label><input name="hero[stat_areas]" value="{{ data_get($sections, 'hero.ar.stats.areas') }}" placeholder="15+" class="{{ $numCls }}"></div>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">صور الخلفية المتحركة</label>
-                    @if (count($heroImages))<div class="flex flex-wrap gap-2 mb-2">@foreach ($heroImages as $img)<img src="{{ Storage::url($img) }}" class="w-16 h-16 object-cover rounded-field" alt="">@endforeach</div>@endif
-                    <input type="file" name="hero[images][]" accept="image/*" multiple class="{{ $fileCls }}">
-                </div>
+                <x-cms.dropzone label="صور الخلفية المتحركة (بلا حد — تتبدّل تلقائياً)"
+                                name="hero[images]" multiple :media="$homeSecs['hero']->getMedia('images')" />
             </div>
 
             {{-- عروض عقارية مميزة --}}
@@ -65,11 +79,8 @@
                 <h3 class="font-bold text-ink">عروض عقارية مميزة</h3>
                 <x-cms.pair label="العنوان" group="featured" field="title" :ar="$s('featured','ar','title')" :en="$s('featured','en','title')" />
                 <x-cms.pair label="الوصف" group="featured" field="description" type="textarea" :ar="$s('featured','ar','description')" :en="$s('featured','en','description')" />
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">صورة توضيحية</label>
-                    @if ($s('featured', 'ar', 'image'))<img src="{{ Storage::url($s('featured', 'ar', 'image')) }}" class="w-20 h-20 object-cover rounded-field mb-2" alt="">@endif
-                    <input type="file" name="featured[image]" accept="image/*" class="{{ $fileCls }}">
-                </div>
+                <x-cms.dropzone label="صورة توضيحية" name="featured[image]"
+                                :media="$homeSecs['featured']->getFirstMedia('image')" />
             </div>
 
             {{-- التغطية الجغرافية --}}
@@ -77,17 +88,74 @@
                 <h3 class="font-bold text-ink">التغطية الجغرافية (أفضل المناطق)</h3>
                 <x-cms.pair label="العنوان" group="areas" field="title" :ar="$s('areas','ar','title')" :en="$s('areas','en','title')" />
                 <x-cms.pair label="الوصف" group="areas" field="description" :ar="$s('areas','ar','description')" :en="$s('areas','en','description')" />
-                <div class="space-y-2">
-                    @for ($i = 0; $i < $slots['areas']; $i++)
-                        @php $it = $areaItems[$i] ?? []; @endphp
-                        <div class="grid grid-cols-12 gap-2 items-end rounded-field bg-gray-50/60 p-2">
-                            <div class="col-span-5"><label class="block text-xs text-gray-500 mb-1">المنطقة</label>
-                                <select name="area_items[{{ $i }}][area_id]" class="{{ $numCls }}"><option value="">— لا شيء —</option>@foreach ($areas as $a)<option value="{{ $a->id }}" @selected(($it['area_id'] ?? null) == $a->id)>{{ $a->name }}</option>@endforeach</select>
-                            </div>
-                            <div class="col-span-3"><label class="block text-xs text-gray-500 mb-1">عدد العقارات</label><input name="area_items[{{ $i }}][count]" value="{{ $it['count'] ?? '' }}" class="{{ $numCls }}"></div>
-                            <div class="col-span-4"><label class="block text-xs text-gray-500 mb-1">صورة @if (! empty($it['image']))<span class="text-success">✓</span>@endif</label><input type="file" name="area_items[{{ $i }}][image]" accept="image/*" class="{{ $fileCls }}"></div>
+                {{-- بنود ديناميكية بلا حد. المحفوظ يُرسَم من السيرفر (ومعه صورته)،
+                     والجديد يُضاف بـ Alpine. حذف بند = إزالة حقوله من الفورم. --}}
+                <div class="space-y-3">
+                    @foreach ($areaRows as $row)
+                        <div x-data="{ gone: false }" x-show="! gone" class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-3">
+                            <template x-if="! gone">
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-gray-500">{{ $loop->iteration }} — منطقة محفوظة</span>
+                                        <button type="button" @click="gone = true" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف المنطقة"><x-icon.trash /></button>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
+                                            {{-- منطقة واحدة من جدول المناطق — الاسم AR/EN مخزَّن فيه بالفعل --}}
+                                            <select name="area_items[{{ $row['uid'] }}][area_id]" class="{{ $inputCls }}">
+                                                <option value="">— اختر المنطقة —</option>
+                                                @foreach ($areas as $a)<option value="{{ $a->id }}" @selected($row['area_id'] == $a->id)>{{ $a->name }}</option>@endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-1">عدد العقارات المتاحة</label>
+                                            <input type="number" min="0" name="area_items[{{ $row['uid'] }}][count]" value="{{ $row['count'] }}" placeholder="اتركه فارغاً ليُحسب تلقائياً" class="{{ $inputCls }}">
+                                        </div>
+                                    </div>
+                                    <x-cms.dropzone label="صورة المنطقة" :name="'area_items['.$row['uid'].'][image]'"
+                                                    :media="$homeSecs['areas']->getFirstMedia($row['uid'])" />
+                                </div>
+                            </template>
                         </div>
-                    @endfor
+                    @endforeach
+
+                    {{-- بنود جديدة --}}
+                    <div x-data="{ rows: [], n: 0 }" class="space-y-3">
+                        <template x-for="(row, i) in rows" :key="row.uid">
+                            <div class="rounded-field bg-primary-50/40 border border-primary-100 p-3 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-primary-700">منطقة جديدة</span>
+                                    <button type="button" @click="rows.splice(i, 1)" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="إزالة"><x-icon.trash /></button>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
+                                        <select :name="`area_items[${row.uid}][area_id]`" class="{{ $inputCls }}">
+                                            <option value="">— اختر المنطقة —</option>
+                                            @foreach ($areas as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">عدد العقارات المتاحة</label>
+                                        <input type="number" min="0" :name="`area_items[${row.uid}][count]`" placeholder="اتركه فارغاً ليُحسب تلقائياً" class="{{ $inputCls }}">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1.5">صورة المنطقة</label>
+                                    <input type="file" :name="`area_items[${row.uid}][image]`" accept="image/jpeg,image/png,image/webp"
+                                           class="w-full text-sm text-gray-500 file:me-3 file:rounded-full file:border-0 file:bg-primary-50 file:text-primary-700 file:px-4 file:py-2 file:text-sm file:font-bold">
+                                    <p class="text-[11px] text-gray-400 mt-1">حد أقصى ٦ ميجابايت — تُصغَّر تلقائياً لارتفاع ١٠٨٠ بكسل.</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <button type="button" @click="rows.push({ uid: 'area-new' + (n++) })"
+                                class="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-gray-300 hover:border-primary-500 hover:text-primary-700 text-gray-500 font-bold px-4 py-2 text-sm transition">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                            إضافة منطقة
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -96,17 +164,93 @@
                 <h3 class="font-bold text-ink">فديوهات تعرفية (تعريف الخدمات)</h3>
                 <x-cms.pair label="العنوان" group="videos" field="title" :ar="$s('videos','ar','title')" :en="$s('videos','en','title')" />
                 <x-cms.pair label="الوصف" group="videos" field="description" :ar="$s('videos','ar','description')" :en="$s('videos','en','description')" />
-                <div class="space-y-3">
-                    @for ($i = 0; $i < $slots['videos']; $i++)
-                        @php $it = $videoItems[$i] ?? []; @endphp
-                        <div class="rounded-field bg-gray-50/60 p-3 space-y-2">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div><label class="block text-xs text-gray-500 mb-1">رابط يوتيوب</label><input name="video_items[{{ $i }}][youtube_url]" value="{{ $it['youtube_url'] ?? '' }}" dir="ltr" class="{{ $numCls }}"></div>
-                                <div><label class="block text-xs text-gray-500 mb-1">صورة @if (! empty($it['image']))<span class="text-success">✓</span>@endif</label><input type="file" name="video_items[{{ $i }}][image]" accept="image/*" class="{{ $fileCls }}"></div>
-                            </div>
-                            <x-cms.pair label="العنوان" group="video_items[{{ $i }}]" field="title" :ar="data_get($it, 'title.ar')" :en="data_get($it, 'title.en')" />
+                @php
+                    $picked = collect($s('videos', 'ar', 'items', []))->map(fn ($v) => (int) $v)->all();
+                    $pool = $videoPool->map(fn ($p) => [
+                        'id' => $p->id,
+                        'ref' => (string) $p->reference_code,
+                        'title' => (string) $p->title,
+                        'thumb' => $p->video_thumb,
+                    ])->values()->all();
+                    // اختيارات لم تعد صالحة (حُذف العقار أو رابط الفيديو)
+                    $stale = array_values(array_diff($picked, $videoPool->pluck('id')->all()));
+                @endphp
+
+                <div x-data="{
+                        pool: @js($pool),
+                        picked: @js(array_values(array_intersect($picked, $videoPool->pluck('id')->all()))),
+                        has(id) { return this.picked.includes(id) },
+                        toggle(id) { this.has(id) ? this.picked.splice(this.picked.indexOf(id), 1) : this.picked.push(id) },
+                        move(i, d) { const j = i + d; if (j < 0 || j >= this.picked.length) return;
+                                     [this.picked[i], this.picked[j]] = [this.picked[j], this.picked[i]] },
+                        card(id) { return this.pool.find(p => p.id === id) },
+                     }" class="space-y-4">
+
+                    {{-- حقول الإرسال: ترتيب الاختيار هو ترتيب العرض --}}
+                    <template x-for="(id, i) in picked" :key="id">
+                        <input type="hidden" name="videos[items][]" :value="id">
+                    </template>
+
+                    <div class="rounded-field bg-primary-50 border border-primary-100 text-primary-800 text-xs p-3 leading-relaxed">
+                        اختر الفيديوهات التي تظهر في الصفحة الرئيسية من <b>العقارات التي لها رابط يوتيوب</b>، ورتّبها بالأسهم.
+                        <b x-show="picked.length === 0">لم تختر شيئاً — سيعرض الموقع أحدث ٨ فيديوهات تلقائياً.</b>
+                        <span x-show="picked.length > 0"><b x-text="picked.length"></b> فيديو مختار.</span>
+                    </div>
+
+                    @if ($stale)
+                        <div class="rounded-field bg-warning-soft border border-warning/20 text-warning text-xs p-3">
+                            {{ count($stale) }} عقار كان مختاراً ولم يعد له فيديو (أو حُذف) — أُزيل تلقائياً من القائمة.
                         </div>
-                    @endfor
+                    @endif
+
+                    {{-- المختار: بالترتيب --}}
+                    <div x-show="picked.length" class="space-y-2">
+                        <p class="text-xs font-bold text-gray-500">الفيديوهات المختارة (بالترتيب)</p>
+                        <template x-for="(id, i) in picked" :key="'s' + id">
+                            <div class="flex items-center gap-3 rounded-field bg-white border border-gray-200 p-2">
+                                <span class="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-primary-900 text-white text-[11px] font-bold" x-text="i + 1"></span>
+                                <img :src="card(id)?.thumb" class="w-20 h-12 object-cover rounded shrink-0 bg-gray-100" alt="">
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-bold text-ink truncate" x-text="card(id)?.title"></span>
+                                    <span class="block text-[11px] text-gray-400" dir="ltr" x-text="card(id)?.ref"></span>
+                                </span>
+                                <button type="button" @click="move(i, -1)" :disabled="i === 0" class="grid place-items-center w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30" title="لأعلى">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+                                </button>
+                                <button type="button" @click="move(i, 1)" :disabled="i === picked.length - 1" class="grid place-items-center w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30" title="لأسفل">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+                                <button type="button" @click="toggle(id)" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10" title="إزالة"><x-icon.trash /></button>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- كل الفيديوهات المتاحة --}}
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 mb-2">كل العقارات التي لها فيديو ({{ $videoPool->count() }})</p>
+                        @if ($videoPool->isEmpty())
+                            <p class="rounded-field bg-gray-50 border border-gray-100 text-gray-500 text-xs p-3">
+                                لا يوجد عقار له رابط يوتيوب بعد. افتح أي عقار من «إدارة العقارات» وأضف رابط الفيديو.
+                            </p>
+                        @else
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                <template x-for="p in pool" :key="p.id">
+                                    <button type="button" @click="toggle(p.id)"
+                                            :class="has(p.id) ? 'border-primary-600 ring-2 ring-primary-500/25' : 'border-gray-200 hover:border-gray-300'"
+                                            class="relative rounded-field border-2 bg-white overflow-hidden text-start transition">
+                                        <img :src="p.thumb" class="w-full aspect-video object-cover bg-gray-100" alt="">
+                                        <span x-show="has(p.id)" class="absolute top-1.5 end-1.5 grid place-items-center w-6 h-6 rounded-full bg-primary-900 text-white">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                        </span>
+                                        <span class="block p-2">
+                                            <span class="block text-xs font-bold text-ink truncate" x-text="p.title"></span>
+                                            <span class="block text-[10px] text-gray-400" dir="ltr" x-text="p.ref"></span>
+                                        </span>
+                                    </button>
+                                </template>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
 
@@ -115,18 +259,42 @@
                 <h3 class="font-bold text-ink">لماذا علم العقارية</h3>
                 <x-cms.pair label="العنوان" group="why" field="title" :ar="$s('why_us','ar','title')" :en="$s('why_us','en','title')" />
                 <x-cms.pair label="الوصف" group="why" field="description" :ar="$s('why_us','ar','description')" :en="$s('why_us','en','description')" />
-                <div class="space-y-3">
-                    @for ($i = 0; $i < $slots['why']; $i++)
-                        @php $it = $whyItems[$i] ?? []; @endphp
-                        <div class="rounded-field bg-gray-50/60 p-3 space-y-2">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div><label class="block text-xs text-gray-500 mb-1">الرقم (مثال: 100%)</label><input name="why_items[{{ $i }}][number]" value="{{ $it['number'] ?? '' }}" dir="ltr" class="{{ $numCls }}"></div>
-                                <div><label class="block text-xs text-gray-500 mb-1">الأيقونة (اسم Phosphor)</label><input name="why_items[{{ $i }}][icon]" value="{{ $it['icon'] ?? '' }}" dir="ltr" placeholder="ShieldCheck" class="{{ $numCls }}"></div>
+                {{-- بنود ديناميكية بلا حد (التصميم كان أربعة ثابتة) --}}
+                <div x-data="{ rows: @js($whyRows), n: 0,
+                               add() { this.rows.push({ uid: 'w-new' + (this.n++), number: '', icon: '', title_ar: '', title_en: '', description_ar: '', description_en: '' }) } }"
+                     class="space-y-3">
+                    <template x-for="(row, i) in rows" :key="row.uid">
+                        <div class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-gray-500">ميزة <span x-text="i + 1"></span></span>
+                                <button type="button" @click="rows.splice(i, 1)" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف الميزة"><x-icon.trash /></button>
                             </div>
-                            <x-cms.pair label="العنوان" group="why_items[{{ $i }}]" field="title" :ar="data_get($it, 'title.ar')" :en="data_get($it, 'title.en')" />
-                            <x-cms.pair label="الوصف" group="why_items[{{ $i }}]" field="description" :ar="data_get($it, 'description.ar')" :en="data_get($it, 'description.en')" />
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-xs text-gray-500 mb-1">الرقم (مثال: 100%)</label>
+                                    <input :name="`why_items[${row.uid}][number]`" x-model="row.number" dir="ltr" class="{{ $inputCls }}"></div>
+                                <div><label class="block text-xs text-gray-500 mb-1">الأيقونة (اسم Phosphor)</label>
+                                    <input :name="`why_items[${row.uid}][icon]`" x-model="row.icon" dir="ltr" placeholder="ShieldCheck" class="{{ $inputCls }}"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block text-xs font-medium text-gray-500 mb-1">العنوان (عربي)</label>
+                                    <input :name="`why_items[${row.uid}][title_ar]`" x-model="row.title_ar" class="{{ $inputCls }}"></div>
+                                <div><label class="block text-xs font-medium text-gray-500 mb-1">العنوان (English)</label>
+                                    <input :name="`why_items[${row.uid}][title_en]`" x-model="row.title_en" dir="ltr" class="{{ $inputCls }}"></div>
+                            </div>
+                            {{-- التصميم كرّر «العنوان» مرّتين — الصحيح أن الثانية هي الوصف --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block text-xs font-medium text-gray-500 mb-1">الوصف (عربي)</label>
+                                    <textarea :name="`why_items[${row.uid}][description_ar]`" x-model="row.description_ar" rows="2" class="{{ $inputCls }}"></textarea></div>
+                                <div><label class="block text-xs font-medium text-gray-500 mb-1">الوصف (English)</label>
+                                    <textarea :name="`why_items[${row.uid}][description_en]`" x-model="row.description_en" rows="2" dir="ltr" class="{{ $inputCls }}"></textarea></div>
+                            </div>
                         </div>
-                    @endfor
+                    </template>
+
+                    <button type="button" @click="add()" class="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-gray-300 hover:border-primary-500 hover:text-primary-700 text-gray-500 font-bold px-4 py-2 text-sm transition">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        إضافة ميزة
+                    </button>
                 </div>
             </div>
 
@@ -144,15 +312,12 @@
                 <x-cms.pair label="الشارة" group="cta" field="badge" :ar="$s('cta','ar','badge')" :en="$s('cta','en','badge')" />
                 <x-cms.pair label="العنوان" group="cta" field="title" :ar="$s('cta','ar','title')" :en="$s('cta','en','title')" />
                 <x-cms.pair label="الوصف" group="cta" field="description" type="textarea" :ar="$s('cta','ar','description')" :en="$s('cta','en','description')" />
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">صورة الخلفية</label>
-                    @if ($s('cta', 'ar', 'image'))<img src="{{ Storage::url($s('cta', 'ar', 'image')) }}" class="w-28 h-16 object-cover rounded-field mb-2" alt="">@endif
-                    <input type="file" name="cta[image]" accept="image/*" class="{{ $fileCls }}">
-                </div>
+                <x-cms.dropzone label="صورة الخلفية" name="cta[image]"
+                                :media="$homeSecs['cta']->getFirstMedia('image')" />
             </div>
 
             <div class="flex items-center justify-end gap-3 sticky bottom-0 bg-gray-50 py-3">
-                <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ الصفحة الرئيسية</button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ الصفحة الرئيسية</button>
             </div>
         </form>
         @endcan
@@ -161,7 +326,7 @@
         <div class="mt-6" x-data="tstCrud()">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="font-bold text-ink">آراء العملاء ({{ $testimonials->count() }})</h3>
-                @can('website.edit')<button @click="startAdd()" class="rounded-field bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 text-sm">+ إضافة رأي</button>@endcan
+                @can('website.edit')<button @click="startAdd()" class="rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 text-sm">+ إضافة رأي</button>@endcan
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($testimonials as $tst)
@@ -170,8 +335,8 @@
                         <div class="flex items-start justify-between"><div><p class="font-semibold text-ink">{{ $tst->name }}</p><p class="text-xs text-gray-400">{{ $tst->title }}</p></div><span class="text-accent-500 text-xs">{{ str_repeat('★', $tst->rating ?? 0) }}</span></div>
                         <p class="text-sm text-gray-600 mt-2">{{ $tst->content }}</p>
                         @can('website.edit')<div class="flex gap-1 mt-3 pt-3 border-t border-gray-50">
-                            <button @click='startEdit(@json($td))' class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary-700 hover:bg-primary-50"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
-                            <form method="POST" action="{{ route('dashboard.website.testimonials.destroy', $tst) }}" onsubmit="return confirm('حذف الرأي؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-danger hover:bg-danger/10"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></form>
+                            <button @click='startEdit(@json($td))' class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+                            <form method="POST" action="{{ route('dashboard.website.testimonials.destroy', $tst) }}" onsubmit="return confirm('حذف الرأي؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition"><x-icon.trash /></button></form>
                         </div>@endcan
                     </div>
                 @empty
@@ -190,7 +355,7 @@
                         <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1.5">الرأي (عربي)</label><textarea name="content_ar" x-model="form.content_ar" rows="2" required class="{{ $numCls }}"></textarea></div>
                         <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1.5">الرأي (English)</label><textarea name="content_en" x-model="form.content_en" rows="2" dir="ltr" class="{{ $numCls }}"></textarea></div>
                     </div>
-                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60"><button type="button" @click="$dispatch('close-modal','tst-form')" class="rounded-field px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button><button class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60"><button type="button" @click="$dispatch('close-modal','tst-form')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button><button class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
                 </form>
             </x-modal>
         </div>
@@ -200,7 +365,7 @@
     <div x-show="tab === 'faq'" x-cloak x-data="faqCrud()">
         <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-ink">الأسئلة الشائعة ({{ $faqs->count() }})</h3>
-            @can('website.edit')<button @click="startAdd()" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">+ إضافة سؤال</button>@endcan
+            @can('website.edit')<button @click="startAdd()" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2 text-sm">+ إضافة سؤال</button>@endcan
         </div>
         <div class="space-y-2">
             @forelse ($faqs as $f)
@@ -208,8 +373,8 @@
                 <div class="rounded-card bg-white border border-gray-100 shadow-sm p-4 flex items-start justify-between gap-3">
                     <div class="min-w-0"><p class="font-semibold text-ink">{{ $f->question }}</p><p class="text-sm text-gray-500 mt-1">{{ $f->answer }}</p></div>
                     @can('website.edit')<div class="flex gap-1 shrink-0">
-                        <button @click='startEdit(@json($fd))' class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary-700 hover:bg-primary-50"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
-                        <form method="POST" action="{{ route('dashboard.website.faqs.destroy', $f) }}" onsubmit="return confirm('حذف السؤال؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-lg text-gray-400 hover:text-danger hover:bg-danger/10"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></form>
+                        <button @click='startEdit(@json($fd))' class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
+                        <form method="POST" action="{{ route('dashboard.website.faqs.destroy', $f) }}" onsubmit="return confirm('حذف السؤال؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition"><x-icon.trash /></button></form>
                     </div>@endcan
                 </div>
             @empty
@@ -225,7 +390,7 @@
                     <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الإجابة (عربي)</label><textarea name="answer_ar" x-model="form.answer_ar" rows="3" required class="{{ $numCls }}"></textarea></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الإجابة (English)</label><textarea name="answer_en" x-model="form.answer_en" rows="3" dir="ltr" class="{{ $numCls }}"></textarea></div>
                 </div>
-                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60"><button type="button" @click="$dispatch('close-modal','faq-form')" class="rounded-field px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button><button class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
+                <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60"><button type="button" @click="$dispatch('close-modal','faq-form')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button><button class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
             </form>
         </x-modal>
     </div>
@@ -245,7 +410,7 @@
                     <div><label class="block text-sm font-medium text-gray-700 mb-1.5">{{ $label }}</label><input name="social_{{ $k }}" value="{{ $settings['social_'.$k] }}" dir="ltr" placeholder="https://" class="{{ $numCls }}"></div>
                 @endforeach
             </div>
-            <div class="flex justify-end"><button class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
+            <div class="flex justify-end"><button class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ</button></div>
         </form>
         @endcan
     </div>
@@ -274,11 +439,8 @@
                 <h3 class="font-bold text-ink">قصتنا (بدأت رحلتنا)</h3>
                 <x-cms.pair label="العنوان" group="about_story" field="title" :ar="$ab('story','ar','title')" :en="$ab('story','en','title')" />
                 <x-cms.pair label="الوصف" group="about_story" field="description" type="textarea" :rows="4" :ar="$ab('story','ar','description')" :en="$ab('story','en','description')" />
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">الصورة التوضيحية</label>
-                    @if ($ab('story', 'ar', 'image'))<img src="{{ Storage::url($ab('story', 'ar', 'image')) }}" class="w-24 h-24 object-cover rounded-field mb-2" alt="">@endif
-                    <input type="file" name="about_story[image]" accept="image/*" class="{{ $fileCls }}">
-                </div>
+                <x-cms.dropzone label="الصورة التوضيحية" name="about_story[image]"
+                                :media="$aboutSecs['story']->getFirstMedia('image')" />
                 <div class="space-y-3 pt-2 border-t border-gray-50">
                     <p class="text-xs font-semibold text-gray-500">عدّادات (كارتان)</p>
                     @for ($i = 0; $i < 2; $i++)
@@ -319,7 +481,7 @@
             </div>
 
             <div class="flex items-center justify-end sticky bottom-0 bg-gray-50 py-3">
-                <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ صفحة «من نحن»</button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ صفحة «من نحن»</button>
             </div>
         </form>
         @endcan
@@ -344,7 +506,7 @@
                 @endforeach
             </div>
             <div class="flex items-center justify-end sticky bottom-0 bg-gray-50 py-3 mt-2">
-                <button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ إعدادات SEO</button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ إعدادات SEO</button>
             </div>
         </form>
         @endcan
@@ -366,7 +528,7 @@
                     <label class="block text-xs font-medium text-gray-500 mb-1">المحتوى (English)</label>
                     <textarea name="body_en" rows="12" dir="ltr" class="{{ $numCls }}">{{ $legal['data']['en'] }}</textarea>
                 </div>
-                <div class="flex justify-end"><button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ {{ $legal['label'] }}</button></div>
+                <div class="flex justify-end"><button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ {{ $legal['label'] }}</button></div>
             </form>
             @endcan
         </div>
@@ -382,7 +544,7 @@
                 <p class="text-xs text-gray-400 -mt-2">قائمة العقارات نفسها تظهر تلقائياً من قاعدة البيانات — هنا تحرّر رأس الصفحة فقط.</p>
                 <x-cms.pair label="العنوان الرئيسي" group="header" field="title" :ar="data_get($lst['data'], 'ar.title')" :en="data_get($lst['data'], 'en.title')" />
                 <x-cms.pair label="الوصف" group="header" field="description" type="textarea" :ar="data_get($lst['data'], 'ar.description')" :en="data_get($lst['data'], 'en.description')" />
-                <div class="flex justify-end"><button type="submit" class="rounded-field bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ رأس الصفحة</button></div>
+                <div class="flex justify-end"><button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-6 py-2.5 text-sm">حفظ رأس الصفحة</button></div>
             </form>
             @endcan
         </div>

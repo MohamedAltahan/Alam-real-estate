@@ -44,9 +44,8 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.create'), 403);
 
         $data = $this->validated($request);
-        $data['cover_image'] = $this->uploadCover($request);
         $property = $this->properties->create($data, $request->input('amenities', []));
-        $this->uploadGallery($request, $property);
+        $this->syncImages($request, $property);
 
         return redirect()
             ->route('dashboard.properties.show', $property)
@@ -55,7 +54,7 @@ class PropertyController extends Controller
 
     public function show(Property $property): View
     {
-        $property->load(['area', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'images', 'reviews.createdBy']);
+        $property->load(['area', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy']);
 
         return view('dashboard.properties.show', ['property' => $property]);
     }
@@ -63,7 +62,7 @@ class PropertyController extends Controller
     public function edit(Property $property): View
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
-        $property->load('amenities', 'images');
+        $property->load('amenities', 'media');
 
         return view('dashboard.properties.form', $this->formData($property));
     }
@@ -73,10 +72,8 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.edit'), 403);
 
         $data = $this->validated($request);
-        if ($cover = $this->uploadCover($request)) {
-            $data['cover_image'] = $cover;
-        }
         $this->properties->update($property, $data, $request->input('amenities', []));
+        $this->syncImages($request, $property);
         $this->uploadGallery($request, $property);
 
         return redirect()
@@ -149,8 +146,8 @@ class PropertyController extends Controller
             'building' => ['nullable', 'string', 'max:120'],
             'video_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['nullable', 'boolean'],
-            'cover_image' => ['nullable', 'image', 'max:4096'],
-            'gallery.*' => ['nullable', 'image', 'max:4096'],
+            'cover' => Property::imageRules(),
+            'gallery.*' => Property::imageRules(),
             'amenities' => ['array'],
             'amenities.*' => ['exists:amenities,id'],
         ], [], [
@@ -183,20 +180,23 @@ class PropertyController extends Controller
         ];
     }
 
-    private function uploadCover(Request $request): ?string
+    /** الغلاف والمعرض عبر media library (٦ ميجا · ارتفاع ١٠٨٠) */
+    private function syncImages(Request $request, Property $property): void
     {
-        return $request->hasFile('cover_image')
-            ? $request->file('cover_image')->store('properties', 'public')
-            : null;
-    }
+        foreach ((array) $request->input('cover_removed', []) as $id) {
+            $property->media()->where('id', $id)->first()?->delete();
+        }
+        foreach ((array) $request->input('gallery_removed', []) as $id) {
+            $property->media()->where('id', $id)->first()?->delete();
+        }
 
-    private function uploadGallery(Request $request, Property $property): void
-    {
-        foreach ($request->file('gallery', []) as $file) {
-            $property->images()->create([
-                'path' => $file->store('properties/gallery', 'public'),
-                'sort_order' => $property->images()->count(),
-            ]);
+        if ($request->hasFile('cover')) {
+            $property->clearMediaCollection('cover');
+            $property->addMedia($request->file('cover'))->toMediaCollection('cover');
+        }
+
+        foreach ((array) $request->file('gallery', []) as $file) {
+            $property->addMedia($file)->toMediaCollection('gallery');
         }
     }
 }

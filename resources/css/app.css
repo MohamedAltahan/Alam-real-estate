@@ -17,18 +17,24 @@
     --font-display: 'Satoshi', 'IBM Plex Sans Arabic', ui-sans-serif, sans-serif;
     --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
 
-    /* ===== Primary — الكحلي (أساسه Secondary/900 = #111033) ===== */
-    --color-primary-50: #f3f2fc;
-    --color-primary-100: #e5e4f7;
-    --color-primary-200: #c4c1ec;
-    --color-primary-300: #9995d9;
-    --color-primary-400: #6b67c0;
-    --color-primary-500: #4642a0;
-    --color-primary-600: #343180;
-    --color-primary-700: #262463;
-    --color-primary-800: #1b1a4a;
-    --color-primary-900: #111033;   /* ← الكحلي الرسمي */
-    --color-primary-950: #0b0a24;
+    /* ===== Primary — الأزرق الرسمي (سكيل Primary من Figma حرفياً) =====
+    | كان هذا السكيل سابقاً بنفسجياً مبنياً حول Secondary/900، وهو ليس Primary.
+    | Figma يفصل بينهما: Primary = الأزرق أدناه · Secondary/900 = #111033 (الكحلي الداكن).
+    */
+    --color-primary-50: #eff3fd;
+    --color-primary-100: #dfe7fa;
+    --color-primary-200: #c7d5f6;
+    --color-primary-300: #a0bbf0;
+    --color-primary-400: #7397e7;
+    --color-primary-500: #5274df;
+    --color-primary-600: #3d57d3;
+    --color-primary-700: #3445c1;
+    --color-primary-800: #303a9d;
+    --color-primary-900: #2b357d;   /* ← Primary/900 الرسمي */
+    --color-primary-950: #1e2559;   /* امتداد أعمق للتدرّجات والطبقات */
+
+    /* ===== Secondary — الكحلي الداكن (Secondary/900 من Figma) ===== */
+    --color-secondary-900: #111033;
 
     /* ===== Accent — الذهبي (أساسه Secondary/Gold/500 = #FBD300) ===== */
     --color-accent-50: #fffce5;
@@ -65,12 +71,63 @@
     --color-info-soft: #e9ebf9;
 
     /* ===== خلفيات النظام ===== */
-    --color-sidebar: #111033;   /* القائمة الجانبية = الكحلي */
-    --color-ink: #1d2026;       /* لون النص الأساسي = Gray/900 */
+    --color-sidebar: #111033;          /* القائمة الجانبية = الكحلي */
+    --color-sidebar-active: #2d2a33;   /* حبّة العنصر النشط (رمادي دافئ من Figma) */
+    --color-sidebar-ring: #c49a19;     /* حدّ ذهبي على بداية العنصر النشط */
+    --color-ink: #1d2026;              /* لون النص الأساسي = Gray/900 */
 
     /* ===== أنصاف أقطار ===== */
     --radius-card: 0.875rem;
     --radius-field: 0.625rem;
+}
+
+/*
+| أي نص بحجم text-sm (14px) يكون Semibold افتراضياً — أزرار ونصوص عادية.
+| موضوع في طبقة components حتى تتفوّق عليه أدوات font-* الصريحة (مثل font-bold).
+*/
+@layer components {
+    .text-sm,
+    .text-xs {
+        font-weight: 600;
+    }
+
+    /* منطقة النتائج أثناء تحديث الفلترة الحيّة */
+    [data-results][data-loading] {
+        opacity: 0.55;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+
+    /*
+    | تأثير الزجاج فوق الهيرو — وصفة واحدة يشترك فيها النافبار وصندوق البحث
+    | وحقول الفلاتر، حتى تبقى الثلاثة متطابقة تماماً بدل تكرار الأدوات يدوياً.
+    | في طبقة components ليتمكّن أي utility لاحق (مثل hover:bg-*) من تجاوزها.
+    */
+    .glass {
+        /* عبر @apply حتى يتولّى Tailwind بادئات backdrop-filter كما في السابق */
+        @apply bg-white/10 border border-white/15 backdrop-blur-xl;
+
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.05);
+    }
+
+}
+
+/*
+| تدرّجا الهوية من Figma. مُعرَّفان كـ @utility (لا @layer components) حتى تعمل
+| معهما الحالات مثل hover:navy-gradient.
+| ملاحظة: كلاهما يضبط background-image، فأي hover:bg-* لن يظهر فوقه —
+| استخدم تدرّجاً آخر أو hover:brightness-* بدلاً منه.
+*/
+
+/* الذهبي: #C49A19 → #DDB834 — كل الأزرار الذهبية وخلفيات أيقونات "لماذا علم العقارية" */
+@utility gold-gradient {
+    background-image: linear-gradient(135deg, #c49a19 0%, #ddb834 100%);
+}
+
+/* الكحلي: #0A1046 93% ← #1A2060 82% (عند 45%) ← #080C37 90% بزاوية 141deg
+   — كارت "عروض عقارية مميزة"، النافبار عند التمرير، وكل الأزرار الزرقاء */
+@utility navy-gradient {
+    background-image: linear-gradient(141deg, #0a1046ed 0%, #1a2060d1 45%, #080c37e6 100%);
 }
 
 /* ===== أساسيات RTL ===== */
@@ -91,5 +148,61 @@
 
     [x-cloak] {
         display: none !important;
+    }
+
+    /*
+    | ===== صندوق الاختيار الموحّد =====
+    | شكل واحد لكل مربّعات الاختيار في المشروع (لوحة التحكم والموقع، الحالي والقادم):
+    | دائرة 18px بحدّ رمادي، وعند التحديد تمتلئ بالكحلي وتظهر علامة صح بيضاء — كما في Figma.
+    | موضوع في طبقة base، فأي utility صريح على العنصر (w-*، rounded-*، bg-*) يتفوّق عليه
+    | لو احتجت شكلاً مختلفاً في حالة خاصة.
+    */
+    input[type='checkbox'] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex-shrink: 0;
+        display: inline-block;
+        vertical-align: middle;
+        width: 18px;
+        height: 18px;
+        border-radius: 9999px;
+        border: 2px solid var(--color-gray-200);
+        background-color: #fff;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 11px 11px;
+        cursor: pointer;
+        transition:
+            background-color 0.15s ease,
+            border-color 0.15s ease;
+        print-color-adjust: exact;
+    }
+
+    input[type='checkbox']:hover:not(:disabled) {
+        border-color: var(--color-gray-300);
+    }
+
+    input[type='checkbox']:checked,
+    input[type='checkbox']:indeterminate {
+        background-color: var(--color-primary-900);
+        border-color: var(--color-primary-900);
+    }
+
+    input[type='checkbox']:checked {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m5 12.5 4.5 4.5L19 7'/%3e%3c/svg%3e");
+    }
+
+    input[type='checkbox']:indeterminate {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round'%3e%3cpath d='M6 12h12'/%3e%3c/svg%3e");
+    }
+
+    input[type='checkbox']:focus-visible {
+        outline: 2px solid var(--color-primary-500);
+        outline-offset: 2px;
+    }
+
+    input[type='checkbox']:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
     }
 }

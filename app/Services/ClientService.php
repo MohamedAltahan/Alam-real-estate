@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientInteraction;
 use App\Models\ClientStage;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,11 +14,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ClientService
 {
-    /** قائمة العملاء مع بحث وفلاتر و pagination */
-    public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    /** استعلام العملاء بعد تطبيق الفلاتر — يخدم القائمة وعدّادات المراحل معاً */
+    private function filtered(array $filters = []): Builder
     {
         return Client::query()
-            ->with(['stage', 'type', 'agent', 'area'])
             ->when($filters['search'] ?? null, function ($q, $search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -27,10 +27,37 @@ class ClientService
             })
             ->when($filters['stage_id'] ?? null, fn ($q, $v) => $q->where('stage_id', $v))
             ->when($filters['agent_id'] ?? null, fn ($q, $v) => $q->where('agent_id', $v))
-            ->when($filters['type_id'] ?? null, fn ($q, $v) => $q->where('type_id', $v))
+            ->when($filters['type_id'] ?? null, fn ($q, $v) => $q->where('type_id', $v));
+    }
+
+    /** قائمة العملاء مع بحث وفلاتر و pagination */
+    public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->filtered($filters)
+            ->with(['stage', 'type', 'agent', 'area'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * عدد العملاء في كل مرحلة (لأزرار الفلتر) — بنفس الفلاتر الأخرى المفعّلة
+     * لكن بدون فلتر المرحلة نفسه، حتى تظل كل الأزرار تعرض أعدادها.
+     *
+     * @return array{total:int, stages:array<int,int>}
+     */
+    public function stageCounts(array $filters = []): array
+    {
+        $base = $this->filtered(array_diff_key($filters, ['stage_id' => null]));
+
+        return [
+            'total' => (clone $base)->count(),
+            'stages' => (clone $base)
+                ->selectRaw('stage_id, COUNT(*) as aggregate')
+                ->groupBy('stage_id')
+                ->pluck('aggregate', 'stage_id')
+                ->all(),
+        ];
     }
 
     /** تفاصيل عميل مع كل ما يخصّه (لشاشة العميل الواحدة) */

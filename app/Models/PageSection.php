@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Concerns\InteractsWithWebImages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
 
-class PageSection extends Model
+class PageSection extends Model implements HasMedia
 {
     use HasTranslations;
+    use InteractsWithWebImages;
 
     protected $fillable = ['page_id', 'key', 'sort_order', 'is_visible', 'content'];
 

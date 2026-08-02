@@ -32,6 +32,30 @@ class ContactRequest extends Model
         return $this->belongsTo(User::class, 'handled_by');
     }
 
+    /** العميل الذي أُنشئ من هذا الطلب (بعد التحويل إلى الـ CRM) */
+    public function convertedClient(): BelongsTo
+    {
+        return $this->belongsTo(Client::class, 'converted_client_id');
+    }
+
+    public function isConverted(): bool
+    {
+        return $this->converted_client_id !== null;
+    }
+
+    /**
+     * تعليم الطلب كمتواصَل معه.
+     * ملاحظة: status / is_read / handled_by ليست في $fillable عمداً (حماية من
+     * mass-assignment عبر فورم الموقع)، لذلك تُضبط هنا مباشرة لا عبر update().
+     */
+    public function markContacted(?int $userId = null): void
+    {
+        $this->status = 'contacted';
+        $this->is_read = true;
+        $this->handled_by = $userId ?? $this->handled_by;
+        $this->save();
+    }
+
     public function scopeUnread($query)
     {
         return $query->where('is_read', false);
