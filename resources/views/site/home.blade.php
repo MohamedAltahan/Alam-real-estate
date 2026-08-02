@@ -162,14 +162,7 @@
                 <h2 class="text-2xl sm:text-3xl font-bold text-ink mb-1">{{ $it($areasC, 'title') ?: $t('أفضل المناطق', 'Best Areas') }}</h2>
                 <p class="text-gray-500 text-sm">{{ $it($areasC, 'description') }}</p>
             </div>
-            <div class="hidden sm:flex items-center gap-2 shrink-0">
-                <button type="button" @click="nav(-1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="prev">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
-                </button>
-                <button type="button" @click="nav(1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="next">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-            </div>
+            <x-site.carousel-nav class="hidden sm:flex" />
         </div>
 
         {{-- شريط المناطق --}}
@@ -197,6 +190,9 @@
                 @endif
             @endforeach
         </div>
+
+        {{-- على الموبايل: الأسهم أسفل الشريط لأن الترويسة لا تتّسع لها --}}
+        <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
     </section>
 @endif
 
@@ -210,14 +206,7 @@
                 <h2 class="text-2xl sm:text-3xl font-bold text-ink mb-1">{{ $it($videos, 'title') ?: $t('تعريف الخدمات المقدمة', 'Our Services') }}</h2>
                 <p class="text-gray-500 text-sm">{{ $it($videos, 'description') ?: $t('تعرّف على خدماتنا عبر مقاطع فيديو تعريفية مُصمّمة لتُوصّل كل المعلومات بسهولة ووضوح.', 'Get to know our services through short, clear intro videos.') }}</p>
             </div>
-            <div class="hidden sm:flex items-center gap-2 shrink-0">
-                <button type="button" @click="nav(-1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="prev">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
-                </button>
-                <button type="button" @click="nav(1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="next">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-            </div>
+            <x-site.carousel-nav class="hidden sm:flex" />
         </div>
 
         {{-- شريط الفيديوهات --}}
@@ -257,6 +246,9 @@
             @endforeach
         </div>
 
+        {{-- على الموبايل: الأسهم أسفل الشريط --}}
+        <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
+
         {{-- زر المزيد --}}
         <div class="text-center mt-9">
             <a href="{{ route('site.properties') }}" class="inline-flex items-center gap-2 rounded-full border-2 border-primary-900 hover:navy-gradient hover:text-white text-primary-900 font-semibold px-7 py-3 text-sm transition">
@@ -295,14 +287,7 @@
                 <p class="text-gray-500 text-sm max-w-2xl mx-auto">{{ $it($why, 'description') }}</p>
 
                 {{-- من lg فقط: دون ذلك يضيق العرض فتتداخل الأسهم مع الوصف --}}
-                <div class="hidden lg:flex items-center gap-2 absolute end-0 top-1/2 -translate-y-1/2">
-                    <button type="button" @click="nav(-1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-500 transition" aria-label="prev">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
-                    <button type="button" @click="nav(1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-500 transition" aria-label="next">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                </div>
+                <x-site.carousel-nav class="hidden lg:flex absolute end-0 top-1/2 -translate-y-1/2" />
             </div>
 
             <div x-ref="track" class="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-1 text-start [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -317,6 +302,9 @@
                     </div>
                 @endforeach
             </div>
+
+            {{-- دون lg: الأسهم أسفل الشريط بدل جانب الترويسة --}}
+            <x-site.carousel-nav class="flex lg:hidden justify-center mt-5" />
         </div>
     </section>
 @endif
@@ -331,14 +319,7 @@
                     <span class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('آراء عملائنا', 'Testimonials') }}</span>
                     <h2 class="text-2xl sm:text-3xl font-bold text-ink">{{ $it($tstH, 'title') ?: $t('ماذا يقولون عنا', 'What they say') }}</h2>
                 </div>
-                <div class="hidden sm:flex items-center gap-2 shrink-0">
-                    <button type="button" @click="nav(-1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="prev">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
-                    <button type="button" @click="nav(1)" :disabled="! canScroll" :class="canScroll ? 'hover:bg-gray-50 hover:text-primary-800' : 'opacity-40 cursor-not-allowed'" class="grid place-items-center w-9 h-9 rounded-full border border-gray-200 text-gray-500 transition" aria-label="next">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                </div>
+                <x-site.carousel-nav class="hidden sm:flex" />
             </div>
 
             <div x-ref="track" class="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -360,6 +341,9 @@
                     </div>
                 @endforeach
             </div>
+
+            {{-- على الموبايل: الأسهم أسفل الشريط --}}
+            <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
         </div>
     </section>
 @endif
