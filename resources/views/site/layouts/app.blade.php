@@ -172,9 +172,14 @@
     </footer>
 
     {{-- ===== أزرار عائمة ===== --}}
-    <div class="fixed bottom-5 end-5 z-40 flex flex-col gap-2">
+    <div class="fixed bottom-5 right-5 z-40 flex flex-col gap-2">
         @if ($wa)
-            <a href="https://wa.me/{{ $wa }}" target="_blank" class="grid place-items-center w-12 h-12 rounded-full bg-success text-white shadow-lg hover:scale-105 transition" aria-label="WhatsApp">
+            @php
+                $floatingWaText = request()->routeIs('site.property') && isset($property)
+                    ? $t('مرحباً، أود الاستفسار عن العقار رقم '.$property->reference_code, 'Hello, I would like to ask about property '.$property->reference_code)
+                    : null;
+            @endphp
+            <a href="https://wa.me/{{ $wa }}{{ $floatingWaText ? '?text='.urlencode($floatingWaText) : '' }}" target="_blank" class="grid place-items-center w-12 h-12 rounded-full bg-success text-white shadow-lg hover:scale-105 transition" aria-label="WhatsApp">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.2l-.8 1c-.2.2-.3.2-.6.1-1.5-.7-2.5-1.3-3.4-3-.3-.4.3-.4.7-1.3.1-.2 0-.4 0-.5l-.9-2.1c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-.7 3.3.5 1.6 1.6 3 3.1 4 2.2 1.5 3.8 1.6 4.6 1.5.6-.1 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.1-.2-.1-.5-.2z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.2-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20z"/></svg>
             </a>
         @endif

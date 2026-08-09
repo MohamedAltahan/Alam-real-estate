@@ -3,10 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Concerns\InteractsWithWebImages;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Concerns\InteractsWithWebImages;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\MediaLibrary\HasMedia;
@@ -15,8 +16,9 @@ use Spatie\Translatable\HasTranslations;
 
 class User extends Authenticatable implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasTranslations;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, HasRoles, HasTranslations, Notifiable;
+
     use InteractsWithWebImages;
 
     protected $fillable = [
@@ -29,6 +31,20 @@ class User extends Authenticatable implements HasMedia
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->imageUrl('avatar');
+    }
+
+    public function displayPreference(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->preferences, 'display.'.$key, $default);
+    }
+
+    public function currencySymbol(): string
+    {
+        return match ($this->displayPreference('currency', 'KWD')) {
+            'SAR' => 'ر.س',
+            'USD' => '$',
+            default => 'د.ك',
+        };
     }
 
     /** حقول قابلة للترجمة (spatie translatable) */

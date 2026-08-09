@@ -87,7 +87,7 @@ const builders = {
         data: {
             labels: payload.labels,
             datasets: [{
-                label: 'الإيراد (ألف د.ك)',
+                label: `الإيراد (ألف ${payload.currency ?? 'د.ك'})`,
                 data: payload.data,
                 borderColor: GOLD,
                 borderWidth: 2.5,

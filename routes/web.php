@@ -5,6 +5,7 @@ use App\Http\Controllers\Dashboard\ContactRequestController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\MarketingSourceController;
 use App\Http\Controllers\Dashboard\PermissionMatrixController;
+use App\Http\Controllers\Dashboard\ProfileSettingsController;
 use App\Http\Controllers\Dashboard\PropertyController;
 use App\Http\Controllers\Dashboard\PropertyOwnerController;
 use App\Http\Controllers\Dashboard\RoleController;
@@ -34,12 +35,24 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('dashboard')->name('dashboard.')->group(function () {
 
+        // ===== إعدادات الحساب الشخصي =====
+        Route::get('profile', [ProfileSettingsController::class, 'edit'])->name('profile.edit');
+        Route::put('profile', [ProfileSettingsController::class, 'updateProfile'])->name('profile.update');
+        Route::put('profile/avatar', [ProfileSettingsController::class, 'updateAvatar'])->name('profile.avatar');
+        Route::put('profile/password', [ProfileSettingsController::class, 'updatePassword'])->name('profile.password');
+        Route::put('profile/notifications', [ProfileSettingsController::class, 'updateNotifications'])->name('profile.notifications');
+        Route::put('profile/preferences', [ProfileSettingsController::class, 'updatePreferences'])->name('profile.preferences');
+
         // تعليم كل الإشعارات كمقروءة (من القائمة المنسدلة في الشريط العلوي)
         Route::post('notifications/read-all', function () {
             ContactRequest::unread()->update(['is_read' => true]);
 
             return back();
-        })->name('notifications.read-all');
+        })->middleware([
+            'can:notifications.view',
+            'can:notifications.edit',
+            'can:contact_requests.view',
+        ])->name('notifications.read-all');
 
         // ===== إدارة العملاء =====
         Route::middleware('can:clients.view')->group(function () {
@@ -57,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:property_owners.view')->group(function () {
             Route::get('owners', [PropertyOwnerController::class, 'index'])->name('owners.index');
             Route::post('owners', [PropertyOwnerController::class, 'store'])->name('owners.store');
+            Route::get('owners/{owner}', [PropertyOwnerController::class, 'show'])->name('owners.show');
             Route::put('owners/{owner}', [PropertyOwnerController::class, 'update'])->name('owners.update');
             Route::delete('owners/{owner}', [PropertyOwnerController::class, 'destroy'])->name('owners.destroy');
         });

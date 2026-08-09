@@ -1,0 +1,176 @@
+<?php
+
+namespace Tests\Feature\Dashboard;
+
+use App\Models\Client;
+use App\Models\ClientStage;
+use App\Models\Property;
+use App\Models\PropertyOwner;
+use App\Models\PropertyStatus;
+use App\Models\UnitType;
+use App\Models\User;
+use App\Services\ClientService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+
+class ClientOwnerWorkflowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_new_client_fields_and_recording_employee_are_saved(): void
+    {
+        $user = User::factory()->create();
+        $this->grant($user, ['clients.view', 'clients.create']);
+        $stage = ClientStage::where('key', 'new')->firstOrFail();
+        $unitType = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment']]);
+
+        $this->actingAs($user)->post(route('dashboard.clients.store'), [
+            'name' => 'عميل الاختبار',
+            'phone' => '99999999',
+            'desired_unit_type_id' => $unitType->id,
+            'social_status' => 'family',
+            'nationality' => 'كويتي',
+            'household_size' => 5,
+            'workplace' => 'شركة الاختبار',
+            'in_person' => 1,
+            'visit_times' => 'بعد الخامسة مساءً',
+            'preferred_contact' => 'whatsapp',
+            'property_address' => 'السالمية، قطعة 1، شارع 2',
+        ])->assertSessionHasNoErrors();
+
+        $client = Client::where('phone', '99999999')->firstOrFail();
+        $this->assertSame($stage->id, $client->stage_id);
+        $this->assertSame($user->id, $client->recorded_by);
+        $this->assertSame($unitType->id, $client->desired_unit_type_id);
+        $this->assertSame('family', $client->social_status);
+        $this->assertSame(5, $client->household_size);
+        $this->assertTrue($client->in_person);
+        $this->assertStringContainsString('السالمية', $client->property_address);
+    }
+
+    public function test_property_cannot_be_added_twice_to_the_same_client(): void
+    {
+        [$available] = $this->propertyStatuses();
+        $client = Client::create(['name' => 'عميل أول', 'phone' => '111']);
+        $property = Property::create([
+            'reference_code' => 'ALM-901', 'title' => ['ar' => 'عقار اختبار', 'en' => 'Test'],
+            'status_id' => $available->id,
+        ]);
+        $service = app(ClientService::class);
+
+        $service->attachProperty($client, $property->id, 'interested');
+
+        try {
+            $service->attachProperty($client, $property->id, 'viewed');
+            $this->fail('Expected duplicate property validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertSame('هذا العقار مضاف بالفعل لهذا العميل.', $exception->errors()['property_id'][0]);
+        }
+
+        $this->assertDatabaseCount('client_property', 1);
+    }
+
+    public function test_reserving_property_updates_status_and_blocks_another_client(): void
+    {
+        [$available, $reserved] = $this->propertyStatuses();
+        $first = Client::create(['name' => 'عميل أول', 'phone' => '111']);
+        $second = Client::create(['name' => 'عميل ثان', 'phone' => '222']);
+        $property = Property::create([
+            'reference_code' => 'ALM-902', 'title' => ['ar' => 'عقار حجز', 'en' => 'Reserved Test'],
+            'status_id' => $available->id,
+        ]);
+        $service = app(ClientService::class);
+
+        $service->attachProperty($first, $property->id, 'reserved');
+        $this->assertSame($reserved->id, $property->refresh()->status_id);
+
+        try {
+            $service->attachProperty($second, $property->id, 'interested');
+            $this->fail('Expected reserved property validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('محجوز', $exception->errors()['property_id'][0]);
+        }
+
+        $service->detachProperty($first, $property->id);
+        $this->assertSame($available->id, $property->refresh()->status_id);
+    }
+
+    public function test_owner_contract_can_be_uploaded_and_owner_profile_opened(): void
+    {
+        $user = User::factory()->create();
+        $this->grant($user, ['property_owners.view', 'property_owners.create']);
+
+        $this->actingAs($user)->post(route('dashboard.owners.store'), [
+            'name' => 'مالك الاختبار',
+            'phone' => '33333333',
+            'status' => 'active',
+            'contract' => UploadedFile::fake()->create('contract.pdf', 100, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+
+        $owner = PropertyOwner::where('phone', '33333333')->firstOrFail();
+        $this->assertCount(1, $owner->getMedia('contract'));
+        $this->actingAs($user)->get(route('dashboard.owners.show', $owner))
+            ->assertOk()
+            ->assertSee('حالة العقد')
+            ->assertSee('contract.pdf');
+    }
+
+    public function test_client_pages_render_notes_and_requested_unit_type(): void
+    {
+        $user = User::factory()->create();
+        $this->grant($user, ['clients.view']);
+        $unitType = UnitType::create(['name' => ['ar' => 'فيلا', 'en' => 'Villa']]);
+        $client = Client::create([
+            'name' => 'عميل العرض', 'phone' => '44444444', 'notes' => 'ملاحظة مهمة',
+            'desired_unit_type_id' => $unitType->id, 'recorded_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)->get(route('dashboard.clients.index'))
+            ->assertOk()
+            ->assertSee('الملاحظات')
+            ->assertSee('ملاحظة مهمة')
+            ->assertDontSee('كل الوكلاء');
+
+        $this->actingAs($user)->get(route('dashboard.clients.show', $client))
+            ->assertOk()
+            ->assertSee('نوع الوحدة المطلوبة')
+            ->assertSee('فيلا')
+            ->assertSee('سجّل البيانات');
+    }
+
+    public function test_property_whatsapp_message_contains_reference_code(): void
+    {
+        [$available] = $this->propertyStatuses();
+        $manager = User::factory()->create(['phone' => '+965 9999 9999']);
+        $property = Property::create([
+            'reference_code' => 'ALM-903',
+            'title' => ['ar' => 'عقار واتساب', 'en' => 'WhatsApp Property'],
+            'status_id' => $available->id,
+            'agent_id' => $manager->id,
+        ]);
+
+        $this->get(route('site.property', $property))
+            ->assertOk()
+            ->assertSee(urlencode('مرحباً، أود الاستفسار عن العقار رقم ALM-903'), false);
+    }
+
+    /** @return array{PropertyStatus, PropertyStatus} */
+    private function propertyStatuses(): array
+    {
+        $available = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
+        $reserved = PropertyStatus::create(['name' => ['ar' => 'محجوز', 'en' => 'Reserved'], 'key' => 'reserved']);
+        PropertyStatus::create(['name' => ['ar' => 'مباع', 'en' => 'Sold'], 'key' => 'sold']);
+
+        return [$available, $reserved];
+    }
+
+    private function grant(User $user, array $permissions): void
+    {
+        foreach ($permissions as $name) {
+            $user->givePermissionTo(Permission::create(['name' => $name, 'guard_name' => 'web']));
+        }
+    }
+}

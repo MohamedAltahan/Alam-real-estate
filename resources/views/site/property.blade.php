@@ -31,6 +31,10 @@
         'Elevator' => '<rect x="3" y="2" width="18" height="20" rx="2"/><path d="M12 2v20M7 9.5 8.5 7 10 9.5M14 14.5 15.5 17 17 14.5"/>',
     ];
     $fallbackIcon = '<path d="M20 6 9 17l-5-5"/>';
+    $whatsappText = $t(
+        'مرحباً، أود الاستفسار عن العقار رقم '.$p->reference_code,
+        'Hello, I would like to ask about property '.$p->reference_code,
+    );
 @endphp
 
 @section('title', $p->title)
@@ -121,11 +125,11 @@
             @endif
         </div>
 
-        {{-- كارت الوكيل --}}
+        {{-- كارت مسؤول العقار --}}
         @if ($agent)
             <aside>
                 <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 sticky top-24">
-                    <h3 class="font-bold text-ink mb-5">{{ $t('الوكيل المسؤول', 'Listing Agent') }}</h3>
+                    <h3 class="font-bold text-ink mb-5">{{ $t('مسؤول العقار', 'Property Manager') }}</h3>
 
                     {{-- الصورة يمين + الاسم + التقييم شمال --}}
                     <div class="flex items-center justify-between gap-3 mb-5">
@@ -165,7 +169,7 @@
 
                     @if ($agent->phone)
                         <div class="flex items-center gap-2 mb-2">
-                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $agent->phone) }}" target="_blank" rel="noopener"
+                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $agent->phone) }}?text={{ urlencode($whatsappText) }}" target="_blank" rel="noopener"
                                class="flex-1 inline-flex items-center justify-center gap-2 rounded-full navy-gradient hover:brightness-125 text-white font-semibold py-3 text-sm transition">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
                                 {{ $t('تواصل عبر واتساب', 'WhatsApp') }}
@@ -177,7 +181,7 @@
                             </a>
                         </div>
                     @endif
-                    <a href="{{ route('site.agent', $agent) }}" class="flex items-center justify-center w-full rounded-full border border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 text-sm transition">{{ $t('عرض ملف الوكيل كاملاً', 'Full profile') }}</a>
+                    <a href="{{ route('site.agent', $agent) }}" class="flex items-center justify-center w-full rounded-full border border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 text-sm transition">{{ $t('عرض ملف مسؤول العقار كاملاً', 'Full property manager profile') }}</a>
                 </div>
             </aside>
         @endif

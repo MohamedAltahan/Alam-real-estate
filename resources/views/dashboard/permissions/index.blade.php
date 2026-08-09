@@ -23,6 +23,7 @@
 
 <form method="POST" action="{{ route('dashboard.permissions.update') }}">
     @csrf
+    @method('PUT')
     <input type="hidden" name="role_id" value="{{ $current?->id }}">
 
     <x-flash />
@@ -87,8 +88,9 @@
                     <tbody>
                         @foreach ($modules as $mkey => $mlabel)
                             @php
+                                $moduleActions = \App\Http\Controllers\Dashboard\PermissionMatrixController::actionsFor($mkey);
                                 // الحالة الابتدائية للصف حتى لا تومض شارة «تحديد/إلغاء» قبل إقلاع Alpine
-                                $rowAll = collect($actions)->keys()->every(fn ($a) => $assigned->has("{$mkey}.{$a}"));
+                                $rowAll = collect($moduleActions)->every(fn ($a) => $assigned->has("{$mkey}.{$a}"));
                             @endphp
                             <tr class="border-t border-gray-100 hover:bg-gray-50/50 transition"
                                 x-data="{
@@ -104,11 +106,15 @@
 
                                 @foreach ($actions as $akey => $alabel)
                                     <td class="px-3 py-3">
-                                        {{-- الشكل نفسه صار افتراضياً لكل صناديق الاختيار في resources/css/app.css --}}
-                                        <label class="flex justify-center py-1 cursor-pointer" title="{{ $alabel }} — {{ $mlabel }}">
-                                            <input type="checkbox" data-perm name="permissions[]" value="{{ $mkey }}.{{ $akey }}"
-                                                   @checked($assigned->has("{$mkey}.{$akey}")) @change="sync()">
-                                        </label>
+                                        @if (in_array($akey, $moduleActions, true))
+                                            {{-- الشكل نفسه صار افتراضياً لكل صناديق الاختيار في resources/css/app.css --}}
+                                            <label class="flex justify-center py-1 cursor-pointer" title="{{ $alabel }} — {{ $mlabel }}">
+                                                <input type="checkbox" data-perm name="permissions[]" value="{{ $mkey }}.{{ $akey }}"
+                                                       @checked($assigned->has("{$mkey}.{$akey}")) @change="sync()">
+                                            </label>
+                                        @else
+                                            <span class="block text-center text-gray-300" aria-label="غير متاح">—</span>
+                                        @endif
                                     </td>
                                 @endforeach
 

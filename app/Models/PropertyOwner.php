@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class PropertyOwner extends Model
+class PropertyOwner extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $fillable = [
         'name', 'phone', 'email', 'area_id',
         'nationality', 'registered_address', 'status',
@@ -28,5 +32,15 @@ class PropertyOwner extends Model
     public function latestProperty(): HasOne
     {
         return $this->hasOne(Property::class, 'owner_id')->latestOfMany();
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('contract')->singleFile();
+    }
+
+    public function getContractFileAttribute()
+    {
+        return $this->getFirstMedia('contract');
     }
 }

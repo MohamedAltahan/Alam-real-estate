@@ -21,18 +21,20 @@
 </head>
 
 @php
-    $nav = [
-        ['label' => 'لوحة التحكم',    'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'grid'],
-        ['label' => 'إدارة العملاء',  'route' => 'dashboard.clients.index', 'active' => 'dashboard.clients.*', 'icon' => 'users'],
-        ['label' => 'ملاك العقارات',  'route' => 'dashboard.owners.index', 'active' => 'dashboard.owners.*', 'icon' => 'key'],
-        ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail'],
-        ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega'],
-        ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe'],
-        ['label' => 'العقارات',       'route' => 'dashboard.properties.index', 'active' => 'dashboard.properties.*', 'icon' => 'building'],
-        ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield'],
-        ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock'],
-        ['label' => 'المشرفين',       'route' => 'dashboard.supervisors.index', 'active' => 'dashboard.supervisors.*', 'icon' => 'gear'],
-    ];
+    $me = auth()->user();
+    $nav = collect([
+        ['label' => 'لوحة التحكم',    'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'grid', 'permission' => null],
+        ['label' => 'إدارة العملاء',  'route' => 'dashboard.clients.index', 'active' => 'dashboard.clients.*', 'icon' => 'users', 'permission' => 'clients.view'],
+        ['label' => 'ملاك العقارات',  'route' => 'dashboard.owners.index', 'active' => 'dashboard.owners.*', 'icon' => 'key', 'permission' => 'property_owners.view'],
+        ['label' => 'العقارات',       'route' => 'dashboard.properties.index', 'active' => 'dashboard.properties.*', 'icon' => 'building', 'permission' => 'properties.view'],
+        ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail', 'permission' => 'contact_requests.view'],
+        ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega', 'permission' => 'marketing_sources.view'],
+        ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
+        ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield', 'permission' => 'roles.view'],
+        ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock', 'permission' => 'permissions.view'],
+        ['label' => 'المشرفين',       'route' => 'dashboard.supervisors.index', 'active' => 'dashboard.supervisors.*', 'icon' => 'user-check', 'permission' => 'supervisors.view'],
+    ])->filter(fn (array $item) => ! $item['permission'] || $me->can($item['permission']))->values();
+    $dashboardHomeRoute = $nav->first()['route'] ?? 'dashboard.profile.edit';
 
     $icons = [
         'grid'     => '<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/>',
@@ -45,6 +47,7 @@
         'shield'   => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
         'lock'     => '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
         'gear'     => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+        'user-check' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
         'logout'   => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
         'user'     => '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
         'phone'    => '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
@@ -58,7 +61,6 @@
         'primary' => 'bg-primary-50 text-primary-700',
     ];
 
-    $me = auth()->user();
     $initial = mb_substr($me->name ?? 'ع', 0, 1);
 @endphp
 
@@ -70,12 +72,12 @@
     <div x-cloak x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"
          class="fixed inset-0 z-30 bg-primary-950/50 lg:hidden"></div>
 
-    <aside class="fixed lg:sticky inset-y-0 start-0 top-0 z-40 w-72 shrink-0 h-screen flex flex-col
+    <aside class="fixed lg:sticky inset-y-0 start-0 top-0 z-40 w-64 shrink-0 h-screen flex flex-col
                   bg-sidebar text-white transition-transform duration-300 lg:translate-x-0"
            :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full'">
 
         {{-- الشعار — النسخة الأصلية نفسها المستخدمة في فوتر الموقع (موحّدة) --}}
-        <a href="{{ route('dashboard') }}" class="h-[68px] shrink-0 flex items-center justify-center px-5">
+        <a href="{{ route($dashboardHomeRoute) }}" class="h-[68px] shrink-0 flex items-center justify-center px-5">
             {{-- هالة ذهبية خفيفة تُبرز الأجزاء الكحلية من الشعار فوق خلفية القائمة الداكنة --}}
             <img src="{{ asset('images/logo.png') }}" alt="علم العقارية"
                  class="h-10 w-auto drop-shadow-[0_0_8px_rgba(196,154,25,0.75)]">
@@ -102,12 +104,16 @@
         {{-- المستخدم + تسجيل الخروج --}}
         <div class="shrink-0 border-t border-white/10 px-4 pt-4 pb-5">
             <div class="flex items-center gap-3">
-                <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-accent-500 text-primary-900 font-bold text-sm">{{ $initial }}</span>
+                @if ($me->avatar_url)
+                    <img src="{{ $me->avatar_url }}" alt="{{ $me->name }}" class="w-9 h-9 shrink-0 rounded-full object-cover">
+                @else
+                    <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-accent-500 text-primary-900 font-bold text-sm">{{ $initial }}</span>
+                @endif
                 <div class="leading-tight min-w-0 flex-1">
                     <p class="text-sm font-bold truncate">{{ $me->name }}</p>
                     <p class="text-[11px] text-white/45 truncate">{{ $me->job_title ?? 'مدير النظام' }}</p>
                 </div>
-                <a href="{{ route('dashboard.supervisors.index') }}" class="text-white/40 hover:text-white/80 transition" aria-label="الإعدادات">
+                <a href="{{ route('dashboard.profile.edit') }}" class="text-white/40 hover:text-white/80 transition" aria-label="إعدادات الملف الشخصي">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                          stroke-linecap="round" stroke-linejoin="round">{!! $icons['gear'] !!}</svg>
                 </a>
@@ -138,6 +144,7 @@
             <div class="ms-auto flex items-center gap-3">
 
                 {{-- ===== الإشعارات ===== --}}
+                @can('notifications.view')
                 <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
                     <button type="button" @click="open = ! open"
                             class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition"
@@ -163,7 +170,7 @@
                             @if ($feedUnread)
                                 <span class="grid place-items-center min-w-5 h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-bold">{{ $feedUnread }}</span>
                             @endif
-                            @if ($feedUnread)
+                            @if ($feedUnread && $me->can('notifications.edit') && $me->can('contact_requests.view'))
                                 <form method="POST" action="{{ route('dashboard.notifications.read-all') }}" class="ms-auto">
                                     @csrf
                                     <button class="flex items-center gap-1 text-xs text-gray-500 hover:text-primary-800 transition">
@@ -195,16 +202,23 @@
                             @endforelse
                         </div>
 
-                        <a href="{{ route('dashboard.requests.index') }}"
-                           class="block py-3.5 text-center text-sm font-bold text-primary-800 hover:bg-gray-50 transition">عرض كل الإشعارات</a>
+                        @can('contact_requests.view')
+                            <a href="{{ route('dashboard.requests.index') }}"
+                               class="block py-3.5 text-center text-sm font-bold text-primary-800 hover:bg-gray-50 transition">عرض كل الإشعارات</a>
+                        @endcan
                     </div>
                 </div>
+                @endcan
 
                 {{-- ===== البروفايل ===== --}}
                 <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
                     <button type="button" @click="open = ! open"
                             class="flex items-center gap-2.5 rounded-full border border-gray-200 bg-white ps-1.5 pe-2 py-1 hover:bg-gray-50 transition">
-                        <span class="grid place-items-center w-8 h-8 shrink-0 me-2 rounded-full bg-accent-500 text-primary-900 font-bold text-sm">{{ $initial }}</span>
+                        @if ($me->avatar_url)
+                            <img src="{{ $me->avatar_url }}" alt="{{ $me->name }}" class="w-8 h-8 shrink-0 me-2 rounded-full object-cover">
+                        @else
+                            <span class="grid place-items-center w-8 h-8 shrink-0 me-2 rounded-full bg-accent-500 text-primary-900 font-bold text-sm">{{ $initial }}</span>
+                        @endif
                         <span class="hidden sm:block text-end leading-tight">
                             <span class="block text-[13px] font-bold text-ink">{{ $me->name }}</span>
                             <span class="block text-[10px] text-gray-400">{{ $me->job_title ?? 'مدير النظام' }}</span>
@@ -221,23 +235,27 @@
                                 rounded-2xl bg-white border border-gray-100 shadow-xl shadow-primary-950/10 overflow-hidden">
 
                         <div class="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
-                            <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-accent-500 text-primary-900 font-bold">{{ $initial }}</span>
+                            @if ($me->avatar_url)
+                                <img src="{{ $me->avatar_url }}" alt="{{ $me->name }}" class="w-10 h-10 shrink-0 rounded-full object-cover">
+                            @else
+                                <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-accent-500 text-primary-900 font-bold">{{ $initial }}</span>
+                            @endif
                             <span class="min-w-0 flex-1 leading-tight">
                                 <span class="block text-sm font-bold text-ink truncate">{{ $me->name }}</span>
                                 <span class="block text-[11px] text-gray-400 truncate">{{ $me->job_title ?? 'مدير النظام' }}</span>
                             </span>
-                            <a href="{{ route('dashboard.supervisors.index') }}" class="text-gray-400 hover:text-ink transition" aria-label="الإعدادات">
+                            <a href="{{ route('dashboard.profile.edit') }}" class="text-gray-400 hover:text-ink transition" aria-label="إعدادات الملف الشخصي">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                      stroke-linecap="round" stroke-linejoin="round">{!! $icons['gear'] !!}</svg>
                             </a>
                         </div>
 
-                        <a href="#" class="flex items-center gap-3 px-4 h-12 text-sm text-ink hover:bg-gray-50 transition">
+                        <a href="{{ route('dashboard.profile.edit', ['tab' => 'profile']) }}" class="flex items-center gap-3 px-4 h-12 text-sm text-ink hover:bg-gray-50 transition">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                  stroke-linecap="round" stroke-linejoin="round" class="text-gray-500">{!! $icons['user'] !!}</svg>
                             عرض الملف الشخصي
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-4 h-12 text-sm text-ink hover:bg-gray-50 transition border-b border-gray-100">
+                        <a href="{{ route('dashboard.profile.edit', ['tab' => 'security']) }}" class="flex items-center gap-3 px-4 h-12 text-sm text-ink hover:bg-gray-50 transition border-b border-gray-100">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                  stroke-linecap="round" stroke-linejoin="round" class="text-gray-500">{!! $icons['key'] !!}</svg>
                             تغيير كلمة المرور

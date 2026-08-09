@@ -34,9 +34,11 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
+            $user = request()->user();
+
             $view->with([
-                'feedItems' => NotificationFeed::items(),
-                'feedUnread' => NotificationFeed::unreadCount(),
+                'feedItems' => NotificationFeed::items($user),
+                'feedUnread' => NotificationFeed::unreadCount($user),
             ]);
         });
     }

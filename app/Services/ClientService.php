@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\ClientInteraction;
 use App\Models\ClientStage;
+use App\Models\Property;
+use App\Models\PropertyStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * منطق العملاء المشترك — يخدم الداشبورد (Blade) والـ API معاً (API-first).
@@ -34,7 +37,10 @@ class ClientService
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return $this->filtered($filters)
-            ->with(['stage', 'type', 'agent', 'area'])
+            ->with([
+                'stage', 'type', 'agent', 'area', 'desiredUnitType', 'recordedBy',
+                'properties', 'interactions.user', 'interactions.stage',
+            ])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -64,14 +70,17 @@ class ClientService
     public function load(Client $client): Client
     {
         return $client->load([
-            'stage', 'type', 'area', 'agent', 'source',
+            'stage', 'type', 'area', 'agent', 'source', 'desiredUnitType', 'recordedBy',
             'interactions.user', 'interactions.stage',
-            'properties.status', 'properties.area',
+            'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
         ]);
     }
 
     public function create(array $data): Client
     {
+        $data['stage_id'] ??= ClientStage::where('key', 'new')->value('id');
+        $data['recorded_by'] = auth()->id();
+
         return Client::create($data);
     }
 
@@ -113,14 +122,61 @@ class ClientService
     /** ربط عقار بالعميل (سجل عقاراته) */
     public function attachProperty(Client $client, int $propertyId, ?string $relation = null, ?string $notes = null): void
     {
-        $client->properties()->syncWithoutDetaching([
-            $propertyId => ['relation' => $relation, 'notes' => $notes],
-        ]);
+        DB::transaction(function () use ($client, $propertyId, $relation, $notes) {
+            $property = Property::query()->lockForUpdate()->with(['status', 'clients'])->findOrFail($propertyId);
+
+            if ($client->properties()->whereKey($propertyId)->exists()) {
+                throw ValidationException::withMessages([
+                    'property_id' => 'هذا العقار مضاف بالفعل لهذا العميل.',
+                ]);
+            }
+
+            if ($property->status?->key === 'sold') {
+                throw ValidationException::withMessages([
+                    'property_id' => 'لا يمكن إضافة هذا العقار لأنه مباع.',
+                ]);
+            }
+
+            if ($property->status?->key === 'reserved' || $property->clients->contains(fn ($linked) => $linked->pivot?->relation === 'reserved')) {
+                throw ValidationException::withMessages([
+                    'property_id' => 'لا يمكن إضافة هذا العقار لأنه محجوز لعميل آخر.',
+                ]);
+            }
+
+            $client->properties()->attach($propertyId, ['relation' => $relation, 'notes' => $notes]);
+
+            if ($relation === 'reserved') {
+                $reservedId = PropertyStatus::where('key', 'reserved')->value('id');
+                if ($reservedId) {
+                    $property->update(['status_id' => $reservedId]);
+                }
+            }
+        });
     }
 
     public function detachProperty(Client $client, int $propertyId): void
     {
-        $client->properties()->detach($propertyId);
+        DB::transaction(function () use ($client, $propertyId) {
+            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
+            $pivot = DB::table('client_property')
+                ->where('client_id', $client->id)
+                ->where('property_id', $propertyId)
+                ->first();
+
+            $client->properties()->detach($propertyId);
+
+            if ($pivot?->relation === 'reserved' && $property->status?->key === 'reserved') {
+                $stillReserved = DB::table('client_property')
+                    ->where('property_id', $propertyId)
+                    ->where('relation', 'reserved')
+                    ->exists();
+                $availableId = PropertyStatus::where('key', 'available')->value('id');
+
+                if (! $stillReserved && $availableId) {
+                    $property->update(['status_id' => $availableId]);
+                }
+            }
+        });
     }
 
     /** مراحل الـ Pipeline للاستخدام في الفلاتر والفورمات */

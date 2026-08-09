@@ -11,7 +11,7 @@
 @section('title', $agent->name)
 
 @section('content')
-{{-- ===================== هيرو الوكيل ===================== --}}
+{{-- ===================== هيرو مسؤول العقار ===================== --}}
 <section class="relative isolate text-white bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950 overflow-hidden">
     <x-site.page-hero-bg />
     <div class="absolute -top-16 -start-16 w-72 h-72 rounded-full bg-white/5"></div>
@@ -84,11 +84,11 @@
                         <div><p class="text-2xl font-bold text-accent-400 tabular-nums">{{ $years }}</p><p class="text-[11px] text-white/50">{{ $t('سنوات', 'years') }}</p></div>
                     </div>
                     @if ($wa)
-                        <a href="https://wa.me/{{ $wa }}" target="_blank" class="flex items-center justify-center gap-2 w-full rounded-field bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold py-2.5 text-sm mb-2 transition">
+                        <a href="https://wa.me/{{ $wa }}" target="_blank" class="flex items-center justify-center gap-2 w-full rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold py-2.5 text-sm mb-2 transition">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.2-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20z"/></svg>
                             {{ $t('واتساب', 'WhatsApp') }}
                         </a>
-                        <a href="tel:{{ preg_replace('/\s/', '', $agent->phone) }}" class="flex items-center justify-center gap-2 w-full rounded-field bg-white/10 hover:bg-white/15 text-white font-semibold py-2.5 text-sm transition">
+                        <a href="tel:{{ preg_replace('/\s/', '', $agent->phone) }}" class="flex items-center justify-center gap-2 w-full rounded-full bg-white/10 hover:bg-white/15 text-white font-semibold py-2.5 text-sm transition">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             {{ $t('اتصال', 'Call') }}
                         </a>
@@ -99,7 +99,7 @@
     </div>
 </section>
 
-{{-- ===================== عقارات الوكيل ===================== --}}
+{{-- ===================== عقارات مسؤول العقار ===================== --}}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
     <div class="flex items-center justify-between mb-6">
         <div>
@@ -117,7 +117,7 @@
         </div>
         <div class="mt-8">{{ $properties->links() }}</div>
     @else
-        <div class="rounded-card bg-white border border-gray-100 py-16 text-center text-gray-400">{{ $t('لا توجد عقارات منشورة لهذا الوكيل حالياً.', 'This agent has no published listings yet.') }}</div>
+        <div class="rounded-card bg-white border border-gray-100 py-16 text-center text-gray-400">{{ $t('لا توجد عقارات منشورة لمسؤول العقار حالياً.', 'This property manager has no published listings yet.') }}</div>
     @endif
 </section>
 
@@ -151,8 +151,8 @@
         <h2 class="text-2xl font-bold mb-3">{{ $t('مهتم بالتعامل مع', 'Interested in working with') }} {{ $agent->name }}؟</h2>
         <p class="text-white/70 max-w-2xl mx-auto mb-6">{{ $t('تواصل مباشرةً أو أرسل استفسارك وسيرد عليك في أقرب وقت.', 'Reach out directly or send your inquiry and get a quick reply.') }}</p>
         <div class="flex items-center justify-center gap-3 flex-wrap">
-            @if ($wa)<a href="https://wa.me/{{ $wa }}" target="_blank" class="rounded-field bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold px-6 py-3 text-sm">{{ $t('تواصل عبر واتساب', 'WhatsApp') }}</a>@endif
-            <a href="{{ route('site.contact') }}" class="rounded-field bg-white/10 border border-white/20 hover:bg-white/15 text-white font-semibold px-6 py-3 text-sm">{{ $t('نموذج التواصل', 'Contact form') }}</a>
+            @if ($wa)<a href="https://wa.me/{{ $wa }}" target="_blank" class="rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold px-6 py-3 text-sm">{{ $t('تواصل عبر واتساب', 'WhatsApp') }}</a>@endif
+            <a href="{{ route('site.contact') }}" class="rounded-full bg-white/10 border border-white/20 hover:bg-white/15 text-white font-semibold px-6 py-3 text-sm">{{ $t('نموذج التواصل', 'Contact form') }}</a>
         </div>
     </div>
 </section>

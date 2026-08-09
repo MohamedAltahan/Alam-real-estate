@@ -14,9 +14,11 @@ class PropertyOwnerController extends Controller
     public function index(Request $request): View
     {
         $owners = PropertyOwner::query()
-            ->with(['area', 'latestProperty.agent'])
+            ->with([
+                'area', 'latestProperty.agent', 'media',
+                'properties.area', 'properties.status', 'properties.unitType', 'properties.media',
+            ])
             ->withCount('properties')
-            ->withSum('properties', 'price')
             ->when($request->search, fn ($q, $s) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")))
             ->latest()
@@ -33,7 +35,9 @@ class PropertyOwnerController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->can('property_owners.create'), 403);
-        PropertyOwner::create($this->validated($request));
+        $data = $this->validated($request);
+        $owner = PropertyOwner::create(collect($data)->except('contract')->all());
+        $this->storeContract($request, $owner);
 
         return back()->with('success', 'تم إضافة المالك بنجاح.');
     }
@@ -41,7 +45,9 @@ class PropertyOwnerController extends Controller
     public function update(Request $request, PropertyOwner $owner): RedirectResponse
     {
         abort_unless($request->user()->can('property_owners.edit'), 403);
-        $owner->update($this->validated($request));
+        $data = $this->validated($request);
+        $owner->update(collect($data)->except('contract')->all());
+        $this->storeContract($request, $owner);
 
         return back()->with('success', 'تم تحديث بيانات المالك.');
     }
@@ -54,6 +60,17 @@ class PropertyOwnerController extends Controller
         return back()->with('success', 'تم حذف المالك.');
     }
 
+    public function show(PropertyOwner $owner): View
+    {
+        $owner->load([
+            'area', 'media',
+            'properties.area', 'properties.status', 'properties.unitType',
+            'properties.agent', 'properties.media',
+        ]);
+
+        return view('dashboard.owners.show', compact('owner'));
+    }
+
     private function validated(Request $request): array
     {
         return $request->validate([
@@ -64,8 +81,16 @@ class PropertyOwnerController extends Controller
             'nationality' => ['nullable', 'string', 'max:120'],
             'registered_address' => ['nullable', 'string', 'max:500'],
             'status' => ['required', 'in:active,inactive'],
+            'contract' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx', 'max:15360'],
         ], [], [
             'name' => 'الاسم', 'phone' => 'رقم الهاتف', 'status' => 'الحالة',
         ]);
+    }
+
+    private function storeContract(Request $request, PropertyOwner $owner): void
+    {
+        if ($request->hasFile('contract')) {
+            $owner->addMediaFromRequest('contract')->toMediaCollection('contract');
+        }
     }
 }

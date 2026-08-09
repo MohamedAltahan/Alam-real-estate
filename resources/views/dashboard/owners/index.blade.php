@@ -4,13 +4,6 @@
 @section('page-title', 'ملاك العقارات')
 
 @php
-    // ٢٨٠٠٠٠٠ → 2.8M · ٤٥٠٠٠٠ → 450K
-    $money = function ($v) {
-        $v = (float) $v;
-        if ($v >= 1000000) return rtrim(rtrim(number_format($v / 1000000, 1), '0'), '.').'M';
-        if ($v >= 1000) return rtrim(rtrim(number_format($v / 1000, 1), '0'), '.').'K';
-        return number_format($v);
-    };
     $months = [1 => 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 @endphp
 
@@ -48,10 +41,9 @@
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
                         <th class="text-start font-medium px-4 py-3">المالك</th>
                         <th class="text-start font-medium px-4 py-3">الهاتف</th>
-                        <th class="text-start font-medium px-4 py-3">العقار</th>
-                        <th class="text-start font-medium px-4 py-3">القيمة الاجمالية</th>
-                        <th class="text-start font-medium px-4 py-3">الوكيل</th>
-                        <th class="text-start font-medium px-4 py-3">الحالة</th>
+                        <th class="text-start font-medium px-4 py-3">عدد العقارات</th>
+                        <th class="text-start font-medium px-4 py-3">مسؤول العقار</th>
+                        <th class="text-start font-medium px-4 py-3">حالة العقد</th>
                         <th class="text-start font-medium px-4 py-3">تاريخ الانضمام</th>
                         <th class="text-start font-medium px-4 py-3">إجراءات</th>
                     </tr>
@@ -71,23 +63,32 @@
                             </td>
                             <td class="px-4 py-3 text-gray-600"><span dir="ltr">{{ $o->phone }}</span></td>
                             <td class="px-4 py-3">
-                                <span class="inline-flex items-center gap-1.5 text-gray-600">
+                                @php $propertiesData = $o->properties->map(fn ($property) => [
+                                    'reference' => $property->reference_code,
+                                    'title' => $property->title,
+                                    'area' => $property->area?->name,
+                                    'type' => $property->unitType?->name,
+                                    'status' => $property->status?->name,
+                                    'price' => number_format((float) $property->price).' '.auth()->user()->currencySymbol(),
+                                    'url' => auth()->user()->can('properties.view') ? route('dashboard.properties.show', $property) : null,
+                                ])->values(); @endphp
+                                <button type="button" @click.stop='openProperties(@json($o->name), @json($propertiesData))' class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-primary-700 hover:bg-primary-50">
                                     <span class="font-bold text-ink tabular-nums">{{ $o->properties_count }}</span>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gray-400"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/></svg>
-                                </span>
+                                </button>
                             </td>
-                            <td class="px-4 py-3 font-bold text-accent-700 tabular-nums">{{ $money($o->properties_sum_price) }} KD</td>
                             <td class="px-4 py-3 text-gray-600">{{ $o->latestProperty?->agent?->name ?: '—' }}</td>
                             <td class="px-4 py-3">
                                 @if ($o->status === 'active')
-                                    <span class="inline-flex items-center rounded-md bg-success-soft text-success px-2.5 py-1 text-xs font-bold">نشط</span>
+                                    <span class="inline-flex items-center rounded-md bg-success-soft text-success px-2.5 py-1 text-xs font-bold">ساري</span>
                                 @else
-                                    <span class="inline-flex items-center rounded-md bg-gray-100 text-gray-500 px-2.5 py-1 text-xs font-bold">غير نشط</span>
+                                    <span class="inline-flex items-center rounded-md bg-danger/10 text-danger px-2.5 py-1 text-xs font-bold">منتهي</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-gray-500">{{ $months[(int) $o->created_at->format('n')] }} {{ $o->created_at->format('Y') }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1">
+                                    <a href="{{ route('dashboard.owners.show', $o) }}" class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="عرض المالك"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                     @can('property_owners.edit')
                                         <button @click='startEdit(@json($editData))'
                                                 class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="تعديل">
@@ -104,7 +105,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -116,7 +117,7 @@
 
     {{-- مودال الإضافة/التعديل --}}
     <x-modal name="owner-form">
-        <form :action="action" method="POST">
+        <form :action="action" method="POST" enctype="multipart/form-data">
             @csrf
             <template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -152,11 +153,16 @@
                     <input name="registered_address" x-model="form.registered_address" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">الحالة</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">حالة العقد</label>
                     <select name="status" x-model="form.status" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
-                        <option value="active">نشط</option>
-                        <option value="inactive">غير نشط</option>
+                        <option value="active">ساري</option>
+                        <option value="inactive">منتهي</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">ملف العقد</label>
+                    <input name="contract" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2 text-sm file:rounded-full file:border-0 file:bg-primary-100 file:text-primary-800 file:px-3 file:py-1.5">
+                    <p class="mt-1 text-[11px] text-gray-400">صورة أو PDF أو Word، بحد أقصى 15 ميجابايت. اختيار ملف جديد يستبدل الحالي.</p>
                 </div>
             </div>
             <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
@@ -164,6 +170,17 @@
                 <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm" x-text="mode === 'edit' ? 'حفظ التعديلات' : 'إضافة المالك'"></button>
             </div>
         </form>
+    </x-modal>
+
+    {{-- ملخص عقارات المالك --}}
+    <x-modal name="owner-properties" maxWidth="2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100"><div><h3 class="font-bold text-ink">عقارات المالك</h3><p class="text-xs text-gray-400" x-text="propertiesOwner"></p></div><button type="button" @click="$dispatch('close-modal', 'owner-properties')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <div class="p-6 max-h-[65vh] overflow-y-auto space-y-3">
+            <template x-for="property in ownerProperties" :key="property.reference">
+                <a :href="property.url || null" :class="property.url ? 'hover:border-primary-200 hover:bg-primary-50/40' : 'cursor-default'" class="block rounded-2xl border border-gray-100 p-4 transition"><div class="flex justify-between gap-3"><strong class="text-ink" dir="ltr" x-text="property.reference"></strong><span class="text-sm font-bold text-primary-800" x-text="property.price"></span></div><p class="text-sm text-gray-600 mt-1" x-text="property.title"></p><p class="text-xs text-gray-400 mt-1"><span x-text="property.type || 'بدون نوع'"></span> · <span x-text="property.area || 'بدون منطقة'"></span> · <span x-text="property.status || 'بدون حالة'"></span></p></a>
+            </template>
+            <p x-show="ownerProperties.length === 0" class="text-center text-sm text-gray-400 py-10">لا توجد عقارات مسجلة لهذا المالك.</p>
+        </div>
     </x-modal>
 
     {{-- مودال الحذف --}}
@@ -184,7 +201,7 @@
 <script>
     function ownerCrud() {
         return {
-            mode: 'add', action: '', delAction: '', delName: '',
+            mode: 'add', action: '', delAction: '', delName: '', propertiesOwner: '', ownerProperties: [],
             form: { name: '', phone: '', email: '', area_id: '', nationality: '', registered_address: '', status: 'active' },
             startAdd() {
                 this.mode = 'add';
@@ -201,6 +218,10 @@
             startDelete(action, name) {
                 this.delAction = action; this.delName = name;
                 this.$dispatch('open-modal', 'owner-delete');
+            },
+            openProperties(name, properties) {
+                this.propertiesOwner = name; this.ownerProperties = properties;
+                this.$dispatch('open-modal', 'owner-properties');
             },
         };
     }

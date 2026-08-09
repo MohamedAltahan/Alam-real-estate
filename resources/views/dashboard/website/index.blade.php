@@ -477,7 +477,7 @@
                 <h3 class="font-bold text-ink">عائلة علم العقارية (الفريق)</h3>
                 <x-cms.pair label="العنوان" group="about_team" field="title" :ar="$ab('team','ar','title')" :en="$ab('team','en','title')" />
                 <x-cms.pair label="الوصف" group="about_team" field="subtitle" :ar="$ab('team','ar','subtitle')" :en="$ab('team','en','subtitle')" />
-                <p class="text-xs text-gray-400">الوكلاء يظهرون تلقائياً من «المشرفين» (المُعلَّمين كوكلاء).</p>
+                <p class="text-xs text-gray-400">مسؤولو العقارات يظهرون تلقائياً من «المشرفين» (المُعلَّمين كمسؤولي عقارات).</p>
             </div>
 
             <div class="flex items-center justify-end sticky bottom-0 bg-gray-50 py-3">

@@ -49,7 +49,7 @@
                             <td class="px-4 py-3 font-semibold text-ink">{{ $s->name }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ $s->type?->name ?: '—' }}</td>
                             <td class="px-4 py-3"><span class="inline-block rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs font-semibold tabular-nums">{{ $s->clients_count }}</span></td>
-                            <td class="px-4 py-3 text-gray-600 tabular-nums">{{ number_format($s->cost, 3) }} د.ك</td>
+                            <td class="px-4 py-3 text-gray-600 tabular-nums">{{ number_format($s->cost, 3) }} {{ auth()->user()->currencySymbol() }}</td>
                             <td class="px-4 py-3">
                                 @if ($s->status === 'active')
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success px-2.5 py-1 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>نشط</span>
@@ -100,7 +100,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">التكلفة (د.ك)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">التكلفة ({{ auth()->user()->currencySymbol() }})</label>
                     <input name="cost" type="number" step="0.001" min="0" x-model="form.cost" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                 </div>
                 <div>

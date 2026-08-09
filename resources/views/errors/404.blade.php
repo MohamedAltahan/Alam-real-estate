@@ -18,11 +18,11 @@
         <p class="text-white/60 max-w-md mx-auto mb-8">{{ $t('ربما تم نقل الصفحة أو حذفها، أو أن الرابط غير صحيح. دعنا نعيدك إلى الطريق الصحيح.', 'The page may have been moved or removed, or the link is incorrect. Let us get you back on track.') }}</p>
 
         <div class="flex items-center justify-center gap-3 flex-wrap">
-            <a href="{{ route('site.home') }}" class="inline-flex items-center gap-2 rounded-field bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold px-6 py-3 text-sm transition">
+            <a href="{{ route('site.home') }}" class="inline-flex items-center gap-2 rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold px-6 py-3 text-sm transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
                 {{ $t('العودة للرئيسية', 'Back home') }}
             </a>
-            <a href="{{ route('site.properties') }}" class="inline-flex items-center gap-2 rounded-field bg-white/10 border border-white/20 hover:bg-white/15 text-white font-semibold px-6 py-3 text-sm transition">
+            <a href="{{ route('site.properties') }}" class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/15 text-white font-semibold px-6 py-3 text-sm transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 {{ $t('تصفح العقارات', 'Browse properties') }}
             </a>

@@ -53,7 +53,7 @@
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
                         <th class="text-start font-medium px-4 py-3">الحالة</th>
-                        <th class="text-start font-medium px-4 py-3">الوكيل</th>
+                        <th class="text-start font-medium px-4 py-3">مسؤول العقار</th>
                         <th class="text-start font-medium px-4 py-3">إجراءات</th>
                     </tr>
                 </thead>
@@ -74,7 +74,7 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $p->unitType?->name }} · {{ $p->area?->name }}</td>
-                            <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ number_format($p->price, 3) }} د.ك<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
+                            <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ number_format($p->price, 3) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
                             <td class="px-4 py-3">
                                 @if ($p->status)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $p->status->color }}; background-color: {{ $p->status->color }}1a;"><span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $p->status->color }}"></span>{{ $p->status->name }}</span>@endif
                             </td>
@@ -86,7 +86,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات. <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a></td></tr>
+                        <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>

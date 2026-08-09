@@ -43,7 +43,7 @@ trait InteractsWithWebImages
             // Fit::Max = لا يتجاوز الارتفاع 1080 ولا يقصّ الصورة — النسبة محفوظة
             ->fit(Fit::Max, 4096, 1080)
             ->keepOriginalImageFormat()
-            ->quality(85)
+            ->quality(100)
             ->nonQueued();
     }
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Http\Controllers\Dashboard\PermissionMatrixController;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -14,16 +15,11 @@ class RolePermissionSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // الوحدات (اللي ليها شاشات فقط — الوحدات الإضافية متجاهَلة)
-        $modules = [
-            'dashboard', 'clients', 'property_owners', 'contact_requests',
-            'marketing_sources', 'website', 'properties', 'roles',
-            'permissions', 'supervisors',
-        ];
-        $actions = ['view', 'create', 'edit', 'delete', 'export'];
+        $modules = array_keys(PermissionMatrixController::MODULES);
 
         $all = [];
         foreach ($modules as $m) {
-            foreach ($actions as $a) {
+            foreach (PermissionMatrixController::actionsFor($m) as $a) {
                 $name = "{$m}.{$a}";
                 Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
                 $all[] = $name;
@@ -39,34 +35,35 @@ class RolePermissionSeeder extends Seeder
             'property-manager' => [
                 'description' => 'مدير العقارات',
                 'perms' => array_merge(
-                    $this->forModules(['properties', 'property_owners'], $actions),
-                    $this->view(['clients', 'contact_requests', 'dashboard'])
+                    $this->forModules(['properties', 'property_owners']),
+                    $this->view(['clients', 'contact_requests', 'dashboard', 'notifications'])
                 ),
             ],
             'sales-agent' => [
-                'description' => 'وكيل مبيعات',
+                'description' => 'مسؤول عقار',
                 'perms' => array_merge(
-                    $this->forModules(['clients'], $actions),
-                    $this->view(['properties', 'contact_requests', 'dashboard'])
+                    $this->forModules(['clients']),
+                    $this->view(['properties', 'contact_requests', 'dashboard', 'notifications'])
                 ),
             ],
             'marketing-staff' => [
                 'description' => 'موظف تسويق',
                 'perms' => array_merge(
-                    $this->forModules(['marketing_sources'], $actions),
-                    $this->view(['clients', 'contact_requests', 'dashboard'])
+                    $this->forModules(['marketing_sources']),
+                    $this->view(['clients', 'contact_requests', 'dashboard', 'notifications'])
                 ),
             ],
             'customer-service' => [
                 'description' => 'خدمة العملاء',
                 'perms' => array_merge(
-                    $this->forModules(['contact_requests'], $actions),
-                    $this->view(['clients', 'properties', 'dashboard'])
+                    $this->forModules(['contact_requests']),
+                    $this->view(['clients', 'properties', 'dashboard', 'notifications']),
+                    ['notifications.edit']
                 ),
             ],
             'accountant' => [
                 'description' => 'محاسب',
-                'perms' => $this->view(['properties', 'clients', 'dashboard']),
+                'perms' => $this->view(['properties', 'clients', 'dashboard', 'notifications']),
             ],
         ];
 
@@ -83,11 +80,11 @@ class RolePermissionSeeder extends Seeder
     }
 
     /** كل الأفعال لعدة وحدات */
-    private function forModules(array $modules, array $actions): array
+    private function forModules(array $modules): array
     {
         $out = [];
         foreach ($modules as $m) {
-            foreach ($actions as $a) {
+            foreach (PermissionMatrixController::actionsFor($m) as $a) {
                 $out[] = "{$m}.{$a}";
             }
         }

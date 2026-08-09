@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Property;
+use App\Models\PropertyStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * منطق العقارات المشترك (API-first) — يخدم الداشبورد والـ API.
@@ -38,6 +40,15 @@ class PropertyService
     public function update(Property $property, array $data, array $amenityIds = []): Property
     {
         return DB::transaction(function () use ($property, $data, $amenityIds) {
+            $reservedId = PropertyStatus::where('key', 'reserved')->value('id');
+            $hasReservation = $property->clients()->wherePivot('relation', 'reserved')->exists();
+
+            if ($hasReservation && array_key_exists('status_id', $data) && (int) $data['status_id'] !== (int) $reservedId) {
+                throw ValidationException::withMessages([
+                    'status_id' => 'لا يمكن تغيير حالة العقار المحجوز. ألغِ ربط الحجز بالعميل أولاً.',
+                ]);
+            }
+
             $property->update($data);
             $property->amenities()->sync($amenityIds);
 

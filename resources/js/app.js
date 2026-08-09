@@ -118,7 +118,7 @@ async function compressImage(file, maxHeight = TARGET_HEIGHT) {
     bitmap.close?.();
 
     const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.85));
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 1));
 
     if (! blob || blob.size >= file.size) {
         return file;                         // الضغط لم يفد — نُبقي الأصل

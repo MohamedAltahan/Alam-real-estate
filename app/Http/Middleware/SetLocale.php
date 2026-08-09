@@ -11,7 +11,9 @@ class SetLocale
     /** تطبيق لغة الزائر المخزّنة في الجلسة (افتراضي: عربي) */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = session('locale', config('app.locale'));
+        $locale = session('locale')
+            ?? data_get($request->user()?->preferences, 'display.language')
+            ?? config('app.locale');
 
         if (in_array($locale, ['ar', 'en'])) {
             app()->setLocale($locale);

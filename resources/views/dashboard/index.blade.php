@@ -19,6 +19,18 @@
 
     $panel = 'rounded-2xl bg-white border border-gray-100';
 
+    $canDashboard = auth()->user()->can('dashboard.view');
+    $canClients = $canDashboard && auth()->user()->can('clients.view');
+    $canProperties = $canDashboard && auth()->user()->can('properties.view');
+    $canRequests = $canDashboard && auth()->user()->can('contact_requests.view');
+
+    $statVisibility = [
+        'properties' => $canProperties,
+        'clients' => $canClients,
+        'revenue' => $canProperties,
+        'deals' => $canClients,
+    ];
+
     // ألوان الحرف الأول في قائمة طلبات التواصل
     $avatarTones = ['bg-success', 'bg-warning', 'bg-primary-700', 'bg-info', 'bg-danger'];
 
@@ -45,31 +57,39 @@
             <div class="min-w-0">
                 <p class="text-[11px] text-white/45 mb-1.5">{{ $today }}</p>
                 <h2 class="text-xl sm:text-[26px] font-bold mb-2">مرحباً، {{ auth()->user()->name }} 👋</h2>
-                <p class="text-sm text-white/65">
-                    لديك <span class="text-accent-500 font-bold">{{ $openRequests }} طلبات جديدة</span>
-                    و <span class="text-accent-500 font-bold">{{ $openFollowUps }} متابعة معلقة</span> اليوم
-                </p>
+                @if ($canClients)
+                    <p class="text-sm text-white/65">
+                        لديك <span class="text-accent-500 font-bold">{{ $openRequests }} طلبات جديدة</span>
+                        و <span class="text-accent-500 font-bold">{{ $openFollowUps }} متابعة معلقة</span> اليوم
+                    </p>
+                @endif
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="{{ route('dashboard.requests.index') }}"
-                   class="inline-flex items-center gap-2 rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-bold px-4 h-11 text-sm transition">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-                    طلبات التواصل
-                </a>
-                <a href="{{ route('dashboard.properties.create') }}"
-                   class="inline-flex items-center gap-2 rounded-full border border-white/25 hover:bg-white/10 text-white font-bold px-4 h-11 text-sm transition">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                    إضافة عقار
-                </a>
+                @if ($canRequests)
+                    <a href="{{ route('dashboard.requests.index') }}"
+                       class="inline-flex items-center gap-2 rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-bold px-4 h-11 text-sm transition">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                        طلبات التواصل
+                    </a>
+                @endif
+                @if ($canProperties && auth()->user()->can('properties.create'))
+                    <a href="{{ route('dashboard.properties.create') }}"
+                       class="inline-flex items-center gap-2 rounded-full border border-white/25 hover:bg-white/10 text-white font-bold px-4 h-11 text-sm transition">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        إضافة عقار
+                    </a>
+                @endif
             </div>
         </div>
     </div>
 
+    @if ($canDashboard)
     {{-- ===================== بطاقات المؤشرات ===================== --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
         @foreach ($stats as $c)
-            <div class="{{ $panel }} p-5">
+            @if ($statVisibility[$c['key']])
+                <div class="{{ $panel }} p-5">
                 <div class="flex items-center gap-3">
                     <div class="min-w-0 flex-1">
                         <p class="text-xs text-gray-500 mb-1">{{ $c['label'] }}</p>
@@ -98,7 +118,8 @@
                         {{ $c['trend']['up'] ? 'أعلى من الشهر الماضي' : 'أقل من الشهر الماضي' }}
                     </span>
                 </p>
-            </div>
+                </div>
+            @endif
         @endforeach
     </div>
 
@@ -106,31 +127,36 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
 
         {{-- الـ Leads حسب الشهر --}}
-        <div class="{{ $panel }} lg:col-span-2 p-5">
-            <h3 class="font-bold text-ink">الـ Leads حسب الشهر</h3>
-            <p class="text-xs text-gray-400 mb-4">مقارنة الطلبات والمغلقة</p>
-            <div class="h-[250px]">
-                <canvas data-chart="leads" data-payload="{{ json_encode($charts['leads']) }}"></canvas>
+        @if ($canClients)
+            <div class="{{ $panel }} lg:col-span-2 p-5">
+                <h3 class="font-bold text-ink">الـ Leads حسب الشهر</h3>
+                <p class="text-xs text-gray-400 mb-4">مقارنة الطلبات والمغلقة</p>
+                <div class="h-[250px]">
+                    <canvas data-chart="leads" data-payload="{{ json_encode($charts['leads']) }}"></canvas>
+                </div>
             </div>
-        </div>
+        @endif
 
         {{-- الإيراد الشهري --}}
-        <div class="{{ $panel }} p-5">
-            <h3 class="font-bold text-ink">الإيراد الشهري</h3>
-            <p class="text-xs text-gray-400 mb-4">آلاف KD — آخر 8 أشهر</p>
-            <div class="h-[250px]">
-                <canvas data-chart="revenue" data-payload="{{ json_encode($charts['revenue']) }}"></canvas>
+        @if ($canProperties)
+            <div class="{{ $panel }} p-5">
+                <h3 class="font-bold text-ink">الإيراد الشهري</h3>
+                <p class="text-xs text-gray-400 mb-4">آلاف {{ $currency }} — آخر 8 أشهر</p>
+                <div class="h-[250px]">
+                    <canvas data-chart="revenue" data-payload="{{ json_encode($charts['revenue']) }}"></canvas>
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 
     {{-- ===================== القوائم السفلية ===================== --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
 
         {{-- معدل التحويل --}}
-        <div class="{{ $panel }} p-5">
-            <h3 class="font-bold text-ink">معدل التحويل</h3>
-            <p class="text-xs text-gray-400">نسبة إغلاق الصفقات</p>
+        @if ($canClients)
+            <div class="{{ $panel }} p-5">
+                <h3 class="font-bold text-ink">معدل التحويل</h3>
+                <p class="text-xs text-gray-400">نسبة إغلاق الصفقات</p>
 
             {{-- دليل الرسم — الألوان مطابقة لـ SLATE و GREEN في resources/js/dashboard.js --}}
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 mb-4">
@@ -147,10 +173,12 @@
             <div class="h-[250px]">
                 <canvas data-chart="conversion" data-payload="{{ json_encode($charts['conversion']) }}"></canvas>
             </div>
-        </div>
+            </div>
+        @endif
 
         {{-- أحدث العقارات --}}
-        <div class="{{ $panel }} p-5">
+        @if ($canProperties)
+            <div class="{{ $panel }} p-5">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-ink">أحدث العقارات</h3>
                 <a href="{{ route('dashboard.properties.index') }}" class="text-xs text-primary-600 hover:text-primary-800 transition">عرض الكل</a>
@@ -177,7 +205,7 @@
                             </span>
 
                             @php
-                                $unit = 'KD'.($p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '');
+                                $unit = $currency.($p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '');
                             @endphp
                             <span class="shrink-0 text-end">
                                 <span class="block text-[13px] font-bold text-ink tabular-nums">
@@ -198,10 +226,12 @@
                     <li class="py-8 text-center text-sm text-gray-400">لا توجد عقارات بعد</li>
                 @endforelse
             </ul>
-        </div>
+            </div>
+        @endif
 
         {{-- أحدث طلبات التواصل --}}
-        <div class="{{ $panel }} p-5">
+        @if ($canRequests)
+            <div class="{{ $panel }} p-5">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-ink">أحدث طلبات التواصل</h3>
                 <a href="{{ route('dashboard.requests.index') }}" class="text-xs text-primary-600 hover:text-primary-800 transition">عرض الكل</a>
@@ -226,6 +256,8 @@
                     <li class="py-8 text-center text-sm text-gray-400">لا توجد طلبات بعد</li>
                 @endforelse
             </ul>
-        </div>
+            </div>
+        @endif
     </div>
+    @endif
 @endsection

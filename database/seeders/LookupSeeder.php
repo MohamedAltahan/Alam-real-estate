@@ -70,18 +70,19 @@ class LookupSeeder extends Seeder
 
         // مراحل العميل (Pipeline) — is_final للتقارير
         foreach ([
-            ['key' => 'new', 'color' => '#3B5BA5', 'final' => false, 'ar' => 'جديد', 'en' => 'New'],
-            ['key' => 'contacted', 'color' => '#7481E0', 'final' => false, 'ar' => 'تم التواصل', 'en' => 'Contacted'],
-            ['key' => 'interested', 'color' => '#B5842A', 'final' => false, 'ar' => 'مهتم', 'en' => 'Interested'],
-            ['key' => 'negotiating', 'color' => '#E0B450', 'final' => false, 'ar' => 'تفاوض', 'en' => 'Negotiating'],
-            ['key' => 'closed_won', 'color' => '#2E7D5B', 'final' => true, 'ar' => 'صفقة ناجحة', 'en' => 'Closed Won'],
-            ['key' => 'closed_lost', 'color' => '#C0392B', 'final' => false, 'ar' => 'صفقة خاسرة', 'en' => 'Closed Lost'],
+            ['key' => 'new', 'color' => '#3B5BA5', 'final' => false, 'ar' => 'طلب جديد', 'en' => 'New Request'],
+            ['key' => 'viewing', 'color' => '#B5842A', 'final' => false, 'ar' => 'معاينة العقار', 'en' => 'Property Viewing'],
+            ['key' => 'closed_won', 'color' => '#2E7D5B', 'final' => true, 'ar' => 'ربح', 'en' => 'Won'],
+            ['key' => 'closed_lost', 'color' => '#C0392B', 'final' => true, 'ar' => 'خسارة', 'en' => 'Lost'],
         ] as $i => $s) {
-            ClientStage::create([
-                'name' => ['ar' => $s['ar'], 'en' => $s['en']],
-                'key' => $s['key'], 'color' => $s['color'],
-                'is_final' => $s['final'], 'sort_order' => $i,
-            ]);
+            ClientStage::updateOrCreate(
+                ['key' => $s['key']],
+                [
+                    'name' => ['ar' => $s['ar'], 'en' => $s['en']],
+                    'color' => $s['color'], 'is_final' => $s['final'],
+                    'is_active' => true, 'sort_order' => $i,
+                ],
+            );
         }
 
         // نوع العميل

@@ -71,11 +71,18 @@
                             </p>
                         @endif
                         @if ($req->convertedClient)
-                            <a href="{{ route('dashboard.clients.show', $req->convertedClient) }}"
-                               class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success px-2.5 py-1 font-bold hover:bg-success/20 transition">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                عميل في الـ CRM: {{ $req->convertedClient->name }}
-                            </a>
+                            @can('clients.view')
+                                <a href="{{ route('dashboard.clients.show', $req->convertedClient) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success px-2.5 py-1 font-bold hover:bg-success/20 transition">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    عميل في الـ CRM: {{ $req->convertedClient->name }}
+                                </a>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success px-2.5 py-1 font-bold">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    تم التحويل إلى عميل
+                                </span>
+                            @endcan
                         @endif
                     </div>
                 @endif
@@ -171,7 +178,7 @@
                 {{-- حقول العميل الجديد --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" x-show="! convert.useExisting">
                     <div>
-                        <label class="{{ $lbl }}">الوكيل المسؤول</label>
+                        <label class="{{ $lbl }}">مسؤول العقار</label>
                         <select name="agent_id" class="{{ $field }}">
                             <option value="">— اختر —</option>
                             @foreach ($agents as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach

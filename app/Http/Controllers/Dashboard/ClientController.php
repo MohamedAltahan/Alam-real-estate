@@ -11,6 +11,7 @@ use App\Models\Client;
 use App\Models\ClientType;
 use App\Models\MarketingSource;
 use App\Models\Property;
+use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ClientService;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class ClientController extends Controller
             'types' => ClientType::where('is_active', true)->get(),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'sources' => MarketingSource::orderBy('name')->get(['id', 'name']),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'filters' => $request->only('search', 'stage_id', 'agent_id', 'type_id'),
         ]);
     }
@@ -53,7 +55,9 @@ class ClientController extends Controller
             'types' => ClientType::where('is_active', true)->get(),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'sources' => MarketingSource::orderBy('name')->get(['id', 'name']),
-            'linkable' => Property::latest()->take(50)->get(['id', 'reference_code']),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
+            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media'])
+                ->latest()->take(100)->get(),
         ]);
     }
 
@@ -88,7 +92,7 @@ class ClientController extends Controller
 
         $data = $request->validate([
             'property_id' => ['required', 'exists:properties,id'],
-            'relation' => ['nullable', 'string', 'max:40'],
+            'relation' => ['nullable', 'in:interested,viewed,reserved'],
             'notes' => ['nullable', 'string'],
         ]);
 

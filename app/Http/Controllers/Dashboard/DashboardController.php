@@ -21,12 +21,21 @@ class DashboardController extends Controller
 
     public function __invoke()
     {
+        $user = auth()->user();
+        $canDashboard = $user->can('dashboard.view');
+        $canClients = $canDashboard && $user->can('clients.view');
+        $canProperties = $canDashboard && $user->can('properties.view');
+        $canRequests = $canDashboard && $user->can('contact_requests.view');
+
         $now = CarbonImmutable::now();
+        $currency = $user->currencySymbol();
         $monthStart = $now->startOfMonth();
         $prevStart = $monthStart->subMonth();
 
-        $soldId = PropertyStatus::where('key', 'sold')->value('id');
-        $wonId = ClientStage::where('key', 'closed_won')->value('id');
+        $soldId = $canProperties ? PropertyStatus::where('key', 'sold')->value('id') : null;
+        $newId = $canClients ? ClientStage::where('key', 'new')->value('id') : null;
+        $viewingId = $canClients ? ClientStage::where('key', 'viewing')->value('id') : null;
+        $wonId = $canClients ? ClientStage::where('key', 'closed_won')->value('id') : null;
 
         // ===== الصفقات المغلقة + الإيرادات (عقارات مباعة) =====
         $sold = $soldId
@@ -37,8 +46,11 @@ class DashboardController extends Controller
         $soldPrevMonth = $sold->whereBetween('updated_at', [$prevStart, $monthStart]);
 
         // ===== بطاقات المؤشرات =====
-        $properties = Property::get(['id', 'created_at']);
-        $clients = Client::get(['id', 'created_at', 'stage_id']);
+        $properties = $canProperties ? Property::get(['id', 'created_at']) : collect();
+        $clients = $canClients ? Client::get(['id', 'created_at', 'updated_at', 'stage_id']) : collect();
+        $wonClients = $wonId ? $clients->where('stage_id', $wonId) : collect();
+        $wonThisMonth = $wonClients->where('updated_at', '>=', $monthStart);
+        $wonPrevMonth = $wonClients->whereBetween('updated_at', [$prevStart, $monthStart]);
 
         $stats = [
             [
@@ -70,7 +82,7 @@ class DashboardController extends Controller
             [
                 'key' => 'revenue',
                 'label' => 'اجمالي الايرادات',
-                'value' => number_format((float) $sold->sum('price')).' <span class="text-base font-bold">دينار</span>',
+                'value' => number_format((float) $sold->sum('price')).' <span class="text-base font-bold">'.$currency.'</span>',
                 'sub_value' => number_format((float) $soldThisMonth->sum('price')),
                 'sub_label' => 'ايرادات هذا الشهر',
                 'trend' => $this->trend((float) $soldThisMonth->sum('price'), (float) $soldPrevMonth->sum('price')),
@@ -80,10 +92,10 @@ class DashboardController extends Controller
             [
                 'key' => 'deals',
                 'label' => 'اجمالي الصفقات المغلقة',
-                'value' => number_format($sold->count()),
-                'sub_value' => number_format($soldThisMonth->count()),
+                'value' => number_format($wonClients->count()),
+                'sub_value' => number_format($wonThisMonth->count()),
                 'sub_label' => 'صفقات الشهر الحالي',
-                'trend' => $this->trend($soldThisMonth->count(), $soldPrevMonth->count()),
+                'trend' => $this->trend($wonThisMonth->count(), $wonPrevMonth->count()),
                 'tone' => 'success',
                 'icon' => 'check',
             ],
@@ -94,38 +106,42 @@ class DashboardController extends Controller
         $leadMonths = $this->lastMonths($now, 9);
         $convMonths = $this->lastMonths($now, 6);
 
-        $requests = ContactRequest::get(['id', 'created_at', 'status']);
-
         $charts = [
             // الإيراد الشهري — بالآلاف
             'revenue' => [
                 'labels' => $revenueMonths->pluck('label'),
+                'currency' => $currency,
                 'data' => $revenueMonths->map(fn ($m) => round(
                     (float) $sold->whereBetween('updated_at', [$m['from'], $m['to']])->sum('price') / 1000, 1
                 )),
             ],
-            // الـ Leads حسب الشهر
+            // العملاء (الطلبات) حسب الشهر
             'leads' => [
                 'labels' => $leadMonths->pluck('label'),
-                'data' => $leadMonths->map(fn ($m) => $requests->whereBetween('created_at', [$m['from'], $m['to']])->count()),
+                'data' => $leadMonths->map(fn ($m) => $clients->whereBetween('created_at', [$m['from'], $m['to']])->count()),
             ],
-            // معدل التحويل — أعمدة (طلبات) + خط (نسبة الإغلاق)
+            // معدل التحويل — أعمدة (عملاء) + خط (نسبة الربح)
             'conversion' => [
                 'labels' => $convMonths->pluck('label'),
-                'bars' => $convMonths->map(fn ($m) => $requests->whereBetween('created_at', [$m['from'], $m['to']])->count()),
-                'line' => $convMonths->map(function ($m) use ($requests) {
-                    $total = $requests->whereBetween('created_at', [$m['from'], $m['to']])->count();
+                'bars' => $convMonths->map(fn ($m) => $clients->whereBetween('created_at', [$m['from'], $m['to']])->count()),
+                'line' => $convMonths->map(function ($m) use ($clients, $wonId) {
+                    $monthly = $clients->whereBetween('created_at', [$m['from'], $m['to']]);
+                    $total = $monthly->count();
 
                     return $total
-                        ? round($requests->whereBetween('created_at', [$m['from'], $m['to']])->where('status', 'contacted')->count() / $total * 100)
+                        ? round($monthly->where('stage_id', $wonId)->count() / $total * 100)
                         : 0;
                 }),
             ],
         ];
 
         // ===== قوائم أسفل الصفحة =====
-        $latestRequests = ContactRequest::with('requestType')->latest()->take(5)->get();
-        $latestProperties = Property::with(['area', 'status'])->latest()->take(5)->get();
+        $latestRequests = $canRequests
+            ? ContactRequest::with('requestType')->latest()->take(5)->get()
+            : collect();
+        $latestProperties = $canProperties
+            ? Property::with(['area', 'status'])->latest()->take(5)->get()
+            : collect();
 
         return view('dashboard.index', [
             'stats' => $stats,
@@ -133,10 +149,9 @@ class DashboardController extends Controller
             'latestRequests' => $latestRequests,
             'latestProperties' => $latestProperties,
             'today' => $this->arabicDate($now),
-            'openRequests' => $requests->where('status', 'pending')->count(),
-            'openFollowUps' => $wonId
-                ? $clients->where('stage_id', '!=', $wonId)->count()
-                : $clients->count(),
+            'currency' => $currency,
+            'openRequests' => $newId ? $clients->where('stage_id', $newId)->count() : 0,
+            'openFollowUps' => $viewingId ? $clients->where('stage_id', $viewingId)->count() : 0,
         ]);
     }
 

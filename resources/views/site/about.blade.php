@@ -13,7 +13,12 @@
 
         return is_array($v) ? ($v[$loc] ?? $v['ar'] ?? $def) : ($v ?: $def);
     };
-    $img = fn ($p) => $p ? \Illuminate\Support\Facades\Storage::url($p) : null;
+    // يقبل رابطاً جاهزاً (media library) أو مساراً قديماً على القرص
+    $img = fn ($p) => !$p
+        ? null
+        : (str_starts_with($p, 'http') || str_starts_with($p, '/')
+            ? $p
+            : \Illuminate\Support\Facades\Storage::url($p));
     // أيقونات + ألوان بطاقات القيم (بالترتيب: قيمنا · رسالتنا · رؤيتنا)
     $valueStyles = [
         ['bg' => 'bg-success-soft', 'text' => 'text-success', 'icon' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'],
@@ -141,7 +146,7 @@
                         <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-primary-700/95 via-primary-700/55 to-transparent"></div>
                         <div class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between text-white">
                             <span class="text-xs font-bold">{{ $agent->properties_count }} {{ $t('عقار', 'listings') }}</span>
-                            {{-- التقييم الحقيقي من متوسط تقييمات الوكيل --}}
+                            {{-- التقييم الحقيقي من متوسط تقييمات مسؤول العقار --}}
                             @if ($agent->reviews_count)
                                 <span class="text-accent-500 text-xs flex items-center gap-1">
                                     ★<span class="tabular-nums" dir="ltr">{{ number_format((float) $agent->rating, 1) }}</span>

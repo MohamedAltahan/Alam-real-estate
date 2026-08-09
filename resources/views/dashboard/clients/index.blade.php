@@ -4,9 +4,6 @@
 @section('page-title', 'إدارة العملاء')
 
 @php
-    $ratingTone = fn ($r) => is_null($r) ? 'text-gray-400 bg-gray-100'
-        : ($r >= 70 ? 'text-success bg-success-soft' : ($r >= 40 ? 'text-warning bg-warning-soft' : 'text-danger bg-danger-soft'));
-
     $activeStage = $filters['stage_id'] ?? '';
     // رابط زر المرحلة = نفس الفلاتر الحالية مع تبديل stage_id فقط
     $stageUrl = fn ($id) => route('dashboard.clients.index', array_filter(array_merge($filters, ['stage_id' => $id]), fn ($v) => $v !== null && $v !== ''));
@@ -19,7 +16,19 @@
 @endphp
 
 @section('content')
-<div x-data="{ addOpen: {{ $errors->any() ? 'true' : 'false' }}, delOpen: false, delAction: '', delName: '' }">
+<div x-data="{
+        addOpen: {{ $errors->any() ? 'true' : 'false' }},
+        delOpen: false, delAction: '', delName: '',
+        notesOpen: false, notesClient: null, copyDone: false,
+        async copyClient(text) {
+            try { await navigator.clipboard.writeText(text) }
+            catch (e) {
+                const area = document.createElement('textarea'); area.value = text;
+                document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+            }
+            this.copyDone = true; setTimeout(() => this.copyDone = false, 1800);
+        }
+    }">
 
     @if (session('success'))
         <div class="mb-4 rounded-field bg-success-soft text-success text-sm px-4 py-3 flex items-center gap-2">
@@ -27,6 +36,10 @@
             {{ session('success') }}
         </div>
     @endif
+    @if ($errors->any())
+        <div class="mb-4 rounded-field bg-danger/10 text-danger text-sm px-4 py-3">{{ $errors->first() }}</div>
+    @endif
+    <div x-show="copyDone" x-cloak x-transition class="fixed top-20 start-1/2 -translate-x-1/2 z-[70] rounded-full bg-primary-950 text-white px-5 py-2.5 text-sm shadow-xl">تم نسخ بيانات العميل</div>
 
     {{-- الترويسة + البحث + إضافة --}}
     <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
@@ -59,7 +72,7 @@
     {{-- ===== منطقة النتائج: تُستبدَل وحدها عند الفلترة الحيّة ===== --}}
     <div data-results>
 
-    {{-- صفّ الفلاتر: أزرار المراحل + فلتر الوكيل — داخل النتائج لأن أعداد المراحل تتغيّر مع الفلاتر --}}
+    {{-- صفّ الفلاتر: أزرار المراحل + فلتر مسؤول العقار --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="inline-flex items-center gap-1 rounded-full bg-gray-100/70 border border-gray-100 p-1 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <a href="{{ $stageUrl(null) }}" data-filter-set="stage_id" data-filter-value="" class="{{ $activeStage === '' ? $pillOn : $pillOff }}">
@@ -79,7 +92,7 @@
             <div class="relative">
                 <select name="agent_id" form="clients-filters"
                         class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                    <option value="">كل الوكلاء</option>
+                    <option value="">كل مسؤولي العقارات</option>
                     @foreach ($agents as $u)
                         <option value="{{ $u->id }}" @selected(($filters['agent_id'] ?? '') == $u->id)>{{ $u->name }}</option>
                     @endforeach
@@ -101,9 +114,9 @@
                         <th class="text-start font-medium px-4 py-3">العميل</th>
                         <th class="text-start font-medium px-4 py-3">الهاتف</th>
                         <th class="text-start font-medium px-4 py-3">المنطقة</th>
-                        <th class="text-start font-medium px-4 py-3">الوكيل</th>
+                        <th class="text-start font-medium px-4 py-3">مسؤول العقار</th>
                         <th class="text-start font-medium px-4 py-3">المرحلة</th>
-                        <th class="text-start font-medium px-4 py-3">التقييم</th>
+                        <th class="text-start font-medium px-4 py-3">الملاحظات</th>
                         <th class="text-start font-medium px-4 py-3">إجراءات</th>
                     </tr>
                 </thead>
@@ -133,18 +146,36 @@
                                     </span>
                                 @else <span class="text-gray-300">—</span> @endif
                             </td>
-                            <td class="px-4 py-3">
-                                <span class="inline-block rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums {{ $ratingTone($c->rating) }}">
-                                    {{ is_null($c->rating) ? '—' : $c->rating . '%' }}
-                                </span>
+                            <td class="px-4 py-3 max-w-[230px]">
+                                <button type="button" @click.stop="notesClient = @js([
+                                        'name' => $c->name,
+                                        'notes' => $c->notes,
+                                        'interactions' => $c->interactions->map(fn ($interaction) => [
+                                            'type' => ['call' => 'مكالمة', 'meeting' => 'مقابلة', 'whatsapp' => 'واتساب', 'email' => 'بريد إلكتروني'][$interaction->type] ?? $interaction->type,
+                                            'notes' => $interaction->notes,
+                                            'stage' => $interaction->stage?->name,
+                                            'user' => $interaction->user?->name,
+                                            'date' => $interaction->occurred_at?->format('Y-m-d H:i'),
+                                        ])->values(),
+                                    ]); notesOpen = true"
+                                        class="w-full text-start rounded-xl px-2.5 py-2 hover:bg-primary-50 transition">
+                                    <span class="block truncate text-gray-600">{{ $c->notes ?: 'فتح سجل التواصل' }}</span>
+                                    <span class="block text-[11px] text-primary-600 mt-0.5">{{ $c->interactions->count() }} تواصل مسجل</span>
+                                </button>
                             </td>
                             <td class="px-4 py-3">
-                                @can('clients.delete')
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click.stop="copyClient(@js($c->shareText()))"
+                                            class="grid place-items-center w-8 h-8 rounded-full text-primary-700 hover:bg-primary-100 transition" title="نسخ كل بيانات العميل">
+                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    </button>
+                                    @can('clients.delete')
                                     <button @click.stop="delOpen = true; delAction = '{{ route('dashboard.clients.destroy', $c) }}'; delName = @js($c->name)"
                                             class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف">
                                         <x-icon.trash />
                                     </button>
-                                @endcan
+                                    @endcan
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -161,7 +192,7 @@
     {{-- ===== مودال إضافة عميل ===== --}}
     <div x-show="addOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
         <div class="absolute inset-0 bg-primary-950/50" @click="addOpen = false"></div>
-        <div class="relative w-full max-w-2xl bg-white rounded-card shadow-2xl max-h-[90vh] overflow-y-auto"
+        <div class="relative w-full max-w-6xl bg-white rounded-card shadow-2xl max-h-[90vh] overflow-y-auto"
              x-transition.opacity>
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <h3 class="font-bold text-ink">إضافة عميل جديد</h3>
@@ -179,6 +210,36 @@
                     <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">إضافة العميل</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    {{-- سجل الملاحظات والتواصل --}}
+    <div x-show="notesOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" @keydown.escape.window="notesOpen = false">
+        <div class="absolute inset-0 bg-primary-950/50" @click="notesOpen = false"></div>
+        <div class="relative w-full max-w-2xl bg-white rounded-card shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div><h3 class="font-bold text-ink">سجل التواصل</h3><p class="text-xs text-gray-400" x-text="notesClient?.name"></p></div>
+                <button type="button" @click="notesOpen = false" class="grid place-items-center w-9 h-9 rounded-full hover:bg-gray-100 text-gray-500"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6">
+                <div class="rounded-2xl bg-gray-50 px-4 py-3 mb-5">
+                    <p class="text-xs text-gray-400 mb-1">ملاحظات العميل</p>
+                    <p class="text-sm text-ink whitespace-pre-line" x-text="notesClient?.notes || 'لا توجد ملاحظات عامة.'"></p>
+                </div>
+                <div class="space-y-3">
+                    <template x-for="(item, index) in (notesClient?.interactions || [])" :key="index">
+                        <article class="rounded-2xl border border-gray-100 p-4">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <span class="font-semibold text-sm text-ink" x-text="item.type"></span>
+                                <span class="text-xs text-gray-400" dir="ltr" x-text="item.date"></span>
+                            </div>
+                            <p class="text-sm text-gray-600 whitespace-pre-line" x-text="item.notes || 'بدون ملاحظات'"></p>
+                            <p class="text-xs text-primary-600 mt-2"><span x-text="item.stage || 'لم تتغير الحالة'"></span><span x-show="item.user"> · بواسطة <span x-text="item.user"></span></span></p>
+                        </article>
+                    </template>
+                    <p x-show="!(notesClient?.interactions || []).length" class="py-8 text-center text-sm text-gray-400">لا يوجد تواصل مسجل مع هذا العميل حتى الآن.</p>
+                </div>
+            </div>
         </div>
     </div>
 

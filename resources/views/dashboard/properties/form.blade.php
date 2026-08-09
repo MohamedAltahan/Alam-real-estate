@@ -56,7 +56,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">السعر (د.ك) <span class="text-danger">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">السعر ({{ auth()->user()->currencySymbol() }}) <span class="text-danger">*</span></label>
                         <input name="price" type="number" step="0.001" min="0" value="{{ old('price', $property->price) }}" required class="{{ $inputCls }}">
                         @error('price')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                     </div>
@@ -70,7 +70,7 @@
                 </div>
 
                 <x-select label="المالك" name="owner_id" :options="$owners->pluck('name', 'id')" :selected="$property->owner_id" />
-                <x-select label="الوكيل المسؤول" name="agent_id" :options="$agents->pluck('name', 'id')" :selected="$property->agent_id" />
+                <x-select label="مسؤول العقار" name="agent_id" :options="$agents->pluck('name', 'id')" :selected="$property->agent_id" />
 
                 <div class="grid grid-cols-3 gap-2 sm:col-span-2">
                     <x-input label="غرف النوم" name="bedrooms" type="number" :value="$property->bedrooms" />

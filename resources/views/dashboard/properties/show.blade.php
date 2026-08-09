@@ -33,7 +33,7 @@
                         @if ($property->is_featured)<span class="rounded-full bg-accent-100 text-accent-800 px-2.5 py-1 text-xs font-medium">مميّز</span>@endif
                     </div>
                     <h2 class="text-xl font-bold text-ink">{{ $property->title }}</h2>
-                    <p class="text-primary-700 font-bold text-lg mt-1 tabular-nums">{{ number_format($property->price, 3) }} د.ك <span class="text-sm text-gray-400 font-normal">{{ $property->purpose === 'rent' ? '/'.($property->price_period === 'yearly' ? 'سنة' : 'شهر') : 'للبيع' }}</span></p>
+                    <p class="text-primary-700 font-bold text-lg mt-1 tabular-nums">{{ number_format($property->price, 3) }} {{ auth()->user()->currencySymbol() }} <span class="text-sm text-gray-400 font-normal">{{ $property->purpose === 'rent' ? '/'.($property->price_period === 'yearly' ? 'سنة' : 'شهر') : 'للبيع' }}</span></p>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100 text-sm">
                         <div><p class="text-gray-400 text-xs">غرف النوم</p><p class="font-semibold text-ink">{{ $property->bedrooms ?? '—' }}</p></div>
@@ -96,13 +96,13 @@
             </div>
         </div>
 
-        {{-- الجانب: المالك والوكيل والموقع --}}
+        {{-- الجانب: المالك ومسؤول العقار والموقع --}}
         <div class="space-y-5">
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                <h3 class="font-bold text-ink mb-3">المالك والوكيل</h3>
+                <h3 class="font-bold text-ink mb-3">المالك ومسؤول العقار</h3>
                 <div class="space-y-3 text-sm">
                     <div><p class="text-gray-400 text-xs">المالك</p><p class="font-medium text-ink">{{ $property->owner?->name ?? '—' }}</p></div>
-                    <div><p class="text-gray-400 text-xs">الوكيل المسؤول</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
+                    <div><p class="text-gray-400 text-xs">مسؤول العقار</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">التصنيف / النوع</p><p class="font-medium text-ink">{{ $property->category?->name }} · {{ $property->unitType?->name }}</p></div>
                 </div>
             </div>
