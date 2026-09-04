@@ -15,6 +15,7 @@ use App\Support\PhoneNumber;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -165,9 +166,9 @@ class ClientService
         ]);
     }
 
-    public function create(array $data): Client
+    public function create(array $data, ?Request $request = null): Client
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $request) {
             [$needs, $viewings, $data] = $this->extractRows($data);
 
             $data['stage_id'] = $data['stage_id'] ?? ClientStage::where('key', 'new')->value('id');
@@ -179,23 +180,49 @@ class ClientService
 
             $this->syncNeeds($client, $needs);
             $this->syncViewings($client, $viewings);
+            $this->syncFiles($client, $request);
 
             return $client;
         });
     }
 
-    public function update(Client $client, array $data): Client
+    public function update(Client $client, array $data, ?Request $request = null): Client
     {
-        return DB::transaction(function () use ($client, $data) {
+        return DB::transaction(function () use ($client, $data, $request) {
             [$needs, $viewings, $data] = $this->extractRows($data);
 
             $client->update($data);
 
             $this->syncNeeds($client, $needs);
             $this->syncViewings($client, $viewings);
+            $this->syncFiles($client, $request);
 
             return $client;
         });
+    }
+
+    /** ملفات العميل: حذف المحدد للحذف ثم إضافة الملفات الجديدة — كل ملف يُسجَّل في سجل التعديلات */
+    private function syncFiles(Client $client, ?Request $request): void
+    {
+        if (! $request) {
+            return;
+        }
+
+        foreach ((array) $request->input('files_removed', []) as $id) {
+            $media = $client->media()->where('id', (int) $id)->first();
+
+            if ($media) {
+                $this->audit->record($client, 'file_removed', null, ['file' => ['old' => $media->file_name, 'new' => null]]);
+                $media->delete();
+            }
+        }
+
+        foreach ((array) $request->file('files', []) as $file) {
+            if ($file) {
+                $media = $client->addMedia($file)->toMediaCollection(Client::FILES);
+                $this->audit->record($client, 'file_added', null, ['file' => ['old' => null, 'new' => $media->file_name]]);
+            }
+        }
     }
 
     public function delete(Client $client): void
@@ -300,7 +327,7 @@ class ClientService
         $needs = array_key_exists('needs', $data) ? (array) $data['needs'] : null;
         $viewings = array_key_exists('viewings', $data) ? (array) $data['viewings'] : null;
 
-        unset($data['needs'], $data['viewings']);
+        unset($data['needs'], $data['viewings'], $data['files'], $data['files_removed']);
 
         return [$needs, $viewings, $data];
     }

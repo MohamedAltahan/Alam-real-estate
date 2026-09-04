@@ -46,7 +46,7 @@ class ClientController extends Controller
 
     public function store(StoreClientRequest $request): RedirectResponse
     {
-        $this->clients->create($request->validated());
+        $this->clients->create($request->validated(), $request);
 
         return back()->with('success', 'تم إضافة العميل بنجاح.');
     }
@@ -68,7 +68,7 @@ class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
-        $this->clients->update($client, $request->validated());
+        $this->clients->update($client, $request->validated(), $request);
 
         return back()->with('success', 'تم تحديث بيانات العميل.');
     }

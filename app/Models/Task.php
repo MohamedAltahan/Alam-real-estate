@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAttachedFiles;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /** مهمة على لوحة المهام — رقمها هو id (#12) */
 class Task extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use HasAttachedFiles;
 
     public const STATUSES = [
         'new' => 'جديد',
@@ -45,11 +44,7 @@ class Task extends Model implements HasMedia
     ];
 
     /** مجموعة المرفقات (صور · PDF · Word · Excel) */
-    public const ATTACHMENTS = 'attachments';
-
-    public const FILE_EXTENSIONS = PropertyOwner::FILE_EXTENSIONS;
-
-    public const MAX_FILE_KB = PropertyOwner::MAX_FILE_KB;
+    public const FILES = 'attachments';
 
     /** المهام المكتملة تظهر على اللوحة لهذه المدة ما لم يُطلب عرض الكل */
     public const DONE_VISIBLE_DAYS = 30;
@@ -89,11 +84,6 @@ class Task extends Model implements HasMedia
         return $this->hasMany(TaskAuditLog::class)->with('user')->latest('created_at')->latest('id');
     }
 
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection(self::ATTACHMENTS);
-    }
-
     public function scopeMine(Builder $query, int $userId): Builder
     {
         return $query->where('assignee_id', $userId);
@@ -123,17 +113,5 @@ class Task extends Model implements HasMedia
     public function priorityTone(): string
     {
         return self::PRIORITY_TONES[$this->priority] ?? 'bg-gray-100 text-gray-500';
-    }
-
-    /** المرفقات بصيغة جاهزة للواجهة (Alpine) */
-    public function filePayload(): array
-    {
-        return $this->getMedia(self::ATTACHMENTS)->map(fn (Media $media) => [
-            'id' => $media->id,
-            'name' => $media->file_name,
-            'size' => (int) $media->size,
-            'url' => $media->getUrl(),
-            'ext' => strtolower(pathinfo($media->file_name, PATHINFO_EXTENSION)),
-        ])->values()->all();
     }
 }

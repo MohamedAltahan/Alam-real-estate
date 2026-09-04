@@ -117,4 +117,14 @@
             @error('notes')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
         </div>
     </section>
+
+    {{-- ===== ملفات العميل ===== --}}
+    <section class="pt-5 border-t border-gray-100">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <h4 class="font-bold text-ink">ملفات العميل</h4>
+            <p class="text-xs text-gray-400">مستندات تخص العميل (عقود، إثبات هوية، عروض) — تُحذف وتُضاف من هنا.</p>
+        </div>
+        <x-file-uploader name="files" remove-name="files_removed" :files="$client?->filePayload() ?? []" />
+        @error('files.*')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+    </section>
 </div>

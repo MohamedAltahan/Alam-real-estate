@@ -58,7 +58,7 @@ class TaskBoardTest extends TestCase
         $this->assertSame($creator->id, $task->created_by);
         $this->assertSame($assignee->id, $task->assignee_id);
         $this->assertSame($property->id, $task->property_id);
-        $this->assertCount(1, $task->getMedia(Task::ATTACHMENTS));
+        $this->assertCount(1, $task->getMedia(Task::FILES));
 
         $this->assertDatabaseHas('task_audit_logs', ['task_id' => $task->id, 'action' => 'created', 'user_id' => $creator->id]);
         $this->assertDatabaseHas('task_audit_logs', ['task_id' => $task->id, 'action' => 'attachment_added']);

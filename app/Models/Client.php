@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAttachedFiles;
 use App\Observers\ClientObserver;
 use App\Support\ClientFields;
 use App\Support\PhoneNumber;
@@ -10,10 +11,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
 
 #[ObservedBy([ClientObserver::class])]
-class Client extends Model
+class Client extends Model implements HasMedia
 {
+    use HasAttachedFiles;
+
+    /** مجموعة ملفات العميل (صور · PDF · Word · Excel) */
+    public const FILES = 'files';
+
     protected $fillable = [
         'name', 'phone_code', 'phone', 'email', 'type_id',
         'stage_id', 'agent_id', 'source_id', 'rating', 'notes',

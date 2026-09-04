@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\ClientService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -101,6 +102,58 @@ class ClientOwnerWorkflowTest extends TestCase
             ->assertSee('contract.pdf')
             ->assertSee('أبو محمد')
             ->assertDontSee('حالة العقد');
+    }
+
+    public function test_client_files_are_uploaded_listed_and_deleted(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $this->grant($user, ['clients.view', 'clients.create', 'clients.edit']);
+
+        $this->actingAs($user)->post(route('dashboard.clients.store'), [
+            'name' => 'عميل الملفات',
+            'phone_code' => '+965',
+            'phone' => '55667788',
+            'files' => [
+                UploadedFile::fake()->create('id-card.pdf', 100, 'application/pdf'),
+                UploadedFile::fake()->image('unit.jpg'),
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $client = Client::where('phone', '55667788')->firstOrFail();
+        $this->assertCount(2, $client->getMedia(Client::FILES));
+        $this->assertDatabaseHas('client_audit_logs', ['client_id' => $client->id, 'action' => 'file_added', 'user_id' => $user->id]);
+
+        // الملفات تظهر في صفحة العميل وفي فورم التعديل
+        $this->actingAs($user)->get(route('dashboard.clients.show', $client))
+            ->assertOk()
+            ->assertSee('ملفات العميل')
+            ->assertSee('id-card.pdf');
+
+        // التعديل: حذف ملف وإضافة آخر — بقية البيانات تبقى كما هي
+        $pdf = $client->getMedia(Client::FILES)->firstWhere('file_name', 'id-card.pdf');
+
+        $this->actingAs($user)->put(route('dashboard.clients.update', $client), [
+            'name' => 'عميل الملفات',
+            'phone_code' => '+965',
+            'phone' => '55667788',
+            'files_removed' => [$pdf->id],
+            'files' => [UploadedFile::fake()->create('contract.docx', 20, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')],
+        ])->assertSessionHasNoErrors();
+
+        $names = $client->refresh()->getMedia(Client::FILES)->pluck('file_name')->all();
+        $this->assertEqualsCanonicalizing(['unit.jpg', 'contract.docx'], $names);
+        $this->assertDatabaseHas('client_audit_logs', ['client_id' => $client->id, 'action' => 'file_removed']);
+
+        // نوع غير مسموح يُرفض
+        $this->actingAs($user)->put(route('dashboard.clients.update', $client), [
+            'name' => 'عميل الملفات',
+            'phone_code' => '+965',
+            'phone' => '55667788',
+            'files' => [UploadedFile::fake()->create('virus.exe', 10)],
+        ])->assertSessionHasErrors('files.0');
+
+        $this->assertCount(2, $client->refresh()->getMedia(Client::FILES));
     }
 
     public function test_client_pages_render_notes_and_requested_unit_type(): void

@@ -447,7 +447,7 @@
                         </svg>
                     </button>
                 </div>
-                <form method="POST" action="{{ route('dashboard.clients.store') }}">
+                <form method="POST" action="{{ route('dashboard.clients.store') }}" enctype="multipart/form-data">
                     @csrf
                     <div class="p-6">
                         @include('dashboard.clients._form', ['client' => null, 'form' => $form])

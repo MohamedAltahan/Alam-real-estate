@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Area;
+use App\Models\Client;
 use App\Support\ClientFields;
 use App\Support\PhoneCountries;
 use Illuminate\Foundation\Http\FormRequest;
@@ -77,6 +78,11 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.in_person' => ['nullable', 'boolean'],
             'viewings.*.outcome' => ['nullable', Rule::in(array_keys(ClientFields::OUTCOMES))],
             'viewings.*.notes' => ['nullable', 'string', 'max:2000'],
+
+            'files' => ['nullable', 'array', 'max:30'],
+            'files.*' => ['file', 'mimes:'.implode(',', Client::FILE_EXTENSIONS), 'max:'.Client::MAX_FILE_KB],
+            'files_removed' => ['nullable', 'array'],
+            'files_removed.*' => ['integer'],
         ];
     }
 
@@ -104,6 +110,8 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.property_id.required' => 'اختر العقار لكل سطر معاينة.',
             'viewings.*.scheduled_at.required' => 'حدّد موعد المعاينة.',
             'viewings.*.scheduled_at.date_format' => 'صيغة موعد المعاينة غير صحيحة.',
+            'files.*.mimes' => 'الملفات المسموحة: صور، PDF، Word، Excel.',
+            'files.*.max' => 'حجم الملف يجب ألا يتجاوز 15 ميجابايت.',
         ];
     }
 
@@ -130,6 +138,8 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.in_person' => 'حضوري',
             'viewings.*.outcome' => 'النتيجة',
             'viewings.*.notes' => 'ملاحظة المعاينة',
+            'files' => 'ملفات العميل',
+            'files.*' => 'ملف العميل',
         ];
     }
 }

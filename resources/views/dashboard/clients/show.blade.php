@@ -15,6 +15,16 @@
         'note' => ['label' => 'ملاحظة', 'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>'],
     ];
     $editOpen = ClientFormData::hasFormErrors($errors);
+
+    $files = $client->filePayload();
+    $fileTone = [
+        'image' => 'bg-info-soft text-info', 'pdf' => 'bg-danger/10 text-danger',
+        'word' => 'bg-primary-50 text-primary-700', 'excel' => 'bg-success-soft text-success', 'file' => 'bg-gray-100 text-gray-500',
+    ];
+    $kindOf = fn ($ext) => match ($ext) {
+        'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg' => 'image',
+        'pdf' => 'pdf', 'doc', 'docx' => 'word', 'xls', 'xlsx', 'csv' => 'excel', default => 'file',
+    };
 @endphp
 
 @section('content')
@@ -46,6 +56,10 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button type="button" @click="$dispatch('open-modal', 'client-files')" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-4 py-2">
+                            ملفات العميل
+                            <span class="grid place-items-center min-w-5 h-5 px-1.5 rounded-full bg-primary-900 text-white text-[11px] font-bold">{{ count($files) }}</span>
+                        </button>
                         @can('clients.edit')<button type="button" @click="editOpen = true" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-4 py-2">تعديل البيانات</button>@endcan
                         @if ($client->phone)<a href="https://wa.me/{{ $client->whatsapp_number }}" target="_blank" rel="noopener" class="rounded-full bg-success/10 text-success hover:bg-success/20 text-sm px-4 py-2 font-medium">واتساب</a>@endif
                     </div>
@@ -238,12 +252,32 @@
         </aside>
     </div>
 
+    {{-- ===== مودال ملفات العميل ===== --}}
+    <x-modal name="client-files" maxWidth="lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div><h3 class="font-bold text-ink">ملفات العميل</h3><p class="text-xs text-gray-400">{{ $client->name }}</p></div>
+            <button type="button" @click="$dispatch('close-modal', 'client-files')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+        <div class="p-6 max-h-[65vh] overflow-y-auto space-y-2">
+            @forelse ($files as $file)
+                @php $kind = $kindOf($file['ext']); @endphp
+                <a href="{{ $file['url'] }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-xl border border-gray-100 hover:border-primary-200 hover:bg-primary-50/40 px-3 py-2.5 transition">
+                    <span class="grid place-items-center w-10 h-10 shrink-0 rounded-lg text-[10px] font-bold uppercase {{ $fileTone[$kind] }}">{{ $file['ext'] ?: 'file' }}</span>
+                    <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-ink truncate">{{ $file['name'] }}</span><span class="block text-[11px] text-gray-400">{{ $file['size'] > 1048576 ? number_format($file['size'] / 1048576, 1).' MB' : max(1, round($file['size'] / 1024)).' KB' }}</span></span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 shrink-0"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+                </a>
+            @empty
+                <p class="text-center text-sm text-gray-400 py-10">لا توجد ملفات مرفوعة لهذا العميل.@can('clients.edit') أضفها من «تعديل البيانات».@endcan</p>
+            @endforelse
+        </div>
+    </x-modal>
+
     @can('clients.edit')
         <div x-show="editOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" @keydown.escape.window="editOpen = false">
             <div class="absolute inset-0 bg-primary-950/50" @click="editOpen = false"></div>
             <div class="relative w-full max-w-6xl bg-white rounded-card shadow-2xl max-h-[90vh] overflow-y-auto">
                 <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-ink">تعديل بيانات العميل</h3><button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
-                <form method="POST" action="{{ route('dashboard.clients.update', $client) }}">@csrf @method('PUT')<div class="p-6">@include('dashboard.clients._form', ['client' => $client, 'form' => $form])</div><div class="sticky bottom-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/95"><button type="button" @click="editOpen = false" class="rounded-full px-4 py-2.5 text-sm text-gray-600">إلغاء</button><button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ التعديلات</button></div></form>
+                <form method="POST" action="{{ route('dashboard.clients.update', $client) }}" enctype="multipart/form-data">@csrf @method('PUT')<div class="p-6">@include('dashboard.clients._form', ['client' => $client, 'form' => $form])</div><div class="sticky bottom-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/95"><button type="button" @click="editOpen = false" class="rounded-full px-4 py-2.5 text-sm text-gray-600">إلغاء</button><button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ التعديلات</button></div></form>
             </div>
         </div>
     @endcan

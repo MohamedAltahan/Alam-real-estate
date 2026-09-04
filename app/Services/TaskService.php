@@ -228,7 +228,7 @@ class TaskService
     public function delete(Task $task): void
     {
         DB::transaction(function () use ($task) {
-            $task->clearMediaCollection(Task::ATTACHMENTS);
+            $task->clearMediaCollection(Task::FILES);
             $task->delete();
         });
     }
@@ -272,7 +272,7 @@ class TaskService
 
         foreach ((array) $request->file('files', []) as $file) {
             if ($file) {
-                $media = $task->addMedia($file)->toMediaCollection(Task::ATTACHMENTS);
+                $media = $task->addMedia($file)->toMediaCollection(Task::FILES);
                 $this->audit->record($task, 'attachment_added', ['file' => ['old' => null, 'new' => $media->file_name]]);
             }
         }

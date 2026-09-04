@@ -86,6 +86,7 @@ final class ClientFields
         'type' => 'نوع التواصل',
         'occurred_at' => 'التاريخ',
         'user_id' => 'الموظف',
+        'file' => 'الملف',
     ];
 
     /** الأعمدة المرجعية → الموديل الذي يُقرأ منه الاسم عند العرض */
@@ -128,6 +129,8 @@ final class ClientFields
         'property_reserved' => 'حجز عقار',
         'reservation_released' => 'إلغاء حجز عقار',
         'interaction_logged' => 'تسجيل تواصل',
+        'file_added' => 'إضافة ملف',
+        'file_removed' => 'حذف ملف',
     ];
 
     public static function label(string $field): string

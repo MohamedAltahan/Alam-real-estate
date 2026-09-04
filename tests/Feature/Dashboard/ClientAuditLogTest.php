@@ -41,6 +41,12 @@ class ClientAuditLogTest extends TestCase
         $service->update($client, ['name' => 'عميل بعد']);
         $this->assertSame($count, ClientAuditLog::where('client_id', $client->id)->count());
 
+        // نهايات الأسطر التي يرسلها المتصفح (CRLF) ليست تغييراً في الملاحظات
+        $service->update($client, ['notes' => "سطر\nثانٍ"]);
+        $count = ClientAuditLog::where('client_id', $client->id)->count();
+        $service->update($client, ['notes' => "سطر\r\nثانٍ"]);
+        $this->assertSame($count, ClientAuditLog::where('client_id', $client->id)->count());
+
         $this->get(route('dashboard.clients.show', $client))
             ->assertOk()
             ->assertSee('سجل التعديلات')

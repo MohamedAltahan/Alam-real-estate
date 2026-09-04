@@ -22,7 +22,8 @@
         <input type="hidden" name="{{ $removeName }}[]" :value="id">
     </template>
 
-    <ul x-show="! isEmpty" class="space-y-1.5">
+    {{-- تبقى القائمة ظاهرة ما دام هناك ملف محفوظ (ولو محدَّداً للحذف) حتى يظل زر التراجع متاحاً --}}
+    <ul x-show="existing.length || pending.length" class="space-y-1.5">
         <template x-for="f in existing" :key="'e' + f.id">
             <li class="flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition"
                 :class="removed.includes(f.id) ? 'border-danger/30 bg-danger/5 opacity-70' : 'border-gray-100 bg-white'">
