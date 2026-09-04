@@ -117,6 +117,11 @@
 .flatpickr-wrapper { display: block; width: 100%; }
 .datetime-alt { direction: rtl; }
 
+/* لوحة المهام: حالات السحب (SortableJS) */
+.task-ghost { opacity: 0.35; }
+.task-chosen { box-shadow: 0 14px 30px -12px rgba(17, 16, 51, 0.35); }
+.task-drag { transform: rotate(1.5deg); }
+
 [data-results][data-loading] {
         opacity: 0.55;
         pointer-events: none;

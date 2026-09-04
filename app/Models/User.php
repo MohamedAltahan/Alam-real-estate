@@ -103,6 +103,12 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(Property::class, 'agent_id');
     }
 
+    /** المهام المسندة إليه */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assignee_id');
+    }
+
     /** تفاعلات التواصل اللي سجّلها */
     public function interactions(): HasMany
     {

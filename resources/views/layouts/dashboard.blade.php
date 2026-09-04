@@ -43,6 +43,7 @@
         ['label' => 'لوحة التحكم',    'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'grid', 'permission' => null],
         ['label' => 'إدارة العملاء',  'route' => 'dashboard.clients.index', 'active' => 'dashboard.clients.*', 'icon' => 'users', 'permission' => 'clients.view'],
         ['label' => 'المعاينات',      'route' => 'dashboard.viewings.index', 'active' => 'dashboard.viewings.*', 'icon' => 'calendar', 'permission' => 'clients.view'],
+        ['label' => 'المهام',         'route' => 'dashboard.tasks.index', 'active' => 'dashboard.tasks.*', 'icon' => 'kanban', 'permission' => 'tasks.view'],
         ['label' => 'ملاك العقارات',  'route' => 'dashboard.owners.index', 'active' => 'dashboard.owners.*', 'icon' => 'key', 'permission' => 'property_owners.view'],
         ['label' => 'العقارات',       'route' => 'dashboard.properties.index', 'active' => 'dashboard.properties.*', 'icon' => 'building', 'permission' => 'properties.view'],
         ['label' => 'إدارة المناطق',  'route' => 'dashboard.areas.index', 'active' => ['dashboard.areas.*', 'dashboard.cities.*'], 'icon' => 'map-pin', 'permission' => 'areas.view'],
@@ -81,6 +82,7 @@
         'chart'    => '<path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/>',
         'bell'     => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
         'link'     => '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+        'kanban'   => '<rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="9.5" y="3" width="5" height="12" rx="1.5"/><rect x="16" y="3" width="5" height="8" rx="1.5"/>',
         'share'    => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
     ];
 

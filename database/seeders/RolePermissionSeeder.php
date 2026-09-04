@@ -35,7 +35,7 @@ class RolePermissionSeeder extends Seeder
             'property-manager' => [
                 'description' => 'مدير العقارات',
                 'perms' => array_merge(
-                    $this->forModules(['properties', 'property_owners', 'areas', 'unit_types', 'publishing_channels']),
+                    $this->forModules(['properties', 'property_owners', 'areas', 'unit_types', 'publishing_channels', 'tasks']),
                     $this->view(['clients', 'contact_requests', 'dashboard', 'notifications', 'reports'])
                 ),
             ],
@@ -43,14 +43,16 @@ class RolePermissionSeeder extends Seeder
                 'description' => 'مندوب مبيعات',
                 'perms' => array_merge(
                     $this->forModules(['clients']),
-                    $this->view(['properties', 'contact_requests', 'dashboard', 'notifications', 'reports'])
+                    $this->view(['properties', 'contact_requests', 'dashboard', 'notifications', 'reports']),
+                    $this->work(['tasks'])
                 ),
             ],
             'marketing-staff' => [
                 'description' => 'موظف تسويق',
                 'perms' => array_merge(
                     $this->forModules(['marketing_sources', 'publishing_channels']),
-                    $this->view(['clients', 'contact_requests', 'dashboard', 'notifications'])
+                    $this->view(['clients', 'contact_requests', 'dashboard', 'notifications']),
+                    $this->work(['tasks'])
                 ),
             ],
             'customer-service' => [
@@ -58,12 +60,13 @@ class RolePermissionSeeder extends Seeder
                 'perms' => array_merge(
                     $this->forModules(['contact_requests']),
                     $this->view(['clients', 'properties', 'dashboard', 'notifications']),
+                    $this->work(['tasks']),
                     ['notifications.edit']
                 ),
             ],
             'accountant' => [
                 'description' => 'محاسب',
-                'perms' => $this->view(['properties', 'clients', 'dashboard', 'notifications', 'reports']),
+                'perms' => $this->view(['properties', 'clients', 'dashboard', 'notifications', 'reports', 'tasks']),
             ],
         ];
 
@@ -85,6 +88,19 @@ class RolePermissionSeeder extends Seeder
         $out = [];
         foreach ($modules as $m) {
             foreach (PermissionMatrixController::actionsFor($m) as $a) {
+                $out[] = "{$m}.{$a}";
+            }
+        }
+
+        return $out;
+    }
+
+    /** عرض + إضافة + تعديل (بدون حذف) لعدة وحدات */
+    private function work(array $modules): array
+    {
+        $out = [];
+        foreach ($modules as $m) {
+            foreach (['view', 'create', 'edit'] as $a) {
                 $out[] = "{$m}.{$a}";
             }
         }

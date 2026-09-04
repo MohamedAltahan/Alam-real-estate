@@ -8,6 +8,7 @@ use App\Models\ContactRequest;
 use App\Models\Property;
 use App\Models\PropertyStatus;
 use App\Models\User;
+use App\Notifications\TaskEvent;
 use App\Notifications\ViewingReminder;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -99,6 +100,7 @@ class NotificationFeed
     {
         $data = (array) $notification->data;
         $isViewing = ($data['kind'] ?? null) === ViewingReminder::KIND;
+        $isTask = ($data['kind'] ?? null) === TaskEvent::KIND;
 
         // تذكير المعاينة: النص يُعاد حسابه الآن من موعد المعاينة بدل النص المحفوظ وقت الإرسال
         $overdue = $isViewing && ViewingReminder::isOverdue($data);
@@ -110,7 +112,7 @@ class NotificationFeed
             'at' => $notification->created_at,
             'unread' => $notification->read_at === null,
             'overdue' => $overdue,
-            'icon' => $isViewing ? 'calendar' : 'bell',
+            'icon' => $isViewing ? 'calendar' : ($isTask ? 'check' : 'bell'),
             'tone' => $overdue ? 'danger' : ($isViewing ? 'accent' : 'primary'),
             'url' => route('dashboard.notifications.open', $notification->id),
         ];

@@ -15,6 +15,7 @@ use App\Http\Controllers\Dashboard\PublishingChannelController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RoleController;
 use App\Http\Controllers\Dashboard\SupervisorController;
+use App\Http\Controllers\Dashboard\TaskController;
 use App\Http\Controllers\Dashboard\UnitTypeController;
 use App\Http\Controllers\Dashboard\ViewingController;
 use App\Http\Controllers\Dashboard\WebsiteController;
@@ -80,6 +81,19 @@ Route::middleware(['auth'])->group(function () {
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
             Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');
             Route::patch('viewings/{viewing}/outcome', [ViewingController::class, 'updateOutcome'])->name('viewings.outcome');
+        });
+
+        // ===== لوحة المهام =====
+        Route::middleware('can:tasks.view')->group(function () {
+            Route::get('tasks', [TaskController::class, 'index'])->name('tasks.index');
+            Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+            // قبل tasks/{task} حتى لا يُفسَّر «property-lookup» كمعرّف مهمة
+            Route::get('tasks/property-lookup', [TaskController::class, 'propertyLookup'])->name('tasks.property-lookup');
+            Route::get('tasks/{task}', [TaskController::class, 'show'])->whereNumber('task')->name('tasks.show');
+            Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+            Route::patch('tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
+            Route::post('tasks/{task}/comments', [TaskController::class, 'comment'])->name('tasks.comments.store');
+            Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
 
         // ===== التقارير =====

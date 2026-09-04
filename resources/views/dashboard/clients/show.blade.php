@@ -175,7 +175,7 @@
             </section>
 
             {{-- ===== سجل التعديلات ===== --}}
-            @include('dashboard.clients._audit', ['auditLogs' => $auditLogs])
+            @include('dashboard.partials.audit', ['auditLogs' => $auditLogs])
         </div>
 
         <aside>

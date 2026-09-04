@@ -146,6 +146,13 @@ function initLiveFilters(form) {
         }
     });
 
+    // إعادة تحميل النتائج بالفلاتر الحالية (مثلاً بعد فشل نقل بطاقة على لوحة المهام)
+    window.addEventListener('live-filters:refresh', () => {
+        lastQuery = null;
+        clearTimeout(timer);
+        apply();
+    });
+
     // مسح كل الفلاتر من زر خارج النموذج
     document.addEventListener('click', (e) => {
         const trigger = e.target.closest('[data-filters-reset]');

@@ -16,6 +16,7 @@ use App\Services\ClientService;
 use App\Support\ClientAuditPresenter;
 use App\Support\ClientFields;
 use App\Support\ClientFormData;
+use App\Support\PropertyLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -117,33 +118,7 @@ class ClientController extends Controller
     /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة */
     public function propertyLookup(Request $request): JsonResponse
     {
-        $q = trim((string) $request->query('q', ''));
-        $term = '%'.mb_strtolower($q).'%';
-
-        $properties = Property::query()
-            ->with(['status', 'area'])
-            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($term) {
-                $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
-                    ->orWhereRaw('LOWER(title) LIKE ?', [$term]);
-            }))
-            ->latest()
-            ->limit(20)
-            ->get();
-
-        return response()->json($properties->map(function (Property $property) {
-            $statusKey = $property->status?->key;
-
-            return [
-                'id' => $property->id,
-                'reference_code' => $property->reference_code,
-                'title' => $property->title,
-                'label' => ClientFormData::propertyLabel($property),
-                'area' => $property->area?->name,
-                'status' => $property->status?->name,
-                'status_key' => $statusKey,
-                'blocked' => $statusKey === 'sold' ? 'مباع' : null,
-            ];
-        })->values());
+        return response()->json(PropertyLookup::search((string) $request->query('q', '')));
     }
 
     private function agents()
