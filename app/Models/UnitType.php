@@ -21,8 +21,9 @@ class UnitType extends Model
         return $this->hasMany(Property::class, 'unit_type_id');
     }
 
-    public function clients(): HasMany
+    /** احتياجات العملاء التي تطلب هذا النوع */
+    public function needs(): HasMany
     {
-        return $this->hasMany(Client::class, 'desired_unit_type_id');
+        return $this->hasMany(ClientPropertyNeed::class, 'unit_type_id');
     }
 }

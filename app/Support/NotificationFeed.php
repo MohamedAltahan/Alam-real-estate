@@ -8,11 +8,12 @@ use App\Models\ContactRequest;
 use App\Models\Property;
 use App\Models\PropertyStatus;
 use App\Models\User;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * تجميع "الإشعارات" من السجلات الحقيقية (طلبات تواصل، عقارات، عملاء)
- * بدل جدول إشعارات منفصل — كل عنصر مربوط برابط يفتح مصدره.
+ * قائمة الإشعارات في الشريط العلوي: إشعارات المستخدم المخزّنة (تذكيرات المعاينات)
+ * + عناصر مجمّعة من السجلات الحقيقية (طلبات تواصل، عقارات، عملاء) — كل عنصر مربوط برابط يفتح مصدره.
  */
 class NotificationFeed
 {
@@ -25,9 +26,19 @@ class NotificationFeed
 
         $soldId = PropertyStatus::where('key', 'sold')->value('id');
 
+        // إشعارات المستخدم المخزّنة (تذكيرات المعاينات) — غير المقروءة أولاً
+        $stored = $user
+            ? $user->notifications()->latest()->take($limit)->get()
+                ->map(fn (DatabaseNotification $n) => self::databaseItem($n))
+                ->sortBy(fn (array $item) => $item['unread'] ? 0 : 1)
+                ->values()
+            : collect();
+
         $requests = self::canView($user, 'contact_requests.view') && self::enabled($user, 'contact_requests', true)
             ? ContactRequest::latest()->take($limit)->get()
                 ->map(fn (ContactRequest $r) => [
+                    'id' => null,
+                    'kind' => 'request',
                     'title' => 'طلب تواصل جديد من '.$r->name,
                     'at' => $r->created_at,
                     'unread' => ! $r->is_read,
@@ -41,6 +52,8 @@ class NotificationFeed
             ? Property::with('status')->latest()->take($limit)->get()
                 ->filter(fn (Property $p) => $p->status_id !== $soldId || self::enabled($user, 'closed_deals', true))
                 ->map(fn (Property $p) => [
+                    'id' => null,
+                    'kind' => 'property',
                     'title' => $p->status_id === $soldId
                         ? 'تم إغلاق صفقة '.$p->title.' بنجاح'
                         : 'تم إضافة عقار جديد '.($p->reference_code ?: $p->title),
@@ -55,6 +68,8 @@ class NotificationFeed
         $clients = self::canView($user, 'clients.view') && self::enabled($user, 'new_clients', true)
             ? Client::with('source')->latest()->take($limit)->get()
                 ->map(fn (Client $c) => [
+                    'id' => null,
+                    'kind' => 'client',
                     'title' => 'عميل جديد: '.$c->name.($c->source ? ' عبر '.$c->source->name : ''),
                     'at' => $c->created_at,
                     'unread' => false,
@@ -66,23 +81,46 @@ class NotificationFeed
 
         $followUps = self::followUpSummary($user);
 
-        return $requests->concat($properties)->concat($clients)->concat($followUps)
+        $feed = $requests->concat($properties)->concat($clients)->concat($followUps)
             ->filter(fn ($i) => $i['at'] !== null)
             ->sortByDesc('at')
-            ->take($limit)
             ->values();
+
+        // الإشعارات المخزّنة أولاً (غير المقروءة في المقدمة) ثم بقية العناصر بالأحدث
+        return $stored->concat($feed)->take($limit)->values();
     }
 
-    /** عدد غير المقروء = طلبات التواصل التي لم تُفتح بعد */
+    /** تحويل إشعار مخزّن (جدول notifications) إلى عنصر قائمة */
+    public static function databaseItem(DatabaseNotification $notification): array
+    {
+        $data = (array) $notification->data;
+
+        return [
+            'id' => $notification->id,
+            'kind' => $data['kind'] ?? 'general',
+            'title' => $data['title'] ?? 'إشعار جديد',
+            'at' => $notification->created_at,
+            'unread' => $notification->read_at === null,
+            'icon' => ($data['kind'] ?? null) === 'viewing' ? 'calendar' : 'bell',
+            'tone' => ($data['kind'] ?? null) === 'viewing' ? 'accent' : 'primary',
+            'url' => route('dashboard.notifications.open', $notification->id),
+        ];
+    }
+
+    /** عدد غير المقروء = طلبات التواصل التي لم تُفتح بعد + إشعارات المستخدم غير المقروءة */
     public static function unreadCount(?User $user = null): int
     {
-        if (! self::canView($user, 'notifications.view')
-            || ! self::canView($user, 'contact_requests.view')
-            || ! self::enabled($user, 'contact_requests', true)) {
+        if (! self::canView($user, 'notifications.view')) {
             return 0;
         }
 
-        return ContactRequest::unread()->count();
+        $count = $user ? $user->unreadNotifications()->count() : 0;
+
+        if (self::canView($user, 'contact_requests.view') && self::enabled($user, 'contact_requests', true)) {
+            $count += ContactRequest::unread()->count();
+        }
+
+        return $count;
     }
 
     private static function followUpSummary(?User $user): Collection
@@ -104,6 +142,8 @@ class NotificationFeed
         $latest = $query->latest('updated_at')->first(['updated_at']);
 
         return collect([[
+            'id' => null,
+            'kind' => 'follow_up',
             'title' => 'لديك '.$count.' متابعة عميل معلقة',
             'at' => $latest?->updated_at,
             'unread' => false,

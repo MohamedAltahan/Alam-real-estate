@@ -12,6 +12,7 @@ use App\Models\Property;
 use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\RequestType;
+use App\Models\UnitType;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
@@ -67,9 +68,9 @@ class DemoDashboardSeeder extends Seeder
 
             $client = new Client([
                 'name' => $this->name(),
+                'phone_code' => '+965',
                 'phone' => '9'.random_int(1000000, 9999999),
                 'email' => 'client'.$i.'@example.com',
-                'area_id' => $areas ? $areas[array_rand($areas)] : null,
                 'type_id' => $types ? $types[array_rand($types)] : null,
                 'stage_id' => $stages ? $stages[array_rand($stages)] : null,
                 'agent_id' => $agents ? $agents[array_rand($agents)] : null,
@@ -79,6 +80,15 @@ class DemoDashboardSeeder extends Seeder
             $client->created_at = $at;
             $client->updated_at = $at;
             $client->save();
+
+            if ($areas) {
+                $areaId = $areas[array_rand($areas)];
+                $client->needs()->create([
+                    'area_id' => $areaId,
+                    'city_id' => Area::whereKey($areaId)->value('city_id'),
+                    'unit_type_id' => UnitType::inRandomOrder()->value('id'),
+                ]);
+            }
         }
 
         // ===== طلبات تواصل موزّعة على آخر ٩ شهور =====

@@ -102,7 +102,7 @@
                     @can('clients.create')
                         @unless ($req->isConverted())
                             <button type="button"
-                                    @click="startConvert({{ $req->id }}, @js($req->name), @js($req->phone), @js($req->email), @js(optional($duplicates[$req->id] ?? null)->only('id', 'name', 'phone')))"
+                                    @click="startConvert({{ $req->id }}, @js($req->name), @js($req->phone), @js($req->email), @js(($dup = $duplicates[$req->id] ?? null) ? ['id' => $dup->id, 'name' => $dup->name, 'phone' => $dup->full_phone] : null))"
                                     class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 text-xs font-bold py-2 transition">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                                 تحويل لعميل

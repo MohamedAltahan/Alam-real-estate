@@ -42,7 +42,9 @@
                     <input name="title[en]" value="{{ $t('title', 'en') }}" dir="ltr" class="{{ $inputCls }}">
                 </div>
 
-                <x-select label="المنطقة" name="area_id" required :options="$areas->pluck('name', 'id')" :selected="$property->area_id" />
+                <x-select label="المنطقة" name="area_id" required
+                          :groups="$areas->groupBy(fn ($a) => $a->city?->name ?: 'بدون مدينة')->map(fn ($group) => $group->pluck('name', 'id'))"
+                          :selected="$property->area_id" />
                 <x-select label="التصنيف" name="category_id" required :options="$categories->pluck('name', 'id')" :selected="$property->category_id" />
                 <x-select label="نوع الوحدة" name="unit_type_id" required :options="$unitTypes->pluck('name', 'id')" :selected="$property->unit_type_id" />
                 @if ($property->exists && $property->activeReservation)

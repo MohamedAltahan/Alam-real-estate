@@ -1,5 +1,6 @@
-@props(['label' => null, 'name', 'options' => [], 'selected' => null, 'required' => false, 'placeholder' => '— اختر —'])
+@props(['label' => null, 'name', 'options' => [], 'groups' => null, 'selected' => null, 'required' => false, 'placeholder' => '— اختر —'])
 
+{{-- groups: ['اسم المجموعة' => [val => label, ...]] لعرض الخيارات داخل <optgroup> --}}
 <div>
     @if ($label)
         <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ $label }} @if ($required)<span class="text-danger">*</span>@endif</label>
@@ -9,9 +10,19 @@
         @if ($placeholder !== false)
             <option value="">{{ $placeholder }}</option>
         @endif
-        @foreach ($options as $val => $lbl)
-            <option value="{{ $val }}" @selected((string) old($name, $selected) === (string) $val)>{{ $lbl }}</option>
-        @endforeach
+        @if ($groups)
+            @foreach ($groups as $group => $items)
+                <optgroup label="{{ $group }}">
+                    @foreach ($items as $val => $lbl)
+                        <option value="{{ $val }}" @selected((string) old($name, $selected) === (string) $val)>{{ $lbl }}</option>
+                    @endforeach
+                </optgroup>
+            @endforeach
+        @else
+            @foreach ($options as $val => $lbl)
+                <option value="{{ $val }}" @selected((string) old($name, $selected) === (string) $val)>{{ $lbl }}</option>
+            @endforeach
+        @endif
         {{ $slot }}
     </select>
     @error($name)<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror

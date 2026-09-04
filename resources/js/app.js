@@ -234,4 +234,12 @@ Alpine.store('video', {
 });
 
 window.Alpine = Alpine;
-Alpine.start();
+
+// نؤجّل التشغيل إلى اكتمال المستند حتى تسجّل وحدات dashboard.js مكوّناتها أولاً
+// (سكربتات module تُنفَّذ بترتيبها قبل DOMContentLoaded).
+const startAlpine = () => Alpine.start();
+if (document.readyState === 'complete') {
+    startAlpine();
+} else {
+    document.addEventListener('DOMContentLoaded', startAlpine, { once: true });
+}

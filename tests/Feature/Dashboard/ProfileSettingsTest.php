@@ -84,6 +84,35 @@ class ProfileSettingsTest extends TestCase
         ], data_get($user->refresh()->preferences, 'notifications'));
     }
 
+    public function test_user_can_persist_viewing_reminder_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->put(route('dashboard.profile.notifications'), [
+            'contact_requests' => '1',
+            'new_clients' => '1',
+            'closed_deals' => '1',
+            'follow_up_reminders' => '0',
+            'viewing_enabled' => '1',
+            'viewing_lead_minutes' => '45',
+            'viewing_repeat_beep' => '0',
+        ])->assertRedirect(route('dashboard.profile.edit', ['tab' => 'notifications']));
+
+        $user->refresh();
+        $this->assertSame(45, $user->viewingLeadMinutes());
+        $this->assertFalse($user->viewingRepeatBeep());
+        $this->assertTrue($user->viewingRemindersEnabled());
+
+        $this->actingAs($user)->put(route('dashboard.profile.notifications'), [
+            'contact_requests' => '1', 'new_clients' => '1', 'closed_deals' => '1', 'follow_up_reminders' => '0',
+            'viewing_lead_minutes' => '2',
+        ])->assertSessionHasErrors('viewing_lead_minutes');
+
+        $this->actingAs($user)->get(route('dashboard.profile.edit', ['tab' => 'notifications']))
+            ->assertOk()
+            ->assertSee('تذكير مواعيد المعاينات');
+    }
+
     public function test_user_can_persist_display_preferences(): void
     {
         $user = User::factory()->create();

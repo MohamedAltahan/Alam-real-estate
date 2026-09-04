@@ -34,6 +34,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
+                        <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">المشرف</th>
                         <th class="text-start font-medium px-4 py-3">الهاتف</th>
                         <th class="text-start font-medium px-4 py-3">الدور</th>
@@ -63,6 +64,7 @@
                             ];
                         @endphp
                         <tr class="hover:bg-gray-50/50">
+                            <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $users->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full overflow-hidden bg-primary-900 text-white font-bold">
@@ -103,7 +105,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-16 text-center text-gray-400">لا يوجد مشرفون.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا يوجد مشرفون.</td></tr>
                     @endforelse
                 </tbody>
             </table>

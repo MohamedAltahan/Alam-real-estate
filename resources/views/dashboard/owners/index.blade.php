@@ -39,6 +39,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
+                        <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">المالك</th>
                         <th class="text-start font-medium px-4 py-3">الهاتف</th>
                         <th class="text-start font-medium px-4 py-3">عدد العقارات</th>
@@ -52,6 +53,7 @@
                     @forelse ($owners as $o)
                         @php $editData = $o->only(['id', 'name', 'phone', 'email', 'area_id', 'nationality', 'registered_address', 'status']); @endphp
                         <tr class="hover:bg-gray-50/50">
+                            <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $owners->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <span class="grid place-items-center w-9 h-9 rounded-full bg-accent-100 text-accent-700 font-bold">{{ mb_substr($o->name, 0, 1) }}</span>
@@ -105,7 +107,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
+                        <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
                     @endforelse
                 </tbody>
             </table>

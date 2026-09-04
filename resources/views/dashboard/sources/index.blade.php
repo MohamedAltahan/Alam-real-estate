@@ -34,6 +34,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
+                        <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">المصدر</th>
                         <th class="text-start font-medium px-4 py-3">النوع</th>
                         <th class="text-start font-medium px-4 py-3">عدد العملاء</th>
@@ -46,6 +47,7 @@
                     @forelse ($sources as $s)
                         @php $editData = $s->only(['id', 'name', 'type_id', 'cost', 'status']); @endphp
                         <tr class="hover:bg-gray-50/50">
+                            <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $sources->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3 font-semibold text-ink">{{ $s->name }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ $s->type?->name ?: '—' }}</td>
                             <td class="px-4 py-3"><span class="inline-block rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs font-semibold tabular-nums">{{ $s->clients_count }}</span></td>
@@ -69,7 +71,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا توجد مصادر.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا توجد مصادر.</td></tr>
                     @endforelse
                 </tbody>
             </table>

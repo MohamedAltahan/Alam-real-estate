@@ -27,6 +27,7 @@ class PermissionMatrixController extends Controller
         'roles' => 'الأدوار',
         'permissions' => 'الصلاحيات',
         'supervisors' => 'المشرفين',
+        'reports' => 'التقارير',
     ];
 
     public const ACTIONS = [
@@ -52,6 +53,7 @@ class PermissionMatrixController extends Controller
         'roles' => ['view', 'create', 'edit', 'delete'],
         'permissions' => ['view', 'edit'],
         'supervisors' => ['view', 'create', 'edit', 'delete'],
+        'reports' => ['view'],
     ];
 
     /** @return array<int, string> */

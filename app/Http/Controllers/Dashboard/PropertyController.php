@@ -108,9 +108,10 @@ class PropertyController extends Controller
 
     private function formData(Property $property): array
     {
+        // المناطق مع مدنها لتجميع القائمة المنسدلة حسب المدينة
         return [
             'property' => $property,
-            'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
+            'areas' => Area::with('city')->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
             'categories' => PropertyCategory::where('is_active', true)->get(),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'statuses' => PropertyStatus::where('is_active', true)->where('key', '!=', 'reserved')->get(),

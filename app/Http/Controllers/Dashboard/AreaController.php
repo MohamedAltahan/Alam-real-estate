@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\City;
 use App\Models\PageSection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,11 +17,13 @@ class AreaController extends Controller
     public function index(Request $request): View
     {
         $areas = Area::query()
-            ->withCount(['properties', 'clients', 'owners'])
+            ->with('city')
+            ->withCount(['properties', 'needs', 'owners'])
             ->when($request->input('search'), function ($query, $search) {
                 $term = '%'.mb_strtolower(trim($search)).'%';
                 $query->whereRaw('LOWER(name) LIKE ?', [$term]);
             })
+            ->when($request->input('city_id'), fn ($query, $cityId) => $query->where('city_id', $cityId))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate(20)
@@ -28,7 +31,8 @@ class AreaController extends Controller
 
         return view('dashboard.areas.index', [
             'areas' => $areas,
-            'filters' => $request->only('search'),
+            'cities' => City::orderBy('sort_order')->orderBy('id')->get(),
+            'filters' => $request->only('search', 'city_id'),
             'nextSortOrder' => ((int) Area::max('sort_order')) + 1,
             'homepageAreaIds' => $this->homepageAreaIds(),
         ]);
@@ -60,8 +64,8 @@ class AreaController extends Controller
     {
         abort_unless($request->user()->can('areas.delete'), 403);
 
-        $area->loadCount(['properties', 'clients', 'owners']);
-        $recordsCount = $area->properties_count + $area->clients_count + $area->owners_count;
+        $area->loadCount(['properties', 'needs', 'owners']);
+        $recordsCount = $area->properties_count + $area->needs_count + $area->owners_count;
 
         if ($recordsCount > 0 || $this->homepageAreaIds()->contains($area->id)) {
             return back()->with('error', 'لا يمكن حذف هذه المنطقة لأنها مستخدمة حاليًا. يمكنك تعطيلها بدلًا من الحذف.');
@@ -72,17 +76,19 @@ class AreaController extends Controller
         return back()->with('success', 'تم حذف المنطقة بنجاح.');
     }
 
-    /** @return array{name: array<string, string>, sort_order: int, is_active: bool} */
+    /** @return array{name: array<string, string>, city_id: ?int, sort_order: int, is_active: bool} */
     private function validated(Request $request): array
     {
         $validated = $request->validate([
             'name.ar' => ['required', 'string', 'max:255'],
             'name.en' => ['nullable', 'string', 'max:255'],
+            'city_id' => ['nullable', 'exists:cities,id'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:999999'],
             'is_active' => ['nullable', 'boolean'],
         ], [], [
             'name.ar' => 'اسم المنطقة بالعربية',
             'name.en' => 'اسم المنطقة بالإنجليزية',
+            'city_id' => 'المدينة',
             'sort_order' => 'الترتيب',
             'is_active' => 'الحالة',
         ]);
@@ -94,6 +100,7 @@ class AreaController extends Controller
 
         return [
             'name' => $names,
+            'city_id' => filled($validated['city_id'] ?? null) ? (int) $validated['city_id'] : null,
             'sort_order' => (int) $validated['sort_order'],
             'is_active' => $request->boolean('is_active'),
         ];

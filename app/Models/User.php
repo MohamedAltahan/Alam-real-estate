@@ -38,6 +38,26 @@ class User extends Authenticatable implements HasMedia
         return data_get($this->preferences, 'display.'.$key, $default);
     }
 
+    /** المدة (بالدقائق) قبل موعد المعاينة التي يُرسل عندها التذكير */
+    public function viewingLeadMinutes(): int
+    {
+        $minutes = (int) data_get($this->preferences, 'viewing_reminders.lead_minutes', 60);
+
+        return max(5, min(1440, $minutes ?: 60));
+    }
+
+    /** هل يتكرر صوت التنبيه كل دقيقة ما دام إشعار المعاينة لم يُفتح؟ */
+    public function viewingRepeatBeep(): bool
+    {
+        return (bool) data_get($this->preferences, 'viewing_reminders.repeat_beep', true);
+    }
+
+    /** هل تذكيرات المعاينات مفعّلة لهذا المستخدم؟ */
+    public function viewingRemindersEnabled(): bool
+    {
+        return (bool) data_get($this->preferences, 'viewing_reminders.enabled', true);
+    }
+
     public function currencySymbol(): string
     {
         return match ($this->displayPreference('currency', 'KWD')) {

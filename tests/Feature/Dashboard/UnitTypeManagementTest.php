@@ -63,8 +63,7 @@ class UnitTypeManagementTest extends TestCase
         Client::create([
             'name' => 'عميل مرتبط',
             'phone' => '50000000',
-            'desired_unit_type_id' => $unitType->id,
-        ]);
+        ])->needs()->create(['unit_type_id' => $unitType->id]);
 
         $this->actingAs($user)
             ->delete(route('dashboard.unit-types.destroy', $unitType))

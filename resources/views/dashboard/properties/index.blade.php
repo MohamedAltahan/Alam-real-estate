@@ -63,6 +63,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
+                        <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">العقار</th>
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
@@ -75,6 +76,7 @@
                     @forelse ($properties as $p)
                         {{-- النقر على الصف كله يفتح العقار --}}
                         <tr class="hover:bg-gray-50/50 cursor-pointer" @click="window.location = '{{ route('dashboard.properties.show', $p) }}'">
+                            <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $properties->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <span class="w-11 h-11 rounded-lg bg-gray-100 overflow-hidden shrink-0 grid place-items-center text-gray-300">
@@ -100,7 +102,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
+                        <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>

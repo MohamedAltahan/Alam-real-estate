@@ -34,7 +34,8 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
-                            <th class="text-start font-medium px-4 py-3">اسم النوع</th>
+                            <th class="text-start font-medium px-4 py-3 w-12">#</th>
+                        <th class="text-start font-medium px-4 py-3">اسم النوع</th>
                             <th class="text-start font-medium px-4 py-3">الاسم بالإنجليزية</th>
                             <th class="text-start font-medium px-4 py-3">الاستخدام</th>
                             <th class="text-start font-medium px-4 py-3">الترتيب</th>
@@ -47,7 +48,7 @@
                             @php
                                 $nameAr = $unitType->getTranslation('name', 'ar', false);
                                 $nameEn = $unitType->getTranslation('name', 'en', false);
-                                $isUsed = $unitType->properties_count + $unitType->clients_count > 0;
+                                $isUsed = $unitType->properties_count + $unitType->needs_count > 0;
                                 $editData = [
                                     'id' => $unitType->id,
                                     'name_ar' => $nameAr,
@@ -57,6 +58,7 @@
                                 ];
                             @endphp
                             <tr class="hover:bg-gray-50/50">
+                            <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $unitTypes->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $nameAr }}</td>
                                 <td class="px-4 py-3 text-gray-500" dir="ltr">{{ $nameEn ?: '—' }}</td>
                                 <td class="px-4 py-3">
@@ -64,8 +66,8 @@
                                         @if ($unitType->properties_count)
                                             <span class="rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs">{{ $unitType->properties_count }} عقار</span>
                                         @endif
-                                        @if ($unitType->clients_count)
-                                            <span class="rounded-full bg-info-soft text-info px-2.5 py-1 text-xs">{{ $unitType->clients_count }} عميل</span>
+                                        @if ($unitType->needs_count)
+                                            <span class="rounded-full bg-info-soft text-info px-2.5 py-1 text-xs">{{ $unitType->needs_count }} طلب عميل</span>
                                         @endif
                                         @unless ($isUsed)
                                             <span class="text-gray-400 text-xs">غير مستخدم</span>
@@ -98,7 +100,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400">لا توجد أنواع مطابقة.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا توجد أنواع مطابقة.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

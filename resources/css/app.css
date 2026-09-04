@@ -92,7 +92,32 @@
     }
 
     /* منطقة النتائج أثناء تحديث الفلترة الحيّة */
-    [data-results][data-loading] {
+    /* منتقي التاريخ (flatpickr) — بألوان النظام واتجاه RTL */
+.flatpickr-calendar {
+    font-family: inherit;
+    border-radius: 1rem;
+    border: 1px solid #eceef4;
+    box-shadow: 0 18px 40px -16px rgba(17, 16, 51, 0.28);
+}
+.flatpickr-calendar.static.open { z-index: 60; }
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover {
+    background: #111033;
+    border-color: #111033;
+    color: #fff;
+}
+.flatpickr-day.today { border-color: #c9a227; }
+.flatpickr-day.today:hover { background: #c9a227; border-color: #c9a227; color: #fff; }
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 700; }
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:focus { background: #f5f6fa; }
+.flatpickr-wrapper { display: block; width: 100%; }
+.datetime-alt { direction: rtl; }
+
+[data-results][data-loading] {
         opacity: 0.55;
         pointer-events: none;
         transition: opacity 0.15s ease;

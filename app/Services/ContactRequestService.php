@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Area;
 use App\Models\Client;
 use App\Models\ClientStage;
+use App\Models\ClientType;
 use App\Models\ContactRequest;
+use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -19,6 +22,7 @@ class ContactRequestService
     public function findDuplicate(ContactRequest $request): ?Client
     {
         $phone = $this->normalizePhone($request->phone);
+        $national = PhoneNumber::split($request->phone)['national'];
         $email = $request->email;
 
         // بدون هاتف ولا بريد لا يوجد ما نطابق عليه — وإلا أعاد أول عميل في الجدول
@@ -27,9 +31,11 @@ class ContactRequestService
         }
 
         return Client::query()
-            ->where(function ($q) use ($phone, $email) {
+            ->where(function ($q) use ($phone, $national, $email) {
                 if ($phone) {
-                    $q->orWhereRaw("REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', '') = ?", [$phone]);
+                    // الرقم المحلي (بعد فصل المفتاح) أو الرقم الكامل كما كان يُخزَّن قديماً
+                    $q->orWhere('phone', $national ?: $phone)
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', '') = ?", [$phone]);
                 }
                 if ($email) {
                     $q->orWhere('email', $email);
@@ -47,20 +53,33 @@ class ContactRequestService
     public function convertToClient(ContactRequest $request, array $data, int $userId): Client
     {
         return DB::transaction(function () use ($request, $data, $userId) {
-            $client = ! empty($data['existing_client_id'])
+            $isNew = empty($data['existing_client_id']);
+            ['code' => $phoneCode, 'national' => $phone] = PhoneNumber::split($request->phone);
+
+            $client = ! $isNew
                 ? Client::findOrFail($data['existing_client_id'])
                 : Client::create([
                     'name' => $request->name,
-                    'phone' => $request->phone,
+                    'phone_code' => $phoneCode,
+                    'phone' => $phone !== '' ? $phone : (string) $request->phone,
                     'email' => $request->email,
-                    // منطقة العقار المطلوب إن وُجد
-                    'area_id' => $data['area_id'] ?? $request->property?->area_id,
-                    'type_id' => $data['type_id'] ?? null,
+                    'type_id' => $data['type_id'] ?? ClientType::where('key', 'tenant')->value('id'),
                     'stage_id' => $data['stage_id'] ?? $this->defaultStageId(),
                     'agent_id' => $data['agent_id'] ?? null,
                     'source_id' => $data['source_id'] ?? null,
                     'notes' => $data['notes'] ?? $request->message,
+                    'recorded_by' => $userId,
                 ]);
+
+            // احتياج العقار من العقار محل الاستفسار (منطقة + مدينة + نوع الوحدة)
+            $areaId = $data['area_id'] ?? $request->property?->area_id;
+            if ($isNew && ($areaId || $request->property?->unit_type_id)) {
+                $client->needs()->create([
+                    'area_id' => $areaId,
+                    'city_id' => $areaId ? Area::whereKey($areaId)->value('city_id') : null,
+                    'unit_type_id' => $request->property?->unit_type_id,
+                ]);
+            }
 
             // العقار محل الاستفسار يُربط بسجل العميل
             if ($request->property_id) {

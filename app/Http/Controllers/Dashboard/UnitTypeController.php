@@ -14,7 +14,7 @@ class UnitTypeController extends Controller
     public function index(Request $request): View
     {
         $unitTypes = UnitType::query()
-            ->withCount(['properties', 'clients'])
+            ->withCount(['properties', 'needs'])
             ->when($request->input('search'), function ($query, $search) {
                 $term = '%'.mb_strtolower(trim($search)).'%';
                 $query->whereRaw('LOWER(name) LIKE ?', [$term]);
@@ -57,9 +57,9 @@ class UnitTypeController extends Controller
     {
         abort_unless($request->user()->can('unit_types.delete'), 403);
 
-        $unitType->loadCount(['properties', 'clients']);
+        $unitType->loadCount(['properties', 'needs']);
 
-        if ($unitType->properties_count + $unitType->clients_count > 0) {
+        if ($unitType->properties_count + $unitType->needs_count > 0) {
             return back()->with('error', 'لا يمكن حذف هذا النوع لأنه مستخدم حاليًا. يمكنك تعطيله بدلًا من الحذف.');
         }
 

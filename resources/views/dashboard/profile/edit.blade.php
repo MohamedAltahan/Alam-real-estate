@@ -139,6 +139,48 @@
                         </div>
                     @endforeach
 
+                    {{-- تذكيرات المعاينات --}}
+                    <div x-data="{ enabled: @js((bool) $viewingReminders['enabled']), repeat: @js((bool) $viewingReminders['repeat_beep']) }"
+                         class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-4 space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-ink">تذكير مواعيد المعاينات</p>
+                                <p class="text-xs text-gray-400 mt-0.5">إشعار بصوت «بيب بيب» قبل موعد المعاينة بالمدة المحددة. يصل التذكير لمسؤول العقار الخاص بالعميل ويُفحص كل دقيقة أثناء فتح لوحة التحكم.</p>
+                            </div>
+                            <input type="hidden" name="viewing_enabled" :value="enabled ? 1 : 0">
+                            <button type="button" role="switch" :aria-checked="enabled" @click="enabled = ! enabled"
+                                    class="relative w-11 h-6 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                                    :class="enabled ? 'bg-primary-800' : 'bg-gray-300'">
+                                <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all" :class="enabled ? 'start-6' : 'start-1'"></span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" :class="! enabled && 'opacity-50'">
+                            <div>
+                                <label for="viewing-lead" class="block text-xs font-bold text-gray-600 mb-1.5">التذكير قبل الموعد بـ (دقائق)</label>
+                                <div class="flex items-center gap-2">
+                                    <input id="viewing-lead" type="number" name="viewing_lead_minutes" min="5" max="1440" step="5"
+                                           value="{{ old('viewing_lead_minutes', $viewingReminders['lead_minutes']) }}"
+                                           class="w-32 rounded-field border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15" dir="ltr">
+                                    <span class="text-xs text-gray-400">من 5 دقائق إلى يوم كامل (1440)</span>
+                                </div>
+                                @error('viewing_lead_minutes')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white px-4 py-3">
+                                <div class="flex-1">
+                                    <p class="text-sm font-bold text-ink">تكرار الصوت حتى فتح الإشعار</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">يعيد «بيب بيب» كل دقيقة ما دام تذكير المعاينة لم يُفتح.</p>
+                                </div>
+                                <input type="hidden" name="viewing_repeat_beep" :value="repeat ? 1 : 0">
+                                <button type="button" role="switch" :aria-checked="repeat" @click="repeat = ! repeat"
+                                        class="relative w-11 h-6 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                                        :class="repeat ? 'bg-primary-800' : 'bg-gray-300'">
+                                    <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all" :class="repeat ? 'start-6' : 'start-1'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-end pt-2">
                         <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-bold px-6 py-2.5 text-sm transition">حفظ إعدادات الإشعارات</button>
                     </div>

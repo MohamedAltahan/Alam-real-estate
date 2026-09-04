@@ -2,31 +2,29 @@
 
 namespace App\Models;
 
+use App\Observers\ClientObserver;
+use App\Support\ClientFields;
+use App\Support\PhoneNumber;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy([ClientObserver::class])]
 class Client extends Model
 {
     protected $fillable = [
-        'name', 'phone', 'email', 'area_id', 'type_id',
+        'name', 'phone_code', 'phone', 'email', 'type_id',
         'stage_id', 'agent_id', 'source_id', 'rating', 'notes',
-        'desired_unit_type_id', 'social_status', 'nationality', 'household_size',
-        'workplace', 'in_person', 'visit_times', 'preferred_contact',
-        'property_address', 'recorded_by',
+        'social_status', 'nationality', 'household_size',
+        'workplace', 'preferred_contact', 'recorded_by',
     ];
 
     protected $casts = [
         'rating' => 'integer',
         'household_size' => 'integer',
-        'in_person' => 'boolean',
     ];
-
-    public function area(): BelongsTo
-    {
-        return $this->belongsTo(Area::class);
-    }
 
     public function type(): BelongsTo
     {
@@ -48,11 +46,6 @@ class Client extends Model
         return $this->belongsTo(MarketingSource::class, 'source_id');
     }
 
-    public function desiredUnitType(): BelongsTo
-    {
-        return $this->belongsTo(UnitType::class, 'desired_unit_type_id');
-    }
-
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
@@ -62,6 +55,24 @@ class Client extends Model
     public function interactions(): HasMany
     {
         return $this->hasMany(ClientInteraction::class)->latest('occurred_at');
+    }
+
+    /** احتياجات العقار (نوع وحدة + مدينة + منطقة) — أكثر من سطر */
+    public function needs(): HasMany
+    {
+        return $this->hasMany(ClientPropertyNeed::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** المعاينات المجدولة/المنتهية — أكثر من سطر */
+    public function viewings(): HasMany
+    {
+        return $this->hasMany(ClientViewing::class)->orderByDesc('scheduled_at')->orderByDesc('id');
+    }
+
+    /** سجل التعديلات (الأحدث أولاً) */
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(ClientAuditLog::class)->orderByDesc('id');
     }
 
     /** عقارات العميل (تظهر في شاشته) */
@@ -86,17 +97,41 @@ class Client extends Model
             ->whereNotNull('active_property_id');
     }
 
+    // ===== Accessors =====
+
+    /** "+965 55112233" */
+    public function getFullPhoneAttribute(): string
+    {
+        return PhoneNumber::format($this->phone_code, $this->phone);
+    }
+
+    /** أرقام فقط لرابط واتساب */
+    public function getWhatsappNumberAttribute(): string
+    {
+        return PhoneNumber::digits($this->phone_code, $this->phone);
+    }
+
     /** نص منسق لنسخ بيانات العميل ومشاركتها في رسالة عادية. */
     public function shareText(): string
     {
-        $socialLabels = ['single' => 'أعزب', 'married' => 'متزوج', 'family' => 'عائلة', 'company' => 'شركات'];
-        $contactLabels = ['whatsapp' => 'واتساب', 'call' => 'اتصال'];
-        $interactionLabels = ['call' => 'مكالمة', 'meeting' => 'مقابلة', 'whatsapp' => 'واتساب', 'email' => 'بريد إلكتروني'];
         $propertyRefs = $this->properties->pluck('reference_code')->filter()->implode('، ');
-        $interactionLog = $this->interactions->map(function ($interaction) use ($interactionLabels) {
+
+        $needs = $this->needs->map(fn (ClientPropertyNeed $need) => '• '.$need->describe())->implode("\n");
+
+        $viewings = $this->viewings->map(function (ClientViewing $viewing) {
+            return '• '.collect([
+                $viewing->property?->reference_code,
+                $viewing->scheduled_at?->format('Y-m-d H:i'),
+                $viewing->in_person ? 'حضوري' : 'غير حضوري',
+                ClientFields::outcomeLabel($viewing->outcome),
+                $viewing->notes,
+            ])->filter()->implode(' — ');
+        })->implode("\n");
+
+        $interactionLog = $this->interactions->map(function ($interaction) {
             $parts = collect([
                 $interaction->occurred_at?->format('Y-m-d'),
-                $interactionLabels[$interaction->type] ?? $interaction->type,
+                ClientFields::enumLabel('type', $interaction->type),
                 $interaction->stage?->name,
                 $interaction->notes,
                 $interaction->user ? 'بواسطة '.$interaction->user->name : null,
@@ -107,22 +142,18 @@ class Client extends Model
 
         return collect([
             'بيانات العميل: '.$this->name,
-            'الهاتف: '.$this->phone,
+            'الهاتف: '.$this->full_phone,
             $this->email ? 'البريد الإلكتروني: '.$this->email : null,
             $this->nationality ? 'الجنسية: '.$this->nationality : null,
-            $this->social_status ? 'الحالة الاجتماعية: '.($socialLabels[$this->social_status] ?? $this->social_status) : null,
+            $this->social_status ? 'الحالة الاجتماعية: '.ClientFields::enumLabel('social_status', $this->social_status) : null,
             $this->household_size ? 'عدد الأفراد: '.$this->household_size : null,
             $this->workplace ? 'مكان العمل: '.$this->workplace : null,
-            $this->preferred_contact ? 'طريقة التواصل: '.($contactLabels[$this->preferred_contact] ?? $this->preferred_contact) : null,
-            ! is_null($this->in_person) ? 'حضوري: '.($this->in_person ? 'نعم' : 'لا') : null,
-            $this->visit_times ? 'أوقات الزيارة: '.$this->visit_times : null,
-            $this->desiredUnitType ? 'نوع الوحدة المطلوبة: '.$this->desiredUnitType->name : null,
-            $this->area ? 'المنطقة المطلوبة: '.$this->area->name : null,
-            $this->property_address ? 'عنوان العقار المطلوب: '.$this->property_address : null,
-            $this->type ? 'نوع العميل: '.$this->type->name : null,
+            $this->preferred_contact ? 'طريقة التواصل: '.ClientFields::enumLabel('preferred_contact', $this->preferred_contact) : null,
+            $needs ? "احتياج العقار:\n".$needs : null,
             $this->stage ? 'الحالة: '.$this->stage->name : null,
             $this->agent ? 'مسؤول العقار: '.$this->agent->name : null,
             $this->recordedBy ? 'سجّل البيانات: '.$this->recordedBy->name : null,
+            $viewings ? "المعاينات:\n".$viewings : null,
             $propertyRefs ? 'العقارات المرتبطة: '.$propertyRefs : null,
             $this->notes ? 'الملاحظات: '.$this->notes : null,
             $interactionLog ? "سجل التواصل:\n".$interactionLog : null,

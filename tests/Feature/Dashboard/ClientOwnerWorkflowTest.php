@@ -30,26 +30,27 @@ class ClientOwnerWorkflowTest extends TestCase
 
         $this->actingAs($user)->post(route('dashboard.clients.store'), [
             'name' => 'عميل الاختبار',
+            'phone_code' => '+965',
             'phone' => '99999999',
-            'desired_unit_type_id' => $unitType->id,
+            'needs' => [
+                ['unit_type_id' => $unitType->id, 'city_id' => '', 'area_id' => ''],
+            ],
             'social_status' => 'family',
             'nationality' => 'كويتي',
             'household_size' => 5,
             'workplace' => 'شركة الاختبار',
-            'in_person' => 1,
-            'visit_times' => 'بعد الخامسة مساءً',
             'preferred_contact' => 'whatsapp',
-            'property_address' => 'السالمية، قطعة 1، شارع 2',
         ])->assertSessionHasNoErrors();
 
         $client = Client::where('phone', '99999999')->firstOrFail();
         $this->assertSame($stage->id, $client->stage_id);
         $this->assertSame($user->id, $client->recorded_by);
-        $this->assertSame($unitType->id, $client->desired_unit_type_id);
+        $this->assertSame('+965', $client->phone_code);
+        $this->assertSame($unitType->id, $client->needs->first()->unit_type_id);
         $this->assertSame('family', $client->social_status);
         $this->assertSame(5, $client->household_size);
-        $this->assertTrue($client->in_person);
-        $this->assertStringContainsString('السالمية', $client->property_address);
+        $this->assertSame('whatsapp', $client->preferred_contact);
+        $this->assertNotNull($client->type_id); // مستأجر افتراضياً
     }
 
     public function test_property_cannot_be_added_twice_to_the_same_client(): void
@@ -194,9 +195,10 @@ class ClientOwnerWorkflowTest extends TestCase
         $this->grant($user, ['clients.view']);
         $unitType = UnitType::create(['name' => ['ar' => 'فيلا', 'en' => 'Villa']]);
         $client = Client::create([
-            'name' => 'عميل العرض', 'phone' => '44444444', 'notes' => 'ملاحظة مهمة',
-            'desired_unit_type_id' => $unitType->id, 'recorded_by' => $user->id,
+            'name' => 'عميل العرض', 'phone_code' => '+965', 'phone' => '44444444', 'notes' => 'ملاحظة مهمة',
+            'recorded_by' => $user->id,
         ]);
+        $client->needs()->create(['unit_type_id' => $unitType->id]);
 
         $this->actingAs($user)->get(route('dashboard.clients.index'))
             ->assertOk()

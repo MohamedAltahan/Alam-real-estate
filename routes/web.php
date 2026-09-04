@@ -1,20 +1,23 @@
 <?php
 
+use App\Http\Controllers\Dashboard\AreaController;
+use App\Http\Controllers\Dashboard\CityController;
 use App\Http\Controllers\Dashboard\ClientController;
 use App\Http\Controllers\Dashboard\ContactRequestController;
 use App\Http\Controllers\Dashboard\DashboardController;
-use App\Http\Controllers\Dashboard\AreaController;
 use App\Http\Controllers\Dashboard\MarketingSourceController;
+use App\Http\Controllers\Dashboard\NotificationController;
 use App\Http\Controllers\Dashboard\PermissionMatrixController;
 use App\Http\Controllers\Dashboard\ProfileSettingsController;
 use App\Http\Controllers\Dashboard\PropertyController;
 use App\Http\Controllers\Dashboard\PropertyOwnerController;
+use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RoleController;
 use App\Http\Controllers\Dashboard\SupervisorController;
 use App\Http\Controllers\Dashboard\UnitTypeController;
+use App\Http\Controllers\Dashboard\ViewingController;
 use App\Http\Controllers\Dashboard\WebsiteController;
 use App\Http\Controllers\Site\SiteController;
-use App\Models\ContactRequest;
 use Illuminate\Support\Facades\Route;
 
 // ===== الموقع العام =====
@@ -45,12 +48,16 @@ Route::middleware(['auth'])->group(function () {
         Route::put('profile/notifications', [ProfileSettingsController::class, 'updateNotifications'])->name('profile.notifications');
         Route::put('profile/preferences', [ProfileSettingsController::class, 'updatePreferences'])->name('profile.preferences');
 
-        // تعليم كل الإشعارات كمقروءة (من القائمة المنسدلة في الشريط العلوي)
-        Route::post('notifications/read-all', function () {
-            ContactRequest::unread()->update(['is_read' => true]);
+        // ===== الإشعارات =====
+        Route::middleware('can:notifications.view')->group(function () {
+            // استطلاع كل دقيقة من المتصفح: يرسل تذكيرات المعاينات المستحقة ويعيد العدّادات
+            Route::get('notifications/poll', [NotificationController::class, 'poll'])->name('notifications.poll');
+            Route::get('notifications/{id}/open', [NotificationController::class, 'open'])->name('notifications.open');
+            Route::post('notifications/read-mine', [NotificationController::class, 'readMine'])->name('notifications.read-mine');
+        });
 
-            return back();
-        })->middleware([
+        // تعليم كل الإشعارات كمقروءة (من القائمة المنسدلة في الشريط العلوي)
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->middleware([
             'can:notifications.view',
             'can:notifications.edit',
             'can:contact_requests.view',
@@ -60,7 +67,9 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:clients.view')->group(function () {
             Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
             Route::post('clients', [ClientController::class, 'store'])->name('clients.store');
-            Route::get('clients/{client}', [ClientController::class, 'show'])->name('clients.show');
+            // قبل clients/{client} حتى لا يُفسَّر «property-lookup» كمعرّف عميل
+            Route::get('clients/property-lookup', [ClientController::class, 'propertyLookup'])->name('clients.property-lookup');
+            Route::get('clients/{client}', [ClientController::class, 'show'])->whereNumber('client')->name('clients.show');
             Route::put('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');
@@ -68,6 +77,15 @@ Route::middleware(['auth'])->group(function () {
             Route::post('clients/{client}/properties/{property}/reserve', [ClientController::class, 'reserveProperty'])->name('clients.properties.reserve');
             Route::delete('clients/{client}/properties/{property}/reservation', [ClientController::class, 'releaseProperty'])->name('clients.properties.release');
             Route::delete('clients/{client}/properties/{property}', [ClientController::class, 'detachProperty'])->name('clients.properties.detach');
+
+            // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
+            Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');
+            Route::patch('viewings/{viewing}/outcome', [ViewingController::class, 'updateOutcome'])->name('viewings.outcome');
+        });
+
+        // ===== التقارير =====
+        Route::middleware('can:reports.view')->group(function () {
+            Route::get('reports/conversion', [ReportController::class, 'conversion'])->name('reports.conversion');
         });
 
         // ===== ملّاك العقارات =====
@@ -115,12 +133,17 @@ Route::middleware(['auth'])->group(function () {
             Route::post('properties/{property}/reviews', [PropertyController::class, 'addReview'])->name('properties.reviews.store');
         });
 
-        // ===== إدارة المناطق =====
+        // ===== إدارة المناطق والمدن (صلاحيات المناطق نفسها) =====
         Route::middleware('can:areas.view')->group(function () {
             Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
             Route::post('areas', [AreaController::class, 'store'])->name('areas.store');
             Route::put('areas/{area}', [AreaController::class, 'update'])->name('areas.update');
             Route::delete('areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+
+            Route::get('cities', [CityController::class, 'index'])->name('cities.index');
+            Route::post('cities', [CityController::class, 'store'])->name('cities.store');
+            Route::put('cities/{city}', [CityController::class, 'update'])->name('cities.update');
+            Route::delete('cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
         });
 
         // ===== إدارة أنواع العقارات =====

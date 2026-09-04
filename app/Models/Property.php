@@ -94,6 +94,12 @@ class Property extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    /** معاينات العملاء لهذا العقار */
+    public function viewings(): HasMany
+    {
+        return $this->hasMany(ClientViewing::class);
+    }
+
     /** سجل الحجوزات التاريخي للعقار. */
     public function reservations(): HasMany
     {

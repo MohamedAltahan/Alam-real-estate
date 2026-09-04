@@ -21,6 +21,13 @@ class ProfileSettingsController extends Controller
         'follow_up_reminders' => false,
     ];
 
+    /** تذكيرات المعاينات (مفتاح مستقل عن notifications حتى لا يتغير شكلها) */
+    private const VIEWING_REMINDER_DEFAULTS = [
+        'enabled' => true,
+        'lead_minutes' => 60,
+        'repeat_beep' => true,
+    ];
+
     public function edit(Request $request): View
     {
         $tab = in_array($request->string('tab')->toString(), self::TABS, true)
@@ -35,6 +42,10 @@ class ProfileSettingsController extends Controller
             'notificationPreferences' => array_replace(
                 self::NOTIFICATION_DEFAULTS,
                 (array) data_get($user->preferences, 'notifications', []),
+            ),
+            'viewingReminders' => array_replace(
+                self::VIEWING_REMINDER_DEFAULTS,
+                (array) data_get($user->preferences, 'viewing_reminders', []),
             ),
             'displayPreferences' => array_replace([
                 'language' => 'ar',
@@ -96,10 +107,27 @@ class ProfileSettingsController extends Controller
             'new_clients' => ['required', 'boolean'],
             'closed_deals' => ['required', 'boolean'],
             'follow_up_reminders' => ['required', 'boolean'],
+            'viewing_enabled' => ['nullable', 'boolean'],
+            'viewing_lead_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
+            'viewing_repeat_beep' => ['nullable', 'boolean'],
+        ], [
+            'viewing_lead_minutes.min' => 'مدة التذكير يجب ألا تقل عن 5 دقائق.',
+            'viewing_lead_minutes.max' => 'مدة التذكير يجب ألا تزيد عن يوم (1440 دقيقة).',
         ]);
 
         $preferences = $request->user()->preferences ?? [];
-        data_set($preferences, 'notifications', collect($data)->map(fn ($value) => (bool) $value)->all());
+        data_set($preferences, 'notifications', collect($data)
+            ->only(array_keys(self::NOTIFICATION_DEFAULTS))
+            ->map(fn ($value) => (bool) $value)
+            ->all());
+
+        if ($request->has('viewing_lead_minutes')) {
+            data_set($preferences, 'viewing_reminders', [
+                'enabled' => $request->boolean('viewing_enabled', true),
+                'lead_minutes' => (int) ($data['viewing_lead_minutes'] ?? self::VIEWING_REMINDER_DEFAULTS['lead_minutes']),
+                'repeat_beep' => $request->boolean('viewing_repeat_beep'),
+            ]);
+        }
 
         $request->user()->update(['preferences' => $preferences]);
 

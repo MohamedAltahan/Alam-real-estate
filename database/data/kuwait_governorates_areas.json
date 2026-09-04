@@ -1,0 +1,732 @@
+{
+  "governorates": [
+    {
+      "name_ar": "محافظة العاصمة",
+      "name_en": "Capital Governorate",
+      "areas": [
+        {
+          "name_ar": "مدينة الكويت",
+          "name_en": "Kuwait City"
+        },
+        {
+          "name_ar": "دسمان",
+          "name_en": "Dasman"
+        },
+        {
+          "name_ar": "شرق",
+          "name_en": "Sharq"
+        },
+        {
+          "name_ar": "الصوابر",
+          "name_en": "Sawaber"
+        },
+        {
+          "name_ar": "المرقاب",
+          "name_en": "Mirqab"
+        },
+        {
+          "name_ar": "القبلة",
+          "name_en": "Jibla"
+        },
+        {
+          "name_ar": "الصالحية",
+          "name_en": "Salhiya"
+        },
+        {
+          "name_ar": "الوطية",
+          "name_en": "Watia"
+        },
+        {
+          "name_ar": "بنيد القار",
+          "name_en": "Bnaid Al-Qar"
+        },
+        {
+          "name_ar": "الدسمة",
+          "name_en": "Dasma"
+        },
+        {
+          "name_ar": "الدعية",
+          "name_en": "Daiya"
+        },
+        {
+          "name_ar": "ضاحية عبد الله السالم",
+          "name_en": "Abdulla Al-Salem"
+        },
+        {
+          "name_ar": "الشامية",
+          "name_en": "Shamiya"
+        },
+        {
+          "name_ar": "الفيحاء",
+          "name_en": "Faiha"
+        },
+        {
+          "name_ar": "النزهة",
+          "name_en": "Nuzha"
+        },
+        {
+          "name_ar": "المنصورية",
+          "name_en": "Mansouriya"
+        },
+        {
+          "name_ar": "الروضة",
+          "name_en": "Rawda"
+        },
+        {
+          "name_ar": "القادسية",
+          "name_en": "Qadsiya"
+        },
+        {
+          "name_ar": "العديلية",
+          "name_en": "Adailiya"
+        },
+        {
+          "name_ar": "الخالدية",
+          "name_en": "Khaldiya"
+        },
+        {
+          "name_ar": "كيفان",
+          "name_en": "Kaifan"
+        },
+        {
+          "name_ar": "قرطبة",
+          "name_en": "Qortuba"
+        },
+        {
+          "name_ar": "السرة",
+          "name_en": "Surra"
+        },
+        {
+          "name_ar": "اليرموك",
+          "name_en": "Yarmouk"
+        },
+        {
+          "name_ar": "الشويخ",
+          "name_en": "Shuwaikh"
+        },
+        {
+          "name_ar": "الشويخ الصناعية",
+          "name_en": "Shuwaikh Industrial Area"
+        },
+        {
+          "name_ar": "ميناء الشويخ",
+          "name_en": "Shuwaikh Port"
+        },
+        {
+          "name_ar": "الدوحة",
+          "name_en": "Doha"
+        },
+        {
+          "name_ar": "ميناء الدوحة",
+          "name_en": "Doha Port"
+        },
+        {
+          "name_ar": "الصليبخات",
+          "name_en": "Sulaibikhat"
+        },
+        {
+          "name_ar": "شمال غرب الصليبيخات",
+          "name_en": "North West Sulaibikhat"
+        },
+        {
+          "name_ar": "غرناطة",
+          "name_en": "Granada"
+        },
+        {
+          "name_ar": "مدينة جابر الأحمد",
+          "name_en": "Jaber Al-Ahmad City"
+        },
+        {
+          "name_ar": "حدائق السور",
+          "name_en": "Al-Sour Gardens"
+        },
+        {
+          "name_ar": "جزيرة فيلكا",
+          "name_en": "Failaka Island"
+        },
+        {
+          "name_ar": "جزيرة عوهة",
+          "name_en": "Ouha Island"
+        },
+        {
+          "name_ar": "جزيرة مسكان",
+          "name_en": "Miskan Island"
+        },
+        {
+          "name_ar": "جزيرة أم النمل",
+          "name_en": "Umm Al-Namil Island"
+        },
+        {
+          "name_ar": "جزيرة كبر",
+          "name_en": "Kubbar Island"
+        },
+        {
+          "name_ar": "جزيرة قاروه",
+          "name_en": "Qaruh Island"
+        },
+        {
+          "name_ar": "جزيرة أم المرادم",
+          "name_en": "Umm Al-Maradim Island"
+        },
+        {
+          "name_ar": "جزيرة الشويخ",
+          "name_en": "Shuwaikh Island"
+        }
+      ]
+    },
+    {
+      "name_ar": "محافظة حولي",
+      "name_en": "Hawalli Governorate",
+      "areas": [
+        {
+          "name_ar": "حولي",
+          "name_en": "Hawalli"
+        },
+        {
+          "name_ar": "الشعب",
+          "name_en": "Shaab"
+        },
+        {
+          "name_ar": "الشعب البحري",
+          "name_en": "Shaab Al-Bahri"
+        },
+        {
+          "name_ar": "السالمية",
+          "name_en": "Salmiya"
+        },
+        {
+          "name_ar": "الرميثية",
+          "name_en": "Rumaithiya"
+        },
+        {
+          "name_ar": "الجابرية",
+          "name_en": "Jabriya"
+        },
+        {
+          "name_ar": "مشرف",
+          "name_en": "Mishref"
+        },
+        {
+          "name_ar": "غرب مشرف",
+          "name_en": "West Mishref"
+        },
+        {
+          "name_ar": "بيان",
+          "name_en": "Bayan"
+        },
+        {
+          "name_ar": "البدع",
+          "name_en": "Al-Bida'a"
+        },
+        {
+          "name_ar": "أنجفة",
+          "name_en": "Anjafa"
+        },
+        {
+          "name_ar": "النقرة",
+          "name_en": "Nugra"
+        },
+        {
+          "name_ar": "ميدان حولي",
+          "name_en": "Maidan Hawalli"
+        },
+        {
+          "name_ar": "ضاحية مبارك العبد الله الجابر",
+          "name_en": "Mubarak Al-Abdullah Al-Jaber"
+        },
+        {
+          "name_ar": "سلوى",
+          "name_en": "Salwa"
+        },
+        {
+          "name_ar": "جنوب السرة",
+          "name_en": "South Surra"
+        },
+        {
+          "name_ar": "الزهراء",
+          "name_en": "Zahra"
+        },
+        {
+          "name_ar": "الصديق",
+          "name_en": "Al-Siddiq"
+        },
+        {
+          "name_ar": "حطين",
+          "name_en": "Hitteen"
+        },
+        {
+          "name_ar": "السلام",
+          "name_en": "Salam"
+        },
+        {
+          "name_ar": "الشهداء",
+          "name_en": "Shuhada"
+        },
+        {
+          "name_ar": "منطقة الوزارات",
+          "name_en": "Ministries Area"
+        }
+      ]
+    },
+    {
+      "name_ar": "محافظة الفروانية",
+      "name_en": "Farwaniya Governorate",
+      "areas": [
+        {
+          "name_ar": "أبرق خيطان",
+          "name_en": "Abraq Khaitan"
+        },
+        {
+          "name_ar": "الأندلس",
+          "name_en": "Andalus"
+        },
+        {
+          "name_ar": "إشبيلية",
+          "name_en": "Ishbiliya"
+        },
+        {
+          "name_ar": "خيطان",
+          "name_en": "Khaitan"
+        },
+        {
+          "name_ar": "خيطان الجديدة",
+          "name_en": "New Khaitan"
+        },
+        {
+          "name_ar": "الفروانية",
+          "name_en": "Farwaniya"
+        },
+        {
+          "name_ar": "الفردوس",
+          "name_en": "Ferdous"
+        },
+        {
+          "name_ar": "ضاحية صباح الناصر",
+          "name_en": "Sabah Al-Nasser"
+        },
+        {
+          "name_ar": "العمرية",
+          "name_en": "Omariya"
+        },
+        {
+          "name_ar": "العارضية",
+          "name_en": "Ardiya"
+        },
+        {
+          "name_ar": "العارضية الصناعية",
+          "name_en": "Ardiya Industrial Area"
+        },
+        {
+          "name_ar": "العارضية الحرفية",
+          "name_en": "Ardiya Herafiya"
+        },
+        {
+          "name_ar": "الرقعي",
+          "name_en": "Al-Riggai"
+        },
+        {
+          "name_ar": "الرابية",
+          "name_en": "Rabiya"
+        },
+        {
+          "name_ar": "الرحاب",
+          "name_en": "Rehab"
+        },
+        {
+          "name_ar": "الري",
+          "name_en": "Al-Rai"
+        },
+        {
+          "name_ar": "الري الصناعية",
+          "name_en": "Al-Rai Industrial Area"
+        },
+        {
+          "name_ar": "جليب الشيوخ",
+          "name_en": "Jleeb Al-Shuyoukh"
+        },
+        {
+          "name_ar": "الضجيج",
+          "name_en": "Al-Dajeej"
+        },
+        {
+          "name_ar": "الشدادية",
+          "name_en": "Shadadiya"
+        },
+        {
+          "name_ar": "الحساوي",
+          "name_en": "Hasawi"
+        },
+        {
+          "name_ar": "العباسية",
+          "name_en": "Abbasiya"
+        },
+        {
+          "name_ar": "منطقة المطار",
+          "name_en": "Airport District"
+        },
+        {
+          "name_ar": "ضاحية عبد الله المبارك",
+          "name_en": "Abdullah Al-Mubarak"
+        },
+        {
+          "name_ar": "جنوب عبد الله المبارك",
+          "name_en": "South Abdullah Al-Mubarak"
+        },
+        {
+          "name_ar": "جامعة صباح السالم",
+          "name_en": "Sabah Al-Salem University"
+        }
+      ]
+    },
+    {
+      "name_ar": "محافظة الأحمدي",
+      "name_en": "Ahmadi Governorate",
+      "areas": [
+        {
+          "name_ar": "أبو حليفة",
+          "name_en": "Abu Halifa"
+        },
+        {
+          "name_ar": "ميناء عبد الله",
+          "name_en": "Mina Abdullah"
+        },
+        {
+          "name_ar": "الأحمدي",
+          "name_en": "Ahmadi"
+        },
+        {
+          "name_ar": "شرق الأحمدي",
+          "name_en": "East Ahmadi"
+        },
+        {
+          "name_ar": "ميناء الأحمدي",
+          "name_en": "Mina Al-Ahmadi"
+        },
+        {
+          "name_ar": "ضاحية علي صباح السالم",
+          "name_en": "Ali Sabah Al-Salem"
+        },
+        {
+          "name_ar": "العقيلة",
+          "name_en": "Egaila"
+        },
+        {
+          "name_ar": "بر الأحمدي",
+          "name_en": "Bar Al-Ahmadi"
+        },
+        {
+          "name_ar": "بنيدر",
+          "name_en": "Bnaider"
+        },
+        {
+          "name_ar": "الظهر",
+          "name_en": "Dhaher"
+        },
+        {
+          "name_ar": "الفحيحيل",
+          "name_en": "Fahaheel"
+        },
+        {
+          "name_ar": "ضاحية فهد الأحمد",
+          "name_en": "Fahad Al-Ahmad"
+        },
+        {
+          "name_ar": "هدية",
+          "name_en": "Hadiya"
+        },
+        {
+          "name_ar": "ضاحية جابر العلي",
+          "name_en": "Jaber Al-Ali"
+        },
+        {
+          "name_ar": "الجليعة",
+          "name_en": "Al-Julaia'a"
+        },
+        {
+          "name_ar": "الخيران",
+          "name_en": "Khairan"
+        },
+        {
+          "name_ar": "المهبولة",
+          "name_en": "Mahboula"
+        },
+        {
+          "name_ar": "المنقف",
+          "name_en": "Mangaf"
+        },
+        {
+          "name_ar": "المقوع",
+          "name_en": "Maqwa"
+        },
+        {
+          "name_ar": "الوفرة السكنية",
+          "name_en": "Wafra Residential"
+        },
+        {
+          "name_ar": "الوفرة الزراعية",
+          "name_en": "Wafra Agricultural Area"
+        },
+        {
+          "name_ar": "النويصيب",
+          "name_en": "Al-Nuwaiseeb"
+        },
+        {
+          "name_ar": "الرقة",
+          "name_en": "Riqqa"
+        },
+        {
+          "name_ar": "مدينة صباح الأحمد السكنية",
+          "name_en": "Sabah Al-Ahmad Residential City"
+        },
+        {
+          "name_ar": "مدينة صباح الأحمد البحرية",
+          "name_en": "Sabah Al-Ahmad Sea City"
+        },
+        {
+          "name_ar": "الصباحية",
+          "name_en": "Sabahiya"
+        },
+        {
+          "name_ar": "جنوب الصباحية",
+          "name_en": "South Sabahiya"
+        },
+        {
+          "name_ar": "الشعيبة",
+          "name_en": "Shuaiba"
+        },
+        {
+          "name_ar": "الشعيبة الصناعية",
+          "name_en": "Shuaiba Industrial Area"
+        },
+        {
+          "name_ar": "الوفرة",
+          "name_en": "Wafra"
+        },
+        {
+          "name_ar": "الزور",
+          "name_en": "Zour"
+        },
+        {
+          "name_ar": "الفنطاس",
+          "name_en": "Fintas"
+        },
+        {
+          "name_ar": "الضباعية",
+          "name_en": "Dhibaia"
+        },
+        {
+          "name_ar": "واره",
+          "name_en": "Wara"
+        },
+        {
+          "name_ar": "غرب عبد الله المبارك",
+          "name_en": "West Abdullah Al-Mubarak"
+        },
+        {
+          "name_ar": "الشدادية الصناعية",
+          "name_en": "Al-Shadadiya Industrial Area"
+        }
+      ]
+    },
+    {
+      "name_ar": "محافظة الجهراء",
+      "name_en": "Jahra Governorate",
+      "areas": [
+        {
+          "name_ar": "الجهراء",
+          "name_en": "Jahra"
+        },
+        {
+          "name_ar": "الجهراء القديمة",
+          "name_en": "Old Jahra"
+        },
+        {
+          "name_ar": "الجهراء الجديدة",
+          "name_en": "New Jahra"
+        },
+        {
+          "name_ar": "الجهراء الصناعية",
+          "name_en": "Jahra Industrial Area"
+        },
+        {
+          "name_ar": "الجهراء الصناعية الحرفية",
+          "name_en": "Jahra Industrial Herafiya"
+        },
+        {
+          "name_ar": "العبدلي",
+          "name_en": "Abdali"
+        },
+        {
+          "name_ar": "المطلاع",
+          "name_en": "Al-Mutlaa"
+        },
+        {
+          "name_ar": "كاظمة",
+          "name_en": "Kazma"
+        },
+        {
+          "name_ar": "بحرة",
+          "name_en": "Bahra"
+        },
+        {
+          "name_ar": "كبد",
+          "name_en": "Kabd"
+        },
+        {
+          "name_ar": "الشقايا",
+          "name_en": "Al-Sheqaya"
+        },
+        {
+          "name_ar": "النهضة",
+          "name_en": "Al-Nahda"
+        },
+        {
+          "name_ar": "أمغرة",
+          "name_en": "Amghara"
+        },
+        {
+          "name_ar": "بر الجهراء",
+          "name_en": "Bar Al-Jahra"
+        },
+        {
+          "name_ar": "النعيم",
+          "name_en": "Naeem"
+        },
+        {
+          "name_ar": "النسيم",
+          "name_en": "Nasseem"
+        },
+        {
+          "name_ar": "العيون",
+          "name_en": "Oyoun"
+        },
+        {
+          "name_ar": "القصر",
+          "name_en": "Qasr"
+        },
+        {
+          "name_ar": "مدينة سعد العبد الله",
+          "name_en": "Saad Al-Abdullah City"
+        },
+        {
+          "name_ar": "السالمي",
+          "name_en": "Salmi"
+        },
+        {
+          "name_ar": "الصبية",
+          "name_en": "Subiya"
+        },
+        {
+          "name_ar": "الصليبية",
+          "name_en": "Sulaibiya"
+        },
+        {
+          "name_ar": "الصليبية الزراعية",
+          "name_en": "Sulaibiya Agricultural Area"
+        },
+        {
+          "name_ar": "الصليبية السكنية",
+          "name_en": "Sulaibiya Residential"
+        },
+        {
+          "name_ar": "الصليبية الصناعية",
+          "name_en": "Sulaibiya Industrial Area"
+        },
+        {
+          "name_ar": "تيماء",
+          "name_en": "Taima"
+        },
+        {
+          "name_ar": "الواحة",
+          "name_en": "Waha"
+        },
+        {
+          "name_ar": "أم العيش",
+          "name_en": "Umm Al-Aish"
+        },
+        {
+          "name_ar": "الروضتين",
+          "name_en": "Rawdatain"
+        },
+        {
+          "name_ar": "جنوب الجهراء",
+          "name_en": "South Jahra"
+        },
+        {
+          "name_ar": "القيروان",
+          "name_en": "Qairawan"
+        },
+        {
+          "name_ar": "القيصرية",
+          "name_en": "Qaysariya"
+        },
+        {
+          "name_ar": "جزيرة بوبيان",
+          "name_en": "Bubiyan Island"
+        },
+        {
+          "name_ar": "جزيرة وربة",
+          "name_en": "Warbah Island"
+        }
+      ]
+    },
+    {
+      "name_ar": "محافظة مبارك الكبير",
+      "name_en": "Mubarak Al-Kabeer Governorate",
+      "areas": [
+        {
+          "name_ar": "أبو الحصانية",
+          "name_en": "Abu Al-Hasaniya"
+        },
+        {
+          "name_ar": "أبو فطيرة",
+          "name_en": "Abu Ftaira"
+        },
+        {
+          "name_ar": "العدان",
+          "name_en": "Al-Adan"
+        },
+        {
+          "name_ar": "القرين",
+          "name_en": "Al-Qurain"
+        },
+        {
+          "name_ar": "القصور",
+          "name_en": "Al-Qusour"
+        },
+        {
+          "name_ar": "الفنيطيس",
+          "name_en": "Al-Fnaitees"
+        },
+        {
+          "name_ar": "المسيلة",
+          "name_en": "Messila"
+        },
+        {
+          "name_ar": "المسايل",
+          "name_en": "Al-Masayel"
+        },
+        {
+          "name_ar": "مبارك الكبير",
+          "name_en": "Mubarak Al-Kabeer"
+        },
+        {
+          "name_ar": "صباح السالم",
+          "name_en": "Sabah Al-Salem"
+        },
+        {
+          "name_ar": "صبحان",
+          "name_en": "Subhan"
+        },
+        {
+          "name_ar": "الوسطى",
+          "name_en": "Wista"
+        },
+        {
+          "name_ar": "غرب أبو فطيرة الحرفية",
+          "name_en": "West Abu Ftaira Herafiya"
+        }
+      ]
+    }
+  ]
+}

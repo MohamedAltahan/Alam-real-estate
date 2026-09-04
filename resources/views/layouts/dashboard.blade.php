@@ -42,13 +42,15 @@
     $nav = collect([
         ['label' => 'لوحة التحكم',    'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'grid', 'permission' => null],
         ['label' => 'إدارة العملاء',  'route' => 'dashboard.clients.index', 'active' => 'dashboard.clients.*', 'icon' => 'users', 'permission' => 'clients.view'],
+        ['label' => 'المعاينات',      'route' => 'dashboard.viewings.index', 'active' => 'dashboard.viewings.*', 'icon' => 'calendar', 'permission' => 'clients.view'],
         ['label' => 'ملاك العقارات',  'route' => 'dashboard.owners.index', 'active' => 'dashboard.owners.*', 'icon' => 'key', 'permission' => 'property_owners.view'],
         ['label' => 'العقارات',       'route' => 'dashboard.properties.index', 'active' => 'dashboard.properties.*', 'icon' => 'building', 'permission' => 'properties.view'],
-        ['label' => 'إدارة المناطق',  'route' => 'dashboard.areas.index', 'active' => 'dashboard.areas.*', 'icon' => 'map-pin', 'permission' => 'areas.view'],
+        ['label' => 'إدارة المناطق',  'route' => 'dashboard.areas.index', 'active' => ['dashboard.areas.*', 'dashboard.cities.*'], 'icon' => 'map-pin', 'permission' => 'areas.view'],
         ['label' => 'أنواع العقارات', 'route' => 'dashboard.unit-types.index', 'active' => 'dashboard.unit-types.*', 'icon' => 'layers', 'permission' => 'unit_types.view'],
         ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail', 'permission' => 'contact_requests.view'],
         ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega', 'permission' => 'marketing_sources.view'],
         ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
+        ['label' => 'تقارير التحول',  'route' => 'dashboard.reports.conversion', 'active' => 'dashboard.reports.*', 'icon' => 'chart', 'permission' => 'reports.view'],
         ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield', 'permission' => 'roles.view'],
         ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock', 'permission' => 'permissions.view'],
         ['label' => 'المشرفين',       'route' => 'dashboard.supervisors.index', 'active' => 'dashboard.supervisors.*', 'icon' => 'user-check', 'permission' => 'supervisors.view'],
@@ -73,6 +75,9 @@
         'user'     => '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
         'phone'    => '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
         'check'    => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+        'calendar' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+        'chart'    => '<path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/>',
+        'bell'     => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     ];
 
     $feedTone = [
@@ -107,7 +112,7 @@
         {{-- الروابط --}}
         <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
             @foreach ($nav as $item)
-                @php $active = request()->routeIs($item['active']); @endphp
+                @php $active = request()->routeIs(...(array) $item['active']); @endphp
                 {{-- العنصر النشط: حبّة دائرية رمادية دافئة بحدّ ذهبي على جهة البداية (مطابق لتصميم Figma) --}}
                 <a href="{{ route($item['route']) }}"
                    class="group flex items-center gap-3 rounded-full px-3.5 h-11 text-sm border-s-2 transition
@@ -164,71 +169,9 @@
 
             <div class="ms-auto flex items-center gap-3">
 
-                {{-- ===== الإشعارات ===== --}}
+                {{-- ===== الإشعارات (استطلاع كل دقيقة + صوت لتذكيرات المعاينات) ===== --}}
                 @can('notifications.view')
-                <div class="relative" x-data="{ open: false }" @keydown.escape.window="open = false">
-                    <button type="button" @click="open = ! open"
-                            class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition"
-                            aria-label="الإشعارات">
-                        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                             stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                        @if ($feedUnread)
-                            <span class="absolute top-2 end-2.5 w-2.5 h-2.5 rounded-full bg-danger ring-2 ring-white"></span>
-                        @endif
-                    </button>
-
-                    <div x-cloak x-show="open" @click.outside="open = false"
-                         x-transition:enter="transition ease-out duration-150"
-                         x-transition:enter-start="opacity-0 -translate-y-1"
-                         class="absolute top-[calc(100%+8px)] end-0 w-[340px] max-w-[calc(100vw-2rem)]
-                                rounded-2xl bg-white border border-gray-100 shadow-xl shadow-primary-950/10 overflow-hidden">
-
-                        {{-- رأس القائمة --}}
-                        <div class="flex items-center gap-2 px-4 h-14 border-b border-gray-100">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
-                                 stroke-linecap="round" stroke-linejoin="round" class="text-ink"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                            <span class="text-sm font-bold text-ink">الإشعارات</span>
-                            @if ($feedUnread)
-                                <span class="grid place-items-center min-w-5 h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-bold">{{ $feedUnread }}</span>
-                            @endif
-                            @if ($feedUnread && $me->can('notifications.edit') && $me->can('contact_requests.view'))
-                                <form method="POST" action="{{ route('dashboard.notifications.read-all') }}" class="ms-auto">
-                                    @csrf
-                                    <button class="flex items-center gap-1 text-xs text-gray-500 hover:text-primary-800 transition">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 13 4 4L14 7"/><path d="m11 15 2 2L22 7"/></svg>
-                                        قراءة الكل
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-
-                        {{-- العناصر --}}
-                        <div class="max-h-[380px] overflow-y-auto">
-                            @forelse ($feedItems as $n)
-                                <a href="{{ $n['url'] }}" class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50/70 transition">
-                                    <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full {{ $feedTone[$n['tone']] }}">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
-                                             stroke-linecap="round" stroke-linejoin="round">{!! $icons[$n['icon']] !!}</svg>
-                                    </span>
-                                    <span class="min-w-0 flex-1 leading-snug">
-                                        <span class="block text-[13px] font-semibold text-ink truncate">{{ $n['title'] }}</span>
-                                        <span class="block text-[11px] text-gray-400 mt-0.5">{{ $n['at']->locale('ar')->diffForHumans() }}</span>
-                                    </span>
-                                    @if ($n['unread'])
-                                        <span class="w-2 h-2 shrink-0 rounded-full bg-info"></span>
-                                    @endif
-                                </a>
-                            @empty
-                                <p class="px-4 py-10 text-center text-sm text-gray-400">لا توجد إشعارات بعد</p>
-                            @endforelse
-                        </div>
-
-                        @can('contact_requests.view')
-                            <a href="{{ route('dashboard.requests.index') }}"
-                               class="block py-3.5 text-center text-sm font-bold text-primary-800 hover:bg-gray-50 transition">عرض كل الإشعارات</a>
-                        @endcan
-                    </div>
-                </div>
+                    @include('layouts.partials.notifications')
                 @endcan
 
                 {{-- ===== البروفايل ===== --}}

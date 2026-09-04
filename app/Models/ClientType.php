@@ -10,7 +10,7 @@ class ClientType extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'is_active'];
+    protected $fillable = ['name', 'key', 'is_active'];
 
     public array $translatable = ['name'];
 
