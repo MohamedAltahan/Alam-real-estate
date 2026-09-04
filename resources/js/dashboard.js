@@ -9,6 +9,7 @@ import './dashboard/property-lookup';
 import './dashboard/repeater';
 import './dashboard/datetime';
 import './dashboard/notifications';
+import './dashboard/searchable-select';
 import './dashboard/file-list';
 import './dashboard/property-form';
 import './dashboard/owner-form';
