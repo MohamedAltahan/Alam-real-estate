@@ -100,14 +100,16 @@ class ViewingReminderTest extends TestCase
         $this->assertSame(1, $recorder->notifications()->count());
     }
 
-    public function test_opening_a_notification_marks_it_read_and_redirects_to_the_client(): void
+    public function test_opening_a_notification_marks_it_read_and_redirects_to_the_viewings_page(): void
     {
-        $viewing = $this->viewing(now()->addMinutes(30), agentId: $this->agent->id);
+        $this->viewing(now()->addMinutes(30), agentId: $this->agent->id);
         $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))->assertOk();
         $notification = $this->agent->notifications()->firstOrFail();
 
+        $this->assertSame(route('dashboard.viewings.index'), $notification->data['url']);
+
         $this->actingAs($this->agent)->get(route('dashboard.notifications.open', $notification->id))
-            ->assertRedirect(route('dashboard.clients.show', $viewing->client_id));
+            ->assertRedirect(route('dashboard.viewings.index'));
 
         $this->assertNotNull($notification->refresh()->read_at);
         $this->assertSame(0, $this->agent->unreadNotifications()->count());

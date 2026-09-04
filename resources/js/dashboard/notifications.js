@@ -2,28 +2,35 @@
  * جرس الإشعارات: استطلاع كل دقيقة (polling) لتذكيرات المعاينات — بدون اتصال لحظي.
  *
  * - يحدّث العدّاد ويضيف إشعارات المعاينات الجديدة أعلى القائمة.
+ * - يعرض تنبيهًا ثابتًا أسفل يسار الشاشة لكل تذكير معاينة لم يُفتح — لا يختفي
+ *   إلا إذا أغلقه المستخدم (يُحفظ الإغلاق محليًا فلا يعود بعد الاستطلاع التالي)
+ *   أو فتح الإشعار من أي مكان. الضغط عليه يفتح صفحة المعاينات.
  * - يشغّل «بيب بيب» لكل تذكير معاينة جديد لم يُفتح (مرة واحدة لكل إشعار)،
  *   ولو إعداد التكرار مفعّل يعيد التنبيه كل دقيقة ما دام هناك تذكير غير مفتوح.
- * - باقي الإشعارات (طلبات التواصل…) بلا صوت.
+ * - باقي الإشعارات (طلبات التواصل…) بلا صوت وبلا تنبيه منبثق.
  */
 import { withAlpine } from './alpine';
 import { beep } from './beep';
 
 const POLL_MS = 60_000;
-const FIRST_POLL_MS = 4_000;
-const STORAGE_KEY = 'alam.notifications.beeped';
+const FIRST_POLL_MS = 2_000;
+const BEEPED_KEY = 'alam.notifications.beeped';
+const DISMISSED_KEY = 'alam.notifications.dismissed';
+const KEEP_IDS = 200;
 
-function readSeen() {
+function readSet(key) {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const value = JSON.parse(localStorage.getItem(key) || '[]');
+
+        return Array.isArray(value) ? value : [];
     } catch {
         return [];
     }
 }
 
-function writeSeen(ids) {
+function writeSet(key, ids) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(ids.slice(-200)));
+        localStorage.setItem(key, JSON.stringify(ids.slice(-KEEP_IDS)));
     } catch {
         // التخزين المحلي غير متاح — نتجاهل
     }
@@ -37,8 +44,7 @@ withAlpine((Alpine) => {
         repeat: Boolean(opts.repeat),
         pollUrl: opts.pollUrl ?? '',
         timer: null,
-        toast: false,
-        toastText: '',
+        toasts: [],
 
         init() {
             if (! this.pollUrl) {
@@ -77,6 +83,7 @@ withAlpine((Alpine) => {
                 this.repeat = Boolean(data.repeat_beep);
 
                 this.merge(items);
+                this.syncToasts(items);
                 this.maybeBeep(items);
             } catch {
                 // فشل الشبكة — نحاول في الدورة التالية
@@ -108,14 +115,36 @@ withAlpine((Alpine) => {
             });
         },
 
+        /** التنبيهات المنبثقة = تذكيرات المعاينات غير المفتوحة والتي لم يُغلقها المستخدم */
+        syncToasts(items) {
+            const pending = items.filter((item) => item.kind === 'viewing' && ! item.read);
+            const dismissed = readSet(DISMISSED_KEY);
+
+            // إشعار اتفتح من مكان تاني → يختفي تنبيهه
+            this.toasts = this.toasts.filter((toast) => pending.some((item) => item.id === toast.id));
+
+            pending.forEach((item) => {
+                if (dismissed.includes(item.id) || this.toasts.some((toast) => toast.id === item.id)) {
+                    return;
+                }
+
+                this.toasts.push({ id: item.id, title: item.title, url: item.url, human: item.human ?? '' });
+            });
+        },
+
+        /** الإغلاق يدويًا: لا يعود التنبيه حتى لو ظل الإشعار غير مقروء */
+        dismiss(id) {
+            this.toasts = this.toasts.filter((toast) => toast.id !== id);
+            writeSet(DISMISSED_KEY, [...readSet(DISMISSED_KEY), id]);
+        },
+
         maybeBeep(items) {
-            const seen = readSeen();
+            const seen = readSet(BEEPED_KEY);
             const fresh = items.filter((item) => item.kind === 'viewing' && ! item.read && ! seen.includes(item.id));
 
             if (fresh.length) {
                 beep();
-                this.showToast(fresh[0].title);
-                writeSeen([...seen, ...fresh.map((item) => item.id)]);
+                writeSet(BEEPED_KEY, [...seen, ...fresh.map((item) => item.id)]);
 
                 return;
             }
@@ -123,12 +152,6 @@ withAlpine((Alpine) => {
             if (this.repeat && this.viewingUnread > 0) {
                 beep();
             }
-        },
-
-        showToast(text) {
-            this.toastText = text;
-            this.toast = true;
-            setTimeout(() => { this.toast = false; }, 7000);
         },
     }));
 });

@@ -52,13 +52,20 @@ class NotificationController extends Controller
         ]);
     }
 
-    /** فتح إشعار: يعلَّم كمقروء ثم يحوّل إلى صفحته (العميل عادة) */
+    /** فتح إشعار: يعلَّم كمقروء ثم يحوّل إلى صفحته (المعاينات لتذكيرات المعاينة) */
     public function open(Request $request, string $id): RedirectResponse
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
 
-        return redirect((string) ($notification->data['url'] ?? route('dashboard.clients.index')));
+        $data = (array) $notification->data;
+
+        // تذكيرات المعاينات القديمة كانت تحمل رابط صفحة العميل
+        $url = ($data['kind'] ?? null) === ViewingReminder::KIND
+            ? route('dashboard.viewings.index')
+            : ($data['url'] ?? route('dashboard.clients.index'));
+
+        return redirect((string) $url);
     }
 
     /** تعليم إشعارات المستخدم نفسه كمقروءة (لا يحتاج صلاحية طلبات التواصل) */

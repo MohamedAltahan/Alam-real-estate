@@ -1,6 +1,6 @@
 {{--
     جرس الإشعارات: يُعرض من السيرفر أول مرة، ثم يستطلع كل دقيقة (notificationBell في dashboard.js)
-    ليحدّث العدّاد ويضيف تذكيرات المعاينات الجديدة مع صوت تنبيه.
+    ليحدّث العدّاد ويضيف تذكيرات المعاينات الجديدة مع صوت تنبيه وتنبيه منبثق أسفل الشاشة.
 --}}
 @php
     $bellIcons = $icons + [
@@ -87,10 +87,37 @@
         </div>
     </div>
 
-    {{-- توست تذكير المعاينة --}}
-    <div x-show="toast" x-cloak x-transition
-         class="fixed top-20 start-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 rounded-full bg-primary-950 text-white px-5 py-2.5 text-sm shadow-xl max-w-[calc(100vw-2rem)]">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-500 shrink-0">{!! $bellIcons['calendar'] !!}</svg>
-        <span x-text="toastText" class="truncate"></span>
-    </div>
+    {{--
+        تنبيهات المعاينات أسفل يسار الشاشة — تبقى ظاهرة حتى يغلقها المستخدم أو يفتح الإشعار.
+        x-teleport ينقلها إلى <body> حتى لا يحدّها ترتيب طبقات الشريط العلوي.
+    --}}
+    <template x-teleport="body">
+        <div class="fixed bottom-6 left-6 z-[80] flex flex-col-reverse gap-3 w-[350px] max-w-[calc(100vw-2rem)]">
+            <template x-for="toast in toasts" :key="toast.id">
+                <div x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 translate-y-3"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-end="opacity-0 translate-y-3"
+                     class="rounded-2xl bg-white border border-gray-100 shadow-2xl shadow-primary-950/25 overflow-hidden">
+                    <div class="flex items-start gap-3 p-3.5">
+                        <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full {{ $feedTone['accent'] }}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">{!! $bellIcons['calendar'] !!}</svg>
+                        </span>
+                        <a :href="toast.url" class="min-w-0 flex-1 leading-snug group">
+                            <span class="block text-[13px] font-bold text-ink group-hover:text-primary-800 transition" x-text="toast.title"></span>
+                            <span class="flex items-center gap-1 text-[11px] font-semibold text-primary-700 mt-1.5">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                اضغط لفتح صفحة المعاينات
+                            </span>
+                        </a>
+                        <button type="button" @click="dismiss(toast.id)" aria-label="إغلاق التنبيه"
+                                class="grid place-items-center w-7 h-7 shrink-0 rounded-full text-gray-400 hover:text-ink hover:bg-gray-100 transition">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="h-1 bg-accent-500"></div>
+                </div>
+            </template>
+        </div>
+    </template>
 </div>
