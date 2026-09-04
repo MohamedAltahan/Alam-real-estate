@@ -24,7 +24,7 @@
 </section>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
-    <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+    <div class="grid lg:grid-cols-2 gap-8 lg:gap-6 items-start">
         {{-- معلومات التواصل + الخريطة (يمين) --}}
         <x-site.contact-aside />
 
@@ -55,7 +55,18 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ $t('رقم الجوال', 'Phone') }}</label>
-                        <input name="phone" value="{{ old('phone') }}" dir="ltr" placeholder="05XXXXXXXX" class="{{ $field }} text-start">
+                        <div class="flex gap-2" dir="ltr">
+                            <div class="relative w-[48%] shrink-0">
+                                <select name="phone_country_code" required class="{{ $field }} appearance-none pe-9 cursor-pointer text-start">
+                                    @foreach ($phoneCountries as $country)
+                                        <option value="{{ $country['code'] }}" @selected(old('phone_country_code', '+965') === $country['code'])>{{ $t($country['ar'], $country['en']) }} ({{ $country['code'] }})</option>
+                                    @endforeach
+                                </select>
+                                <svg class="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                            <input name="phone" type="tel" inputmode="tel" autocomplete="tel-national" value="{{ old('phone') }}" dir="ltr" placeholder="" class="{{ $field }} min-w-0 text-start">
+                        </div>
+                        @error('phone_country_code')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                         @error('phone')<p class="text-xs text-danger mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>

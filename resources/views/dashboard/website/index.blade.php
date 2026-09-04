@@ -17,8 +17,8 @@
     $areaRows = collect($areaItems)->values()->map(fn ($it, $i) => [
         'uid' => $it['collection'] ?? 'area-'.$i,
         'area_id' => (string) ($it['area_id'] ?? ''),
-        'count' => (string) ($it['count'] ?? ''),
     ])->all();
+    $areaCounts = $areas->pluck('properties_count', 'id');
 
     $whyRows = collect($whyItems)->values()->map(fn ($it) => [
         'uid' => 'w'.uniqid(),
@@ -37,7 +37,7 @@
 @endphp
 
 @section('content')
-<div x-data="{ tab: 'homepage' }">
+<div x-data="{ tab: @js($errors->hasAny(['contact_map_lat', 'contact_map_lng']) ? 'footer' : 'homepage') }">
     <x-flash />
 
     <div class="mb-5">
@@ -48,7 +48,7 @@
     {{-- التبويبات --}}
     <div class="flex flex-wrap gap-2 mb-5">
         @foreach ($tabs as $k => $label)
-            <button @click="tab = '{{ $k }}'" :class="tab === '{{ $k }}' ? 'bg-primary-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'" class="rounded-full px-4 py-2 text-sm font-medium transition">{{ $label }}</button>
+            <button @click="tab = '{{ $k }}'; if ('{{ $k }}' === 'footer') setTimeout(() => window.dispatchEvent(new Event('contact-map-visible')), 100)" :class="tab === '{{ $k }}' ? 'bg-primary-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'" class="rounded-full px-4 py-2 text-sm font-medium transition">{{ $label }}</button>
         @endforeach
     </div>
 
@@ -92,7 +92,7 @@
                      والجديد يُضاف بـ Alpine. حذف بند = إزالة حقوله من الفورم. --}}
                 <div class="space-y-3">
                     @foreach ($areaRows as $row)
-                        <div x-data="{ gone: false }" x-show="! gone" class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-3">
+                        <div x-data="{ gone: false, selectedArea: @js($row['area_id']), areaCounts: @js($areaCounts) }" x-show="! gone" class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-3">
                             <template x-if="! gone">
                                 <div class="space-y-3">
                                     <div class="flex items-center justify-between">
@@ -103,14 +103,17 @@
                                         <div>
                                             <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
                                             {{-- منطقة واحدة من جدول المناطق — الاسم AR/EN مخزَّن فيه بالفعل --}}
-                                            <select name="area_items[{{ $row['uid'] }}][area_id]" class="{{ $inputCls }}">
+                                            <select name="area_items[{{ $row['uid'] }}][area_id]" x-model="selectedArea" class="{{ $inputCls }}">
                                                 <option value="">— اختر المنطقة —</option>
                                                 @foreach ($areas as $a)<option value="{{ $a->id }}" @selected($row['area_id'] == $a->id)>{{ $a->name }}</option>@endforeach
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-xs text-gray-500 mb-1">عدد العقارات المتاحة</label>
-                                            <input type="number" min="0" name="area_items[{{ $row['uid'] }}][count]" value="{{ $row['count'] }}" placeholder="اتركه فارغاً ليُحسب تلقائياً" class="{{ $inputCls }}">
+                                            <label class="block text-xs text-gray-500 mb-1">عدد العقارات</label>
+                                            <div class="flex items-center justify-between gap-3 rounded-field border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                                                <span><b class="text-primary-800" x-text="areaCounts[selectedArea] ?? 0"></b> عقار</span>
+                                                <span class="text-[11px] text-success">يُحسب تلقائياً</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <x-cms.dropzone label="صورة المنطقة" :name="'area_items['.$row['uid'].'][image]'"
@@ -121,7 +124,7 @@
                     @endforeach
 
                     {{-- بنود جديدة --}}
-                    <div x-data="{ rows: [], n: 0 }" class="space-y-3">
+                    <div x-data="{ rows: [], n: 0, areaCounts: @js($areaCounts) }" class="space-y-3">
                         <template x-for="(row, i) in rows" :key="row.uid">
                             <div class="rounded-field bg-primary-50/40 border border-primary-100 p-3 space-y-3">
                                 <div class="flex items-center justify-between">
@@ -131,14 +134,17 @@
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
-                                        <select :name="`area_items[${row.uid}][area_id]`" class="{{ $inputCls }}">
+                                        <select :name="`area_items[${row.uid}][area_id]`" x-model="row.area_id" class="{{ $inputCls }}">
                                             <option value="">— اختر المنطقة —</option>
                                             @foreach ($areas as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-xs text-gray-500 mb-1">عدد العقارات المتاحة</label>
-                                        <input type="number" min="0" :name="`area_items[${row.uid}][count]`" placeholder="اتركه فارغاً ليُحسب تلقائياً" class="{{ $inputCls }}">
+                                        <label class="block text-xs text-gray-500 mb-1">عدد العقارات</label>
+                                        <div class="flex items-center justify-between gap-3 rounded-field border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                                            <span><b class="text-primary-800" x-text="areaCounts[row.area_id] ?? 0"></b> عقار</span>
+                                            <span class="text-[11px] text-success">يُحسب تلقائياً</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
@@ -150,7 +156,7 @@
                             </div>
                         </template>
 
-                        <button type="button" @click="rows.push({ uid: 'area-new' + (n++) })"
+                        <button type="button" @click="rows.push({ uid: 'area-new' + (n++), area_id: '' })"
                                 class="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-gray-300 hover:border-primary-500 hover:text-primary-700 text-gray-500 font-bold px-4 py-2 text-sm transition">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                             إضافة منطقة
@@ -330,9 +336,19 @@
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($testimonials as $tst)
-                    @php $td = ['id' => $tst->id, 'name' => $tst->name, 'title_ar' => $tst->getTranslation('title', 'ar', false), 'title_en' => $tst->getTranslation('title', 'en', false), 'content_ar' => $tst->getTranslation('content', 'ar', false), 'content_en' => $tst->getTranslation('content', 'en', false), 'rating' => $tst->rating]; @endphp
+                    @php $td = ['id' => $tst->id, 'name' => $tst->name, 'title_ar' => $tst->getTranslation('title', 'ar', false), 'title_en' => $tst->getTranslation('title', 'en', false), 'content_ar' => $tst->getTranslation('content', 'ar', false), 'content_en' => $tst->getTranslation('content', 'en', false), 'rating' => $tst->rating, 'avatar_url' => $tst->avatar_url]; @endphp
                     <div class="rounded-card bg-white border border-gray-100 shadow-sm p-4">
-                        <div class="flex items-start justify-between"><div><p class="font-semibold text-ink">{{ $tst->name }}</p><p class="text-xs text-gray-400">{{ $tst->title }}</p></div><span class="text-accent-500 text-xs">{{ str_repeat('★', $tst->rating ?? 0) }}</span></div>
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                @if ($tst->avatar_url)
+                                    <img src="{{ $tst->avatar_url }}" alt="{{ $tst->name }}" class="w-11 h-11 rounded-full object-cover shrink-0">
+                                @else
+                                    <span class="grid place-items-center w-11 h-11 rounded-full bg-primary-50 text-primary-800 font-bold shrink-0">{{ mb_substr($tst->name, 0, 1) }}</span>
+                                @endif
+                                <div class="min-w-0"><p class="font-semibold text-ink truncate">{{ $tst->name }}</p><p class="text-xs text-gray-400 truncate">{{ $tst->title }}</p></div>
+                            </div>
+                            <span class="text-accent-500 text-xs shrink-0">{{ str_repeat('★', $tst->rating ?? 0) }}</span>
+                        </div>
                         <p class="text-sm text-gray-600 mt-2">{{ $tst->content }}</p>
                         @can('website.edit')<div class="flex gap-1 mt-3 pt-3 border-t border-gray-50">
                             <button @click='startEdit(@json($td))' class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
@@ -345,11 +361,31 @@
             </div>
 
             <x-modal name="tst-form">
-                <form :action="action" method="POST">@csrf<template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
+                <form :action="action" method="POST" enctype="multipart/form-data">@csrf<template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
                     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-ink" x-text="mode === 'edit' ? 'تعديل رأي' : 'إضافة رأي'"></h3><button type="button" @click="$dispatch('close-modal','tst-form')" class="text-gray-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
                     <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الاسم</label><input name="name" x-model="form.name" required class="{{ $numCls }}"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1.5">التقييم</label><select name="rating" x-model="form.rating" class="{{ $numCls }}">@for ($i = 5; $i >= 1; $i--)<option value="{{ $i }}">{{ $i }} نجوم</option>@endfor</select></div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">صورة الشخص</label>
+                            <div class="flex items-center gap-4 rounded-2xl border border-gray-200 bg-gray-50/60 p-3">
+                                <div class="grid place-items-center w-16 h-16 rounded-full bg-white border border-gray-200 overflow-hidden shrink-0">
+                                    <template x-if="avatarSource() && !form.avatar_removed"><img :src="avatarSource()" alt="" class="w-full h-full object-cover"></template>
+                                    <template x-if="!avatarSource() || form.avatar_removed"><span class="text-xl font-bold text-primary-800" x-text="form.name ? form.name.charAt(0) : 'ص'"></span></template>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <label class="inline-flex cursor-pointer items-center rounded-full bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-primary-300 hover:text-primary-800 transition">
+                                        <span x-text="mode === 'edit' && form.avatar_url ? 'استبدال الصورة' : 'اختيار صورة'"></span>
+                                        <input x-ref="testimonialAvatar" type="file" name="avatar" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="previewAvatar($event)">
+                                    </label>
+                                    <p class="mt-1.5 text-xs text-gray-400">JPG أو PNG أو WebP — بحد أقصى 6 MB</p>
+                                    <label x-show="mode === 'edit' && form.avatar_url" class="mt-2 inline-flex items-center gap-2 text-xs text-danger cursor-pointer">
+                                        <input type="checkbox" name="avatar_removed" value="1" x-model="form.avatar_removed" class="rounded border-gray-300 text-danger focus:ring-danger">
+                                        <span>حذف الصورة الحالية</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الوظيفة (عربي)</label><input name="title_ar" x-model="form.title_ar" class="{{ $numCls }}"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الوظيفة (English)</label><input name="title_en" x-model="form.title_en" dir="ltr" class="{{ $numCls }}"></div>
                         <div class="sm:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1.5">الرأي (عربي)</label><textarea name="content_ar" x-model="form.content_ar" rows="2" required class="{{ $numCls }}"></textarea></div>
@@ -406,6 +442,19 @@
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">البريد الإلكتروني</label><input name="contact_email" value="{{ $settings['contact_email'] }}" dir="ltr" class="{{ $numCls }}"></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">واتساب</label><input name="contact_whatsapp" value="{{ $settings['contact_whatsapp'] }}" dir="ltr" class="{{ $numCls }}"></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">العنوان</label><input name="contact_address" value="{{ $settings['contact_address'] }}" class="{{ $numCls }}"></div>
+                <div class="sm:col-span-2 space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">موقع المكتب على الخريطة</label>
+                        <p class="text-xs text-gray-400">حرّك الخريطة واضغط على الموقع المطلوب، أو اسحب الدبوس مباشرة.</p>
+                    </div>
+                    <div id="contact-map-picker" class="h-80 w-full rounded-2xl border border-gray-200 overflow-hidden bg-gray-100" dir="ltr"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-medium text-gray-500 mb-1">خط العرض</label><input id="contact-map-lat" name="contact_map_lat" type="number" step="any" min="-90" max="90" required value="{{ old('contact_map_lat', $settings['contact_map_lat'] ?? '29.3375') }}" dir="ltr" class="{{ $numCls }}"></div>
+                        <div><label class="block text-xs font-medium text-gray-500 mb-1">خط الطول</label><input id="contact-map-lng" name="contact_map_lng" type="number" step="any" min="-180" max="180" required value="{{ old('contact_map_lng', $settings['contact_map_lng'] ?? '48.0758') }}" dir="ltr" class="{{ $numCls }}"></div>
+                    </div>
+                    @error('contact_map_lat')<p class="text-xs text-danger">{{ $message }}</p>@enderror
+                    @error('contact_map_lng')<p class="text-xs text-danger">{{ $message }}</p>@enderror
+                </div>
                 @foreach (['facebook' => 'فيسبوك', 'instagram' => 'إنستجرام', 'twitter' => 'تويتر (X)', 'linkedin' => 'لينكدإن'] as $k => $label)
                     <div><label class="block text-sm font-medium text-gray-700 mb-1.5">{{ $label }}</label><input name="social_{{ $k }}" value="{{ $settings['social_'.$k] }}" dir="ltr" placeholder="https://" class="{{ $numCls }}"></div>
                 @endforeach
@@ -554,9 +603,31 @@
 <script>
     function tstCrud() {
         return {
-            mode: 'add', action: '', form: { name: '', title_ar: '', title_en: '', content_ar: '', content_en: '', rating: '5' },
-            startAdd() { this.mode = 'add'; this.form = { name: '', title_ar: '', title_en: '', content_ar: '', content_en: '', rating: '5' }; this.action = '{{ route('dashboard.website.testimonials.store') }}'; this.$dispatch('open-modal', 'tst-form'); },
-            startEdit(t) { this.mode = 'edit'; this.form = { name: t.name ?? '', title_ar: t.title_ar ?? '', title_en: t.title_en ?? '', content_ar: t.content_ar ?? '', content_en: t.content_en ?? '', rating: String(t.rating ?? 5) }; this.action = '{{ url('dashboard/website/testimonials') }}/' + t.id; this.$dispatch('open-modal', 'tst-form'); },
+            mode: 'add', action: '', form: { name: '', title_ar: '', title_en: '', content_ar: '', content_en: '', rating: '5', avatar_url: null, avatar_preview: null, avatar_removed: false },
+            startAdd() {
+                this.mode = 'add';
+                this.form = { name: '', title_ar: '', title_en: '', content_ar: '', content_en: '', rating: '5', avatar_url: null, avatar_preview: null, avatar_removed: false };
+                this.action = '{{ route('dashboard.website.testimonials.store') }}';
+                this.resetAvatarInput();
+                this.$dispatch('open-modal', 'tst-form');
+            },
+            startEdit(t) {
+                this.mode = 'edit';
+                this.form = { name: t.name ?? '', title_ar: t.title_ar ?? '', title_en: t.title_en ?? '', content_ar: t.content_ar ?? '', content_en: t.content_en ?? '', rating: String(t.rating ?? 5), avatar_url: t.avatar_url ?? null, avatar_preview: null, avatar_removed: false };
+                this.action = '{{ url('dashboard/website/testimonials') }}/' + t.id;
+                this.resetAvatarInput();
+                this.$dispatch('open-modal', 'tst-form');
+            },
+            avatarSource() { return this.form.avatar_preview || this.form.avatar_url; },
+            previewAvatar(event) {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                this.form.avatar_preview = URL.createObjectURL(file);
+                this.form.avatar_removed = false;
+            },
+            resetAvatarInput() {
+                this.$nextTick(() => { if (this.$refs.testimonialAvatar) this.$refs.testimonialAvatar.value = ''; });
+            },
         };
     }
     function faqCrud() {
@@ -568,3 +639,54 @@
     }
 </script>
 @endsection
+
+@push('styles')
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+@endpush
+
+@push('scripts')
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('contact-map-picker');
+            const latInput = document.getElementById('contact-map-lat');
+            const lngInput = document.getElementById('contact-map-lng');
+            if (!container || !latInput || !lngInput || typeof L === 'undefined') return;
+
+            const initialLat = Number.parseFloat(latInput.value) || 29.3375;
+            const initialLng = Number.parseFloat(lngInput.value) || 48.0758;
+            const map = L.map(container).setView([initialLat, initialLng], 14);
+            const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            }).addTo(map);
+
+            const setLocation = (lat, lng, moveMarker = true) => {
+                latInput.value = Number(lat).toFixed(7);
+                lngInput.value = Number(lng).toFixed(7);
+                if (moveMarker) marker.setLatLng([lat, lng]);
+            };
+
+            map.on('click', event => setLocation(event.latlng.lat, event.latlng.lng));
+            marker.on('dragend', event => {
+                const point = event.target.getLatLng();
+                setLocation(point.lat, point.lng, false);
+            });
+
+            const moveFromInputs = () => {
+                const lat = Number.parseFloat(latInput.value);
+                const lng = Number.parseFloat(lngInput.value);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    marker.setLatLng([lat, lng]);
+                    map.panTo([lat, lng]);
+                }
+            };
+            latInput.addEventListener('change', moveFromInputs);
+            lngInput.addEventListener('change', moveFromInputs);
+            window.addEventListener('contact-map-visible', () => setTimeout(() => map.invalidateSize(), 50));
+            setTimeout(() => map.invalidateSize(), 200);
+        });
+    </script>
+@endpush

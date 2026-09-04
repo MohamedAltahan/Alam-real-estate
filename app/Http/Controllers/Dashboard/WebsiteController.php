@@ -11,8 +11,8 @@ use App\Models\Property;
 use App\Models\Setting;
 use App\Models\Testimonial;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class WebsiteController extends Controller
@@ -49,7 +49,7 @@ class WebsiteController extends Controller
             'privacy' => $this->legalBody('privacy'),
             'offersHeader' => $this->listingHeader('offers'),
             'propsHeader' => $this->listingHeader('properties'),
-            'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
+            'areas' => Area::where('is_active', true)->withCount('properties')->orderBy('sort_order')->get(),
             // العقارات المرشَّحة لقسم الفيديوهات (لها رابط يوتيوب فقط)
             'videoPool' => Property::withVideo()->latest()->get(['id', 'reference_code', 'title', 'video_url']),
             'faqs' => Faq::orderBy('sort_order')->get(),
@@ -106,7 +106,6 @@ class WebsiteController extends Controller
 
             $areaItems[] = [
                 'area_id' => $it['area_id'],
-                'count' => $it['count'] ?? '',
                 'collection' => $collection,
             ];
         }
@@ -329,13 +328,17 @@ class WebsiteController extends Controller
     {
         abort_unless($request->user()->can('website.edit'), 403);
         $d = $this->testimonialData($request);
-        Testimonial::create([
+        $testimonial = Testimonial::create([
             'name' => $d['name'],
             'title' => ['ar' => $d['title_ar'], 'en' => $d['title_en'] ?: $d['title_ar']],
             'content' => ['ar' => $d['content_ar'], 'en' => $d['content_en'] ?: $d['content_ar']],
             'rating' => $d['rating'],
             'sort_order' => (Testimonial::max('sort_order') ?? 0) + 1,
         ]);
+
+        if ($request->hasFile('avatar')) {
+            $testimonial->addMediaFromRequest('avatar')->toMediaCollection('avatar');
+        }
 
         return back()->with('success', 'تمت إضافة الرأي.');
     }
@@ -350,6 +353,15 @@ class WebsiteController extends Controller
             'content' => ['ar' => $d['content_ar'], 'en' => $d['content_en'] ?: $d['content_ar']],
             'rating' => $d['rating'],
         ]);
+
+        if ($request->boolean('avatar_removed')) {
+            $testimonial->clearMediaCollection('avatar');
+        }
+
+        if ($request->hasFile('avatar')) {
+            $testimonial->clearMediaCollection('avatar');
+            $testimonial->addMediaFromRequest('avatar')->toMediaCollection('avatar');
+        }
 
         return back()->with('success', 'تم تحديث الرأي.');
     }
@@ -366,6 +378,15 @@ class WebsiteController extends Controller
     public function updateSettings(Request $request): RedirectResponse
     {
         abort_unless($request->user()->can('website.edit'), 403);
+
+        $request->validate([
+            'contact_map_lat' => ['required', 'numeric', 'between:-90,90'],
+            'contact_map_lng' => ['required', 'numeric', 'between:-180,180'],
+        ], [], [
+            'contact_map_lat' => 'خط العرض',
+            'contact_map_lng' => 'خط الطول',
+        ]);
+
         foreach (self::SETTINGS as $group => $keys) {
             foreach ($keys as $key) {
                 Setting::updateOrCreate(['group' => $group, 'key' => $key], ['value' => $request->input("{$group}_{$key}")]);
@@ -377,7 +398,7 @@ class WebsiteController extends Controller
 
     // ===== Helpers =====
     private const SETTINGS = [
-        'contact' => ['phone', 'email', 'address', 'whatsapp'],
+        'contact' => ['phone', 'email', 'address', 'whatsapp', 'map_lat', 'map_lng'],
         'social' => ['facebook', 'instagram', 'twitter', 'linkedin'],
     ];
 
@@ -550,6 +571,8 @@ class WebsiteController extends Controller
             'title_ar' => ['nullable', 'string', 'max:120'], 'title_en' => ['nullable', 'string', 'max:120'],
             'content_ar' => ['required', 'string'], 'content_en' => ['nullable', 'string'],
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
-        ], [], ['name' => 'الاسم', 'content_ar' => 'الرأي', 'rating' => 'التقييم']);
+            'avatar' => Testimonial::imageRules(),
+            'avatar_removed' => ['nullable', 'boolean'],
+        ], [], ['name' => 'الاسم', 'content_ar' => 'الرأي', 'rating' => 'التقييم', 'avatar' => 'صورة الشخص']);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientInteraction;
 use App\Models\ClientStage;
 use App\Models\Property;
+use App\Models\PropertyReservation;
 use App\Models\PropertyStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +74,7 @@ class ClientService
             'stage', 'type', 'area', 'agent', 'source', 'desiredUnitType', 'recordedBy',
             'interactions.user', 'interactions.stage',
             'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
+            'properties.activeReservation.client', 'properties.activeReservation.reservedBy',
         ]);
     }
 
@@ -93,7 +95,32 @@ class ClientService
 
     public function delete(Client $client): void
     {
-        $client->delete();
+        DB::transaction(function () use ($client) {
+            $reservations = PropertyReservation::query()
+                ->where('client_id', $client->id)
+                ->where('status', PropertyReservation::STATUS_ACTIVE)
+                ->whereNotNull('active_property_id')
+                ->lockForUpdate()
+                ->get();
+            $availableId = PropertyStatus::where('key', 'available')->value('id');
+
+            foreach ($reservations as $reservation) {
+                $property = Property::query()->lockForUpdate()->with('status')->find($reservation->property_id);
+
+                if ($property?->status?->key === 'reserved' && $availableId) {
+                    $property->update(['status_id' => $availableId]);
+                }
+
+                $reservation->update([
+                    'active_property_id' => null,
+                    'status' => PropertyReservation::STATUS_CANCELLED,
+                    'released_by' => auth()->id(),
+                    'released_at' => now(),
+                ]);
+            }
+
+            $client->delete();
+        });
     }
 
     /**
@@ -123,7 +150,13 @@ class ClientService
     public function attachProperty(Client $client, int $propertyId, ?string $relation = null, ?string $notes = null): void
     {
         DB::transaction(function () use ($client, $propertyId, $relation, $notes) {
-            $property = Property::query()->lockForUpdate()->with(['status', 'clients'])->findOrFail($propertyId);
+            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
+
+            if ($relation === 'reserved') {
+                $this->reservePropertyLocked($client, $property, $notes);
+
+                return;
+            }
 
             if ($client->properties()->whereKey($propertyId)->exists()) {
                 throw ValidationException::withMessages([
@@ -131,24 +164,60 @@ class ClientService
                 ]);
             }
 
-            if ($property->status?->key === 'sold') {
+            $this->ensurePropertyCanBeLinked($property);
+
+            $client->properties()->attach($propertyId, [
+                'relation' => in_array($relation, ['interested', 'viewed'], true) ? $relation : 'interested',
+                'notes' => $notes,
+            ]);
+        });
+    }
+
+    /** إنشاء حجز نشط، مع قفل العقار لمنع طلبين متزامنين من حجز نفس العقار. */
+    public function reserveProperty(Client $client, int $propertyId, ?string $notes = null): PropertyReservation
+    {
+        return DB::transaction(function () use ($client, $propertyId, $notes) {
+            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
+
+            return $this->reservePropertyLocked($client, $property, $notes);
+        });
+    }
+
+    /** إلغاء الحجز النشط صراحةً وإعادة العقار إلى متاح. */
+    public function releaseReservation(Client $client, int $propertyId): void
+    {
+        DB::transaction(function () use ($client, $propertyId) {
+            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
+            $reservation = PropertyReservation::query()
+                ->where('active_property_id', $propertyId)
+                ->where('status', PropertyReservation::STATUS_ACTIVE)
+                ->lockForUpdate()
+                ->with('client')
+                ->first();
+
+            if (! $reservation) {
                 throw ValidationException::withMessages([
-                    'property_id' => 'لا يمكن إضافة هذا العقار لأنه مباع.',
+                    'property_id' => 'لا يوجد حجز نشط لهذا العقار.',
                 ]);
             }
 
-            if ($property->status?->key === 'reserved' || $property->clients->contains(fn ($linked) => $linked->pivot?->relation === 'reserved')) {
+            if ((int) $reservation->client_id !== (int) $client->id) {
                 throw ValidationException::withMessages([
-                    'property_id' => 'لا يمكن إضافة هذا العقار لأنه محجوز لعميل آخر.',
+                    'property_id' => $this->reservationMessage($reservation),
                 ]);
             }
 
-            $client->properties()->attach($propertyId, ['relation' => $relation, 'notes' => $notes]);
+            $reservation->update([
+                'active_property_id' => null,
+                'status' => PropertyReservation::STATUS_CANCELLED,
+                'released_by' => auth()->id(),
+                'released_at' => now(),
+            ]);
 
-            if ($relation === 'reserved') {
-                $reservedId = PropertyStatus::where('key', 'reserved')->value('id');
-                if ($reservedId) {
-                    $property->update(['status_id' => $reservedId]);
+            if ($property->status?->key === 'reserved') {
+                $availableId = PropertyStatus::where('key', 'available')->value('id');
+                if ($availableId) {
+                    $property->update(['status_id' => $availableId]);
                 }
             }
         });
@@ -157,26 +226,114 @@ class ClientService
     public function detachProperty(Client $client, int $propertyId): void
     {
         DB::transaction(function () use ($client, $propertyId) {
-            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
-            $pivot = DB::table('client_property')
+            Property::query()->lockForUpdate()->findOrFail($propertyId);
+            $hasActiveReservation = PropertyReservation::query()
+                ->where('active_property_id', $propertyId)
                 ->where('client_id', $client->id)
-                ->where('property_id', $propertyId)
-                ->first();
+                ->where('status', PropertyReservation::STATUS_ACTIVE)
+                ->exists();
+
+            if ($hasActiveReservation) {
+                throw ValidationException::withMessages([
+                    'property_id' => 'ألغِ الحجز النشط أولًا، ثم يمكنك إزالة العقار من سجل العميل.',
+                ]);
+            }
 
             $client->properties()->detach($propertyId);
-
-            if ($pivot?->relation === 'reserved' && $property->status?->key === 'reserved') {
-                $stillReserved = DB::table('client_property')
-                    ->where('property_id', $propertyId)
-                    ->where('relation', 'reserved')
-                    ->exists();
-                $availableId = PropertyStatus::where('key', 'available')->value('id');
-
-                if (! $stillReserved && $availableId) {
-                    $property->update(['status_id' => $availableId]);
-                }
-            }
         });
+    }
+
+    private function reservePropertyLocked(Client $client, Property $property, ?string $notes): PropertyReservation
+    {
+        if ($property->status?->key === 'sold') {
+            throw ValidationException::withMessages([
+                'property_id' => 'لا يمكن حجز هذا العقار لأنه مباع.',
+            ]);
+        }
+
+        $activeReservation = PropertyReservation::query()
+            ->where('active_property_id', $property->id)
+            ->where('status', PropertyReservation::STATUS_ACTIVE)
+            ->lockForUpdate()
+            ->with('client')
+            ->first();
+
+        if ($activeReservation) {
+            $message = (int) $activeReservation->client_id === (int) $client->id
+                ? 'هذا العقار محجوز بالفعل لهذا العميل منذ '.$activeReservation->reserved_at?->format('Y-m-d').'.'
+                : $this->reservationMessage($activeReservation);
+
+            throw ValidationException::withMessages(['property_id' => $message]);
+        }
+
+        if ($property->status?->key === 'reserved') {
+            throw ValidationException::withMessages([
+                'property_id' => 'حالة العقار محجوزة لكن لا يوجد حجز نشط مرتبط بعميل. راجع حالة العقار أولًا.',
+            ]);
+        }
+
+        $reservedId = PropertyStatus::where('key', 'reserved')->value('id');
+        if (! $reservedId) {
+            throw ValidationException::withMessages([
+                'property_id' => 'حالة «محجوز» غير مهيأة في النظام.',
+            ]);
+        }
+
+        if (! $client->properties()->whereKey($property->id)->exists()) {
+            $client->properties()->attach($property->id, [
+                'relation' => 'interested',
+                'notes' => $notes,
+            ]);
+        }
+
+        $reservation = PropertyReservation::create([
+            'property_id' => $property->id,
+            'client_id' => $client->id,
+            'active_property_id' => $property->id,
+            'status' => PropertyReservation::STATUS_ACTIVE,
+            'reserved_by' => auth()->id(),
+            'reserved_at' => now(),
+            'notes' => $notes,
+        ]);
+
+        $property->update(['status_id' => $reservedId]);
+
+        return $reservation;
+    }
+
+    private function ensurePropertyCanBeLinked(Property $property): void
+    {
+        if ($property->status?->key === 'sold') {
+            throw ValidationException::withMessages([
+                'property_id' => 'لا يمكن إضافة هذا العقار لأنه مباع.',
+            ]);
+        }
+
+        $activeReservation = PropertyReservation::query()
+            ->where('active_property_id', $property->id)
+            ->where('status', PropertyReservation::STATUS_ACTIVE)
+            ->with('client')
+            ->first();
+
+        if ($activeReservation) {
+            throw ValidationException::withMessages([
+                'property_id' => $this->reservationMessage($activeReservation),
+            ]);
+        }
+
+        if ($property->status?->key === 'reserved') {
+            throw ValidationException::withMessages([
+                'property_id' => 'لا يمكن إضافة العقار لأن حالته «محجوز». راجع تفاصيل العقار.',
+            ]);
+        }
+    }
+
+    private function reservationMessage(PropertyReservation $reservation): string
+    {
+        $clientName = $reservation->client?->name ?: 'عميل آخر';
+        $date = $reservation->reserved_at?->format('Y-m-d');
+
+        return 'العقار محجوز حاليًا للعميل «'.$clientName.'»'.($date ? ' منذ '.$date : '').'. ألغِ الحجز الحالي أولًا.';
     }
 
     /** مراحل الـ Pipeline للاستخدام في الفلاتر والفورمات */

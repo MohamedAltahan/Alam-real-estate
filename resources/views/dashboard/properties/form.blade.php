@@ -45,7 +45,21 @@
                 <x-select label="المنطقة" name="area_id" required :options="$areas->pluck('name', 'id')" :selected="$property->area_id" />
                 <x-select label="التصنيف" name="category_id" required :options="$categories->pluck('name', 'id')" :selected="$property->category_id" />
                 <x-select label="نوع الوحدة" name="unit_type_id" required :options="$unitTypes->pluck('name', 'id')" :selected="$property->unit_type_id" />
-                <x-select label="الحالة" name="status_id" required :options="$statuses->pluck('name', 'id')" :selected="$property->status_id" />
+                @if ($property->exists && $property->activeReservation)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">الحالة</label>
+                        <input type="hidden" name="status_id" value="{{ $property->status_id }}">
+                        <div class="rounded-field border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
+                            محجوز للعميل {{ $property->activeReservation->client?->name }} — ألغِ الحجز من شاشة العميل لتغيير الحالة.
+                        </div>
+                        @error('status_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                    </div>
+                @else
+                    <div>
+                        <x-select label="الحالة" name="status_id" required :options="$statuses->pluck('name', 'id')" :selected="$property->status_id" />
+                        <p class="mt-1 text-[11px] text-gray-400">حالة «محجوز» تُضبط تلقائيًا عند الحجز من شاشة العميل.</p>
+                    </div>
+                @endif
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">الغرض <span class="text-danger">*</span></label>

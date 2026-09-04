@@ -3,6 +3,7 @@
 use App\Http\Controllers\Dashboard\ClientController;
 use App\Http\Controllers\Dashboard\ContactRequestController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\AreaController;
 use App\Http\Controllers\Dashboard\MarketingSourceController;
 use App\Http\Controllers\Dashboard\PermissionMatrixController;
 use App\Http\Controllers\Dashboard\ProfileSettingsController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Dashboard\PropertyController;
 use App\Http\Controllers\Dashboard\PropertyOwnerController;
 use App\Http\Controllers\Dashboard\RoleController;
 use App\Http\Controllers\Dashboard\SupervisorController;
+use App\Http\Controllers\Dashboard\UnitTypeController;
 use App\Http\Controllers\Dashboard\WebsiteController;
 use App\Http\Controllers\Site\SiteController;
 use App\Models\ContactRequest;
@@ -63,6 +65,8 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');
             Route::post('clients/{client}/properties', [ClientController::class, 'attachProperty'])->name('clients.properties.attach');
+            Route::post('clients/{client}/properties/{property}/reserve', [ClientController::class, 'reserveProperty'])->name('clients.properties.reserve');
+            Route::delete('clients/{client}/properties/{property}/reservation', [ClientController::class, 'releaseProperty'])->name('clients.properties.release');
             Route::delete('clients/{client}/properties/{property}', [ClientController::class, 'detachProperty'])->name('clients.properties.detach');
         });
 
@@ -109,6 +113,22 @@ Route::middleware(['auth'])->group(function () {
             Route::put('properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
             Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
             Route::post('properties/{property}/reviews', [PropertyController::class, 'addReview'])->name('properties.reviews.store');
+        });
+
+        // ===== إدارة المناطق =====
+        Route::middleware('can:areas.view')->group(function () {
+            Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
+            Route::post('areas', [AreaController::class, 'store'])->name('areas.store');
+            Route::put('areas/{area}', [AreaController::class, 'update'])->name('areas.update');
+            Route::delete('areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+        });
+
+        // ===== إدارة أنواع العقارات =====
+        Route::middleware('can:unit_types.view')->group(function () {
+            Route::get('unit-types', [UnitTypeController::class, 'index'])->name('unit-types.index');
+            Route::post('unit-types', [UnitTypeController::class, 'store'])->name('unit-types.store');
+            Route::put('unit-types/{unitType}', [UnitTypeController::class, 'update'])->name('unit-types.update');
+            Route::delete('unit-types/{unitType}', [UnitTypeController::class, 'destroy'])->name('unit-types.destroy');
         });
 
         // ===== إدارة الأدوار =====

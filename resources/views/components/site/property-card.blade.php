@@ -19,7 +19,13 @@
     $gallery = collect($p->gallery_urls);
 @endphp
 
-<div class="rounded-2xl bg-white border border-gray-100 overflow-hidden group flex flex-col [.list-view_&]:sm:flex-row">
+<div data-property-url="{{ route('site.property', $p) }}"
+     role="link"
+     tabindex="0"
+     aria-label="{{ $t('عرض تفاصيل العقار', 'View property details') }}: {{ $p->title }}"
+     onclick="if (!event.target.closest('a, button')) window.location.href = this.dataset.propertyUrl"
+     onkeydown="if (event.key === 'Enter' && !event.target.closest('a, button')) window.location.href = this.dataset.propertyUrl"
+     class="rounded-2xl bg-white border border-gray-100 overflow-hidden group flex flex-col cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 [.list-view_&]:sm:flex-row">
     {{-- الصورة --}}
     <div class="relative aspect-[4/3] bg-gray-100 shrink-0 overflow-hidden [.list-view_&]:sm:w-72 [.list-view_&]:sm:aspect-auto"
          @if ($gallery->count() > 1) x-data="{ i: 0 }" @endif>

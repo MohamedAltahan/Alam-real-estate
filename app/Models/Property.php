@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Concerns\InteractsWithWebImages;
+use App\Support\Video;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
@@ -92,12 +94,26 @@ class Property extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    /** سجل الحجوزات التاريخي للعقار. */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class);
+    }
+
+    /** الحجز النشط الوحيد — هو مصدر حقيقة حالة الحجز. */
+    public function activeReservation(): HasOne
+    {
+        return $this->hasOne(PropertyReservation::class)
+            ->where('status', PropertyReservation::STATUS_ACTIVE)
+            ->whereNotNull('active_property_id');
+    }
+
     // ===== Accessors =====
 
     /** معرّف فيديو يوتيوب (للتشغيل داخل الموقع بدل التحويل لليوتيوب) */
     public function getVideoIdAttribute(): ?string
     {
-        return \App\Support\Video::youtubeId($this->video_url);
+        return Video::youtubeId($this->video_url);
     }
 
     /** غلاف العقار (media library) */

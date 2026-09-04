@@ -133,7 +133,10 @@ class DemoContentSeeder extends Seeder
                 'status_id' => 1, 'owner_id' => $owner->id, 'agent_id' => $agent->id,
                 'bedrooms' => $bed, 'bathrooms' => $bath, 'area_size' => $size,
                 'block' => (string) (($i % 9) + 1), 'street' => (string) (600 + $i * 7), 'building' => (string) (($i % 12) + 1),
-                'video_url' => $i % 3 === 0 ? 'https://www.youtube.com/watch?v='.self::DEMO_VIDEOS[intdiv($i, 3) % count(self::DEMO_VIDEOS)] : null,
+                // ستة فيديوهات تجريبية حتى يظهر شريط الفيديوهات ممتلئًا في نسخة العرض.
+                'video_url' => in_array($i, [0, 2, 3, 5, 6, 9], true)
+                    ? 'https://www.youtube.com/watch?v='.self::DEMO_VIDEOS[$i % count(self::DEMO_VIDEOS)]
+                    : null,
                 'is_featured' => $featured, 'rating' => $rating, 'reviews_count' => 5 + $i,
             ]);
 

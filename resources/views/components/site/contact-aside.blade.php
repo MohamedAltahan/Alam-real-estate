@@ -4,9 +4,9 @@
     $set = fn ($group, $key, $def = '') => \App\Models\Setting::get($group, $key, $def);
     $row = 'flex items-center gap-4 text-sm';
     $chip = 'grid place-items-center w-10 h-10 rounded-full bg-transparent border border-primary-100 text-primary-800 shrink-0';
-    // إحداثيات السالمية، الكويت (تُستخدم لخريطة OpenStreetMap بدون مفتاح API)
-    $lat = '29.3375';
-    $lng = '48.0758';
+    // إحداثيات قابلة للتعديل من إدارة الموقع ← الفوتر وبيانات التواصل.
+    $lat = (float) $set('contact', 'map_lat', '29.3375');
+    $lng = (float) $set('contact', 'map_lng', '48.0758');
 @endphp
 
 <div>

@@ -98,6 +98,23 @@
 
         {{-- الجانب: المالك ومسؤول العقار والموقع --}}
         <div class="space-y-5">
+            @if ($property->activeReservation)
+                <div class="rounded-card bg-warning-soft border border-warning/20 shadow-sm p-6">
+                    <h3 class="font-bold text-ink mb-3">الحجز النشط</h3>
+                    <div class="space-y-2 text-sm">
+                        <div><p class="text-gray-500 text-xs">العميل صاحب الحجز</p>
+                            @can('clients.view')
+                                <a href="{{ route('dashboard.clients.show', $property->activeReservation->client) }}" class="font-semibold text-primary-800 hover:underline">{{ $property->activeReservation->client?->name }}</a>
+                            @else
+                                <p class="font-semibold text-ink">{{ $property->activeReservation->client?->name }}</p>
+                            @endcan
+                        </div>
+                        <div><p class="text-gray-500 text-xs">تاريخ الحجز</p><p class="font-medium text-ink">{{ $property->activeReservation->reserved_at?->format('Y-m-d H:i') ?? '—' }}</p></div>
+                        <div><p class="text-gray-500 text-xs">تم بواسطة</p><p class="font-medium text-ink">{{ $property->activeReservation->reservedBy?->name ?? 'النظام' }}</p></div>
+                    </div>
+                </div>
+            @endif
+
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                 <h3 class="font-bold text-ink mb-3">المالك ومسؤول العقار</h3>
                 <div class="space-y-3 text-sm">

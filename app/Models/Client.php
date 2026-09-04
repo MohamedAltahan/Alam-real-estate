@@ -72,6 +72,20 @@ class Client extends Model
             ->withTimestamps();
     }
 
+    /** كل حجوزات العميل، بما فيها الحجوزات الملغاة. */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class);
+    }
+
+    /** الحجوزات النشطة الحالية للعميل. */
+    public function activeReservations(): HasMany
+    {
+        return $this->hasMany(PropertyReservation::class)
+            ->where('status', PropertyReservation::STATUS_ACTIVE)
+            ->whereNotNull('active_property_id');
+    }
+
     /** نص منسق لنسخ بيانات العميل ومشاركتها في رسالة عادية. */
     public function shareText(): string
     {

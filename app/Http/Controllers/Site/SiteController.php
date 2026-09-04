@@ -15,10 +15,24 @@ use App\Models\UnitType;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SiteController extends Controller
 {
+    private const PHONE_COUNTRIES = [
+        ['code' => '+965', 'ar' => 'الكويت', 'en' => 'Kuwait'],
+        ['code' => '+966', 'ar' => 'السعودية', 'en' => 'Saudi Arabia'],
+        ['code' => '+971', 'ar' => 'الإمارات', 'en' => 'UAE'],
+        ['code' => '+974', 'ar' => 'قطر', 'en' => 'Qatar'],
+        ['code' => '+973', 'ar' => 'البحرين', 'en' => 'Bahrain'],
+        ['code' => '+968', 'ar' => 'عُمان', 'en' => 'Oman'],
+        ['code' => '+20', 'ar' => 'مصر', 'en' => 'Egypt'],
+        ['code' => '+962', 'ar' => 'الأردن', 'en' => 'Jordan'],
+        ['code' => '+964', 'ar' => 'العراق', 'en' => 'Iraq'],
+        ['code' => '+961', 'ar' => 'لبنان', 'en' => 'Lebanon'],
+    ];
+
     public function home(): View
     {
         $c = $this->pageSections('home');
@@ -26,10 +40,10 @@ class SiteController extends Controller
 
         return view('site.home', [
             'c' => $c,
-            'areas' => Area::whereIn('id', $areaIds)->get()->keyBy('id'),
+            'areas' => Area::whereIn('id', $areaIds)->withCount('properties')->get()->keyBy('id'),
             'testimonials' => Testimonial::where('is_active', true)->orderBy('sort_order')->get(),
             'searchAreas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
-            'searchUnitTypes' => UnitType::where('is_active', true)->get(),
+            'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             // تبويبات البحث في الهيرو: سكني/تجاري فقط — "مفروش" مستبعَد هنا وحده
             // ويبقى متاحاً في باقي النظام (نماذج العقارات وصفحة العروض).
             'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get()
@@ -91,7 +105,7 @@ class SiteController extends Controller
             'properties' => $properties,
             'header' => $this->pageHeader('properties'),
             'categories' => PropertyCategory::where('is_active', true)->get(),
-            'unitTypes' => UnitType::where('is_active', true)->get(),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'filters' => $request->only('category', 'unit_type', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
         ]);
@@ -154,6 +168,7 @@ class SiteController extends Controller
     {
         return view('site.contact', [
             'types' => RequestType::whereIn('key', ['general', 'property_inquiry'])->get(),
+            'phoneCountries' => self::PHONE_COUNTRIES,
         ]);
     }
 
@@ -162,12 +177,16 @@ class SiteController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone_country_code' => ['required', Rule::in(array_column(self::PHONE_COUNTRIES, 'code'))],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^(?=(?:\\D*\\d){6,15}\\D*$)[0-9+()\\s.\\-]+$/'],
             'email' => ['nullable', 'email', 'max:120'],
             'request_type_id' => ['nullable', 'exists:request_types,id'],
             'subject' => ['nullable', 'string', 'max:160'],
             'message' => ['required', 'string', 'max:2000'],
         ]);
+
+        $data['phone'] = $this->fullPhone($data['phone_country_code'], $data['phone'] ?? null);
+        unset($data['phone_country_code']);
 
         ContactRequest::create($data);
 
@@ -178,8 +197,9 @@ class SiteController extends Controller
     public function listProperty(): View
     {
         return view('site.list-property', [
-            'unitTypes' => UnitType::where('is_active', true)->get(),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
+            'phoneCountries' => self::PHONE_COUNTRIES,
         ]);
     }
 
@@ -188,7 +208,8 @@ class SiteController extends Controller
     {
         $v = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'phone' => ['required', 'string', 'max:30'],
+            'phone_country_code' => ['required', Rule::in(array_column(self::PHONE_COUNTRIES, 'code'))],
+            'phone' => ['required', 'string', 'max:30', 'regex:/^(?=(?:\\D*\\d){6,15}\\D*$)[0-9+()\\s.\\-]+$/'],
             'email' => ['nullable', 'email', 'max:120'],
             'unit_type_id' => ['nullable', 'exists:unit_types,id'],
             'area_id' => ['nullable', 'exists:areas,id'],
@@ -199,6 +220,7 @@ class SiteController extends Controller
         $unit = ! empty($v['unit_type_id']) ? UnitType::find($v['unit_type_id']) : null;
         $area = ! empty($v['area_id']) ? Area::find($v['area_id']) : null;
         $type = RequestType::where('key', 'list_property')->first();
+        $phone = $this->fullPhone($v['phone_country_code'], $v['phone']);
 
         $summary = collect([
             $unit?->name ? 'النوع: '.$unit->name : null,
@@ -208,7 +230,7 @@ class SiteController extends Controller
 
         ContactRequest::create([
             'name' => $v['name'],
-            'phone' => $v['phone'],
+            'phone' => $phone,
             'email' => $v['email'] ?? null,
             'request_type_id' => $type?->id,
             'subject' => trim('طلب عرض عقار'.($summary ? ' — '.$summary : '')),
@@ -216,6 +238,22 @@ class SiteController extends Controller
         ]);
 
         return back()->with('sent', true);
+    }
+
+    private function fullPhone(string $countryCode, ?string $phone): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+
+        if ($digits === '') {
+            return null;
+        }
+
+        $countryDigits = ltrim($countryCode, '+');
+        if (str_starts_with($digits, $countryDigits)) {
+            $digits = substr($digits, strlen($countryDigits));
+        }
+
+        return $countryCode.' '.ltrim($digits, '0');
     }
 
     /** الأسئلة الشائعة */

@@ -104,6 +104,10 @@
                 <h3 class="font-bold text-ink mb-4">عقارات العميل <span class="text-gray-400 font-normal text-sm">({{ $client->properties->count() }})</span></h3>
                 <div class="space-y-2 mb-5">
                     @forelse ($client->properties as $property)
+                        @php
+                            $activeReservation = $property->activeReservation;
+                            $reservedForThisClient = $activeReservation && (int) $activeReservation->client_id === (int) $client->id;
+                        @endphp
                         <div class="flex items-center gap-3 rounded-2xl border border-gray-100 p-3">
                             <span class="w-12 h-11 rounded-xl bg-gray-100 overflow-hidden shrink-0">@if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
                             <div class="flex-1 min-w-0">
@@ -112,9 +116,26 @@
                                 @else
                                     <span class="text-sm font-semibold text-ink" dir="ltr">{{ $property->reference_code }}</span>
                                 @endcan
-                                <p class="text-xs text-gray-400 truncate">{{ $relationLabels[$property->pivot->relation] ?? 'مرتبط' }} · {{ $property->status?->name ?: 'بدون حالة' }}</p>
+                                <p class="text-xs {{ $reservedForThisClient ? 'text-warning font-semibold' : 'text-gray-400' }} truncate">
+                                    @if ($reservedForThisClient)
+                                        حجز نشط منذ {{ $activeReservation->reserved_at?->format('Y-m-d') }}
+                                    @elseif ($activeReservation)
+                                        محجوز للعميل {{ $activeReservation->client?->name }}
+                                    @else
+                                        {{ $relationLabels[$property->pivot->relation] ?? 'مرتبط' }} · {{ $property->status?->name ?: 'بدون حالة' }}
+                                    @endif
+                                </p>
                             </div>
-                            @can('clients.edit')<form method="POST" action="{{ route('dashboard.clients.properties.detach', [$client, $property]) }}">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-gray-300 hover:text-danger hover:bg-danger/10" title="إلغاء الربط"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></form>@endcan
+                            @can('clients.edit')
+                                <div class="flex flex-col items-end gap-1.5 shrink-0">
+                                    @if ($reservedForThisClient)
+                                        <form method="POST" action="{{ route('dashboard.clients.properties.release', [$client, $property]) }}" onsubmit="return confirm('هل تريد إلغاء حجز هذا العقار؟')">@csrf @method('DELETE')<button class="rounded-full bg-warning-soft text-warning px-2.5 py-1 text-[11px] font-semibold hover:bg-warning/20">إلغاء الحجز</button></form>
+                                    @elseif (! $activeReservation && $property->status?->key !== 'sold')
+                                        <form method="POST" action="{{ route('dashboard.clients.properties.reserve', [$client, $property]) }}" onsubmit="return confirm('هل تريد حجز هذا العقار للعميل؟')">@csrf<button class="rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-[11px] font-semibold hover:bg-primary-100">حجز العقار</button></form>
+                                    @endif
+                                    <form method="POST" action="{{ route('dashboard.clients.properties.detach', [$client, $property]) }}" onsubmit="return confirm('هل تريد إزالة العقار من سجل العميل؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-gray-300 hover:text-danger hover:bg-danger/10" title="إلغاء الربط"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></form>
+                                </div>
+                            @endcan
                         </div>
                     @empty
                         <p class="text-center text-sm text-gray-400 py-4">لا توجد عقارات مرتبطة.</p>
@@ -131,7 +152,14 @@
                             @foreach ($linkable as $property)
                                 @php
                                     $alreadyLinked = $client->properties->contains('id', $property->id);
-                                    $blockedReason = $alreadyLinked ? 'مضاف بالفعل لهذا العميل' : ($property->status?->key === 'reserved' ? 'لا يمكن الإضافة — العقار محجوز' : ($property->status?->key === 'sold' ? 'لا يمكن الإضافة — العقار مباع' : null));
+                                    $activeReservation = $property->activeReservation;
+                                    $blockedReason = $alreadyLinked
+                                        ? 'مضاف بالفعل لهذا العميل'
+                                        : ($activeReservation
+                                            ? 'محجوز للعميل '.$activeReservation->client?->name.' منذ '.$activeReservation->reserved_at?->format('Y-m-d')
+                                            : ($property->status?->key === 'reserved'
+                                                ? 'حالة العقار محجوزة — راجع تفاصيله'
+                                                : ($property->status?->key === 'sold' ? 'لا يمكن الإضافة — العقار مباع' : null)));
                                     $searchText = mb_strtolower(collect([$property->reference_code, $property->title, $property->area?->name, $property->unitType?->name])->filter()->implode(' '));
                                 @endphp
                                 <button type="button" x-show="!propertySearch || @js($searchText).includes(propertySearch.toLowerCase())" @if (! $blockedReason) @click="selectedProperty = @js(['id' => $property->id, 'reference' => $property->reference_code])" @endif @disabled($blockedReason)

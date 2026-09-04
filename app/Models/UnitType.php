@@ -20,4 +20,9 @@ class UnitType extends Model
     {
         return $this->hasMany(Property::class, 'unit_type_id');
     }
+
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'desired_unit_type_id');
+    }
 }

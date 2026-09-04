@@ -22,11 +22,14 @@ class PropertyController extends Controller
 
     public function index(Request $request): View
     {
+        $filterKeys = ['search', 'status_id', 'area_id', 'unit_type_id', 'purpose'];
+
         return view('dashboard.properties.index', [
-            'properties' => $this->properties->paginate($request->only('search', 'status_id', 'area_id', 'purpose')),
+            'properties' => $this->properties->paginate($request->only($filterKeys)),
             'statuses' => PropertyStatus::where('is_active', true)->get(),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
-            'filters' => $request->only('search', 'status_id', 'area_id', 'purpose'),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
+            'filters' => $request->only($filterKeys),
         ]);
     }
 
@@ -54,7 +57,7 @@ class PropertyController extends Controller
 
     public function show(Property $property): View
     {
-        $property->load(['area', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy']);
+        $property->load(['area', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy', 'activeReservation.client', 'activeReservation.reservedBy']);
 
         return view('dashboard.properties.show', ['property' => $property]);
     }
@@ -62,7 +65,7 @@ class PropertyController extends Controller
     public function edit(Property $property): View
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
-        $property->load('amenities', 'media');
+        $property->load('amenities', 'media', 'activeReservation.client');
 
         return view('dashboard.properties.form', $this->formData($property));
     }
@@ -74,7 +77,6 @@ class PropertyController extends Controller
         $data = $this->validated($request);
         $this->properties->update($property, $data, $request->input('amenities', []));
         $this->syncImages($request, $property);
-        $this->uploadGallery($request, $property);
 
         return redirect()
             ->route('dashboard.properties.show', $property)
@@ -110,8 +112,8 @@ class PropertyController extends Controller
             'property' => $property,
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'categories' => PropertyCategory::where('is_active', true)->get(),
-            'unitTypes' => UnitType::where('is_active', true)->get(),
-            'statuses' => PropertyStatus::where('is_active', true)->get(),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
+            'statuses' => PropertyStatus::where('is_active', true)->where('key', '!=', 'reserved')->get(),
             'owners' => PropertyOwner::orderBy('name')->get(['id', 'name']),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'amenities' => Amenity::where('is_active', true)->orderBy('sort_order')->get(),

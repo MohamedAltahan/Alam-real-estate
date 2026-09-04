@@ -20,4 +20,14 @@ class Area extends Model
     {
         return $this->hasMany(Property::class);
     }
+
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
+    }
+
+    public function owners(): HasMany
+    {
+        return $this->hasMany(PropertyOwner::class);
+    }
 }

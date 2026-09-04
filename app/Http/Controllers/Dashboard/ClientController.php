@@ -56,7 +56,7 @@ class ClientController extends Controller
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'sources' => MarketingSource::orderBy('name')->get(['id', 'name']),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
-            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media'])
+            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media', 'activeReservation.client'])
                 ->latest()->take(100)->get(),
         ]);
     }
@@ -98,7 +98,28 @@ class ClientController extends Controller
 
         $this->clients->attachProperty($client, (int) $data['property_id'], $data['relation'] ?? null, $data['notes'] ?? null);
 
-        return back()->with('success', 'تم ربط العقار بالعميل.');
+        return back()->with('success', ($data['relation'] ?? null) === 'reserved'
+            ? 'تم حجز العقار للعميل.'
+            : 'تم ربط العقار بالعميل.');
+    }
+
+    public function reserveProperty(Request $request, Client $client, Property $property): RedirectResponse
+    {
+        abort_unless(auth()->user()->can('clients.edit'), 403);
+
+        $data = $request->validate(['notes' => ['nullable', 'string']]);
+        $this->clients->reserveProperty($client, $property->id, $data['notes'] ?? null);
+
+        return back()->with('success', 'تم حجز العقار للعميل.');
+    }
+
+    public function releaseProperty(Client $client, Property $property): RedirectResponse
+    {
+        abort_unless(auth()->user()->can('clients.edit'), 403);
+
+        $this->clients->releaseReservation($client, $property->id);
+
+        return back()->with('success', 'تم إلغاء الحجز وأصبح العقار متاحًا.');
     }
 
     public function detachProperty(Client $client, Property $property): RedirectResponse

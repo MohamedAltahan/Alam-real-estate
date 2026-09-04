@@ -18,6 +18,23 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/dashboard.js'])
+    <style>
+        body.dashboard-shell select:not([multiple]):not(.appearance-none) {
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: left 1rem center;
+            background-size: 1rem 1rem;
+            padding-left: 3rem;
+        }
+
+        body.dashboard-shell select:not([multiple]):not(.appearance-none):dir(ltr) {
+            background-position: right 1rem center;
+            padding-right: 3rem;
+        }
+    </style>
+    @stack('styles')
 </head>
 
 @php
@@ -27,6 +44,8 @@
         ['label' => 'إدارة العملاء',  'route' => 'dashboard.clients.index', 'active' => 'dashboard.clients.*', 'icon' => 'users', 'permission' => 'clients.view'],
         ['label' => 'ملاك العقارات',  'route' => 'dashboard.owners.index', 'active' => 'dashboard.owners.*', 'icon' => 'key', 'permission' => 'property_owners.view'],
         ['label' => 'العقارات',       'route' => 'dashboard.properties.index', 'active' => 'dashboard.properties.*', 'icon' => 'building', 'permission' => 'properties.view'],
+        ['label' => 'إدارة المناطق',  'route' => 'dashboard.areas.index', 'active' => 'dashboard.areas.*', 'icon' => 'map-pin', 'permission' => 'areas.view'],
+        ['label' => 'أنواع العقارات', 'route' => 'dashboard.unit-types.index', 'active' => 'dashboard.unit-types.*', 'icon' => 'layers', 'permission' => 'unit_types.view'],
         ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail', 'permission' => 'contact_requests.view'],
         ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega', 'permission' => 'marketing_sources.view'],
         ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
@@ -44,6 +63,8 @@
         'mega'     => '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.2-3"/>',
         'globe'    => '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/>',
         'building' => '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/>',
+        'map-pin'  => '<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+        'layers'   => '<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
         'shield'   => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
         'lock'     => '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
         'gear'     => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
@@ -64,7 +85,7 @@
     $initial = mb_substr($me->name ?? 'ع', 0, 1);
 @endphp
 
-<body class="bg-gray-50 font-sans text-ink antialiased" x-data="{ logoutOpen: false, sidebarOpen: false }">
+<body class="dashboard-shell bg-gray-50 font-sans text-ink antialiased" x-data="{ logoutOpen: false, sidebarOpen: false }">
 
 <div class="flex min-h-screen">
 

@@ -10,6 +10,7 @@ use App\Models\PropertyStatus;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ClientService;
+use App\Services\PropertyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
@@ -86,16 +87,85 @@ class ClientOwnerWorkflowTest extends TestCase
 
         $service->attachProperty($first, $property->id, 'reserved');
         $this->assertSame($reserved->id, $property->refresh()->status_id);
+        $this->assertDatabaseHas('property_reservations', [
+            'property_id' => $property->id,
+            'client_id' => $first->id,
+            'active_property_id' => $property->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('client_property', [
+            'property_id' => $property->id,
+            'client_id' => $first->id,
+            'relation' => 'interested',
+        ]);
 
         try {
             $service->attachProperty($second, $property->id, 'interested');
             $this->fail('Expected reserved property validation to fail.');
         } catch (ValidationException $exception) {
             $this->assertStringContainsString('محجوز', $exception->errors()['property_id'][0]);
+            $this->assertStringContainsString('عميل أول', $exception->errors()['property_id'][0]);
         }
 
-        $service->detachProperty($first, $property->id);
+        try {
+            $service->detachProperty($first, $property->id);
+            $this->fail('Expected active reservation detach validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('ألغِ الحجز', $exception->errors()['property_id'][0]);
+        }
+
+        $service->releaseReservation($first, $property->id);
         $this->assertSame($available->id, $property->refresh()->status_id);
+        $this->assertDatabaseHas('property_reservations', [
+            'property_id' => $property->id,
+            'client_id' => $first->id,
+            'active_property_id' => null,
+            'status' => 'cancelled',
+        ]);
+
+        $service->attachProperty($second, $property->id, 'interested');
+        $this->assertDatabaseHas('client_property', [
+            'property_id' => $property->id,
+            'client_id' => $second->id,
+            'relation' => 'interested',
+        ]);
+    }
+
+    public function test_reserved_status_cannot_be_selected_without_an_active_reservation(): void
+    {
+        [$available, $reserved] = $this->propertyStatuses();
+        $property = Property::create([
+            'reference_code' => 'ALM-904',
+            'title' => ['ar' => 'عقار متاح', 'en' => 'Available Property'],
+            'status_id' => $available->id,
+        ]);
+
+        try {
+            app(PropertyService::class)->update($property, ['status_id' => $reserved->id]);
+            $this->fail('Expected manual reserved status validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('شاشة العميل', $exception->errors()['status_id'][0]);
+        }
+
+        $this->assertSame($available->id, $property->refresh()->status_id);
+    }
+
+    public function test_deleting_client_releases_any_active_property_reservations(): void
+    {
+        [$available] = $this->propertyStatuses();
+        $client = Client::create(['name' => 'عميل سيُحذف', 'phone' => '555']);
+        $property = Property::create([
+            'reference_code' => 'ALM-905',
+            'title' => ['ar' => 'عقار حجز العميل', 'en' => 'Client Reservation'],
+            'status_id' => $available->id,
+        ]);
+        $service = app(ClientService::class);
+
+        $service->reserveProperty($client, $property->id);
+        $service->delete($client);
+
+        $this->assertSame('available', $property->refresh()->status?->key);
+        $this->assertDatabaseMissing('property_reservations', ['client_id' => $client->id]);
     }
 
     public function test_owner_contract_can_be_uploaded_and_owner_profile_opened(): void

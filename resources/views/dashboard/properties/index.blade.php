@@ -24,7 +24,7 @@
     <form method="GET" id="properties-filters" data-live-filters class="flex flex-wrap items-center gap-3 mb-4">
         <div class="relative flex-1 min-w-[220px]">
             <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث برمز العقار..." autocomplete="off" class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم أو رمز العقار..." autocomplete="off" class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
         </div>
         <div class="relative">
             <select name="purpose" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
@@ -38,6 +38,20 @@
             <select name="status_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
                 <option value="">كل الحالات</option>
                 @foreach ($statuses as $s)<option value="{{ $s->id }}" @selected(($filters['status_id'] ?? '') == $s->id)>{{ $s->name }}</option>@endforeach
+            </select>
+            <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="relative">
+            <select name="area_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+                <option value="">كل المناطق</option>
+                @foreach ($areas as $area)<option value="{{ $area->id }}" @selected(($filters['area_id'] ?? '') == $area->id)>{{ $area->name }}</option>@endforeach
+            </select>
+            <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="relative">
+            <select name="unit_type_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+                <option value="">كل الأنواع</option>
+                @foreach ($unitTypes as $unitType)<option value="{{ $unitType->id }}" @selected(($filters['unit_type_id'] ?? '') == $unitType->id)>{{ $unitType->name }}</option>@endforeach
             </select>
             <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
         </div>

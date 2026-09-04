@@ -218,7 +218,7 @@
                             <div class="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-2">
                                 <div class="min-w-0">
                                     <p class="font-bold text-white truncate">{{ $area->name }}</p>
-                                    <p class="text-xs text-accent-400">{{ $item['count'] ?? '' }}
+                                    <p class="text-xs text-accent-400">{{ $area->properties_count }}
                                         {{ $t('عقار', 'properties') }}</p>
                                 </div>
                                 <span

@@ -37,7 +37,8 @@
     <div data-results>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         @forelse ($requests as $req)
-            <div class="rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $req->is_read ? '' : 'ring-1 ring-primary-200' }}">
+            <div class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $req->is_read ? '' : 'ring-1 ring-primary-200' }}">
+                <div class="flex-1">
                 <div class="flex items-start justify-between gap-2 mb-3">
                     <div class="flex items-center gap-2">
                         @unless ($req->is_read)<span class="w-2 h-2 rounded-full bg-primary-600"></span>@endunless
@@ -86,6 +87,7 @@
                         @endif
                     </div>
                 @endif
+                </div>
 
                 <div class="flex items-center gap-2 mt-4 pt-3 border-t border-gray-50">
                     @can('contact_requests.edit')
