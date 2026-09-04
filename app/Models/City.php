@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Translatable\HasTranslations;
 
-/** المدينة (المحافظة) — المناطق تتبعها */
+/** المحافظة — المناطق تتبعها */
 class City extends Model
 {
     use HasTranslations;

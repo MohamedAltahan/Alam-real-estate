@@ -50,7 +50,7 @@
                                 'id' => $u->id, 'name' => $u->name, 'email' => $u->email,
                                 'phone' => $u->phone, 'civil_id' => $u->civil_id, 'job_title' => $u->job_title,
                                 'status' => $u->status, 'is_agent' => (bool) $u->is_agent, 'role' => $role?->name,
-                                // ملف مسؤول العقار
+                                // ملف مندوب المبيعات
                                 'bio_ar' => $u->getTranslation('bio', 'ar', false),
                                 'bio_en' => $u->getTranslation('bio', 'en', false),
                                 'languages' => $u->languages ?? [],
@@ -75,7 +75,7 @@
                                         @endif
                                     </span>
                                     <div class="min-w-0">
-                                        <span class="flex items-center gap-1.5 font-semibold text-ink truncate">{{ $u->name }}@if ($u->is_agent)<span class="text-[10px] bg-accent-100 text-accent-700 rounded px-1.5 py-0.5">مسؤول عقار</span>@endif</span>
+                                        <span class="flex items-center gap-1.5 font-semibold text-ink truncate">{{ $u->name }}@if ($u->is_agent)<span class="text-[10px] bg-accent-100 text-accent-700 rounded px-1.5 py-0.5">مندوب مبيعات</span>@endif</span>
                                         <span class="block text-xs text-gray-400 truncate"><span dir="ltr">{{ $u->email }}</span></span>
                                     </div>
                                 </div>
@@ -149,14 +149,14 @@
                 <div class="sm:col-span-2">
                     <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                         <input type="checkbox" name="is_agent" value="1" x-model="form.is_agent">
-                        مسؤول عقار (يظهر في الموقع)
+                        مندوب مبيعات (يظهر في الموقع)
                     </label>
                 </div>
 
-                {{-- ===== ملف مسؤول العقار العام — يظهر فقط عند تفعيل "مسؤول عقار" ===== --}}
+                {{-- ===== ملف مندوب المبيعات العام — يظهر فقط عند تفعيل "مندوب مبيعات" ===== --}}
                 <template x-if="form.is_agent">
                     <div class="sm:col-span-2 space-y-4 pt-4 border-t border-gray-100">
-                        <p class="text-xs font-bold text-gray-400">بيانات تُعرض في صفحة «من نحن» وصفحة مسؤول العقار بالموقع</p>
+                        <p class="text-xs font-bold text-gray-400">بيانات تُعرض في صفحة «من نحن» وصفحة مندوب المبيعات بالموقع</p>
 
                         {{-- الصورة الشخصية --}}
                         <div>

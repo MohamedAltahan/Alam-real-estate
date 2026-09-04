@@ -146,7 +146,7 @@
                         <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-primary-700/95 via-primary-700/55 to-transparent"></div>
                         <div class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between text-white">
                             <span class="text-xs font-bold">{{ $agent->properties_count }} {{ $t('عقار', 'listings') }}</span>
-                            {{-- التقييم الحقيقي من متوسط تقييمات مسؤول العقار --}}
+                            {{-- التقييم الحقيقي من متوسط تقييمات مندوب المبيعات --}}
                             @if ($agent->reviews_count)
                                 <span class="text-accent-500 text-xs flex items-center gap-1">
                                     ★<span class="tabular-nums" dir="ltr">{{ number_format((float) $agent->rating, 1) }}</span>

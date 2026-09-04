@@ -11,6 +11,7 @@ use App\Http\Controllers\Dashboard\PermissionMatrixController;
 use App\Http\Controllers\Dashboard\ProfileSettingsController;
 use App\Http\Controllers\Dashboard\PropertyController;
 use App\Http\Controllers\Dashboard\PropertyOwnerController;
+use App\Http\Controllers\Dashboard\PublishingChannelController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RoleController;
 use App\Http\Controllers\Dashboard\SupervisorController;
@@ -74,8 +75,6 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');
             Route::post('clients/{client}/properties', [ClientController::class, 'attachProperty'])->name('clients.properties.attach');
-            Route::post('clients/{client}/properties/{property}/reserve', [ClientController::class, 'reserveProperty'])->name('clients.properties.reserve');
-            Route::delete('clients/{client}/properties/{property}/reservation', [ClientController::class, 'releaseProperty'])->name('clients.properties.release');
             Route::delete('clients/{client}/properties/{property}', [ClientController::class, 'detachProperty'])->name('clients.properties.detach');
 
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
@@ -131,6 +130,21 @@ Route::middleware(['auth'])->group(function () {
             Route::put('properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
             Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
             Route::post('properties/{property}/reviews', [PropertyController::class, 'addReview'])->name('properties.reviews.store');
+            // قنوات النشر (مواقع/سوشال) التي نُشر عليها العقار
+            Route::put('properties/{property}/channels', [PropertyController::class, 'updateChannels'])->name('properties.channels.update');
+        });
+
+        // ===== قنوات النشر: المواقع الإلكترونية والسوشال ميديا =====
+        Route::middleware('can:publishing_channels.view')->group(function () {
+            Route::get('websites', [PublishingChannelController::class, 'index'])->name('websites.index');
+            Route::post('websites', [PublishingChannelController::class, 'store'])->name('websites.store');
+            Route::put('websites/{channel}', [PublishingChannelController::class, 'update'])->name('websites.update');
+            Route::delete('websites/{channel}', [PublishingChannelController::class, 'destroy'])->name('websites.destroy');
+
+            Route::get('social-channels', [PublishingChannelController::class, 'index'])->name('social-channels.index');
+            Route::post('social-channels', [PublishingChannelController::class, 'store'])->name('social-channels.store');
+            Route::put('social-channels/{channel}', [PublishingChannelController::class, 'update'])->name('social-channels.update');
+            Route::delete('social-channels/{channel}', [PublishingChannelController::class, 'destroy'])->name('social-channels.destroy');
         });
 
         // ===== إدارة المناطق والمدن (صلاحيات المناطق نفسها) =====

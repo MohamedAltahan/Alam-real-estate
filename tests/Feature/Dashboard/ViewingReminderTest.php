@@ -29,7 +29,7 @@ class ViewingReminderTest extends TestCase
         $this->agent->givePermissionTo(Permission::where('name', 'notifications.view')->firstOrFail());
 
         $status = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
-        $this->property = Property::create(['reference_code' => 'ALM-701', 'title' => ['ar' => 'عقار', 'en' => 'Property'], 'status_id' => $status->id]);
+        $this->property = Property::create(['reference_code' => '701', 'title' => ['ar' => 'عقار', 'en' => 'Property'], 'status_id' => $status->id]);
     }
 
     public function test_poll_creates_a_reminder_once_when_the_viewing_is_within_lead_time(): void
@@ -44,7 +44,7 @@ class ViewingReminderTest extends TestCase
 
         $this->assertNotNull($viewing->refresh()->reminded_at);
         $this->assertSame(1, $this->agent->notifications()->where('type', ViewingReminder::class)->count());
-        $this->assertStringContainsString('ALM-701', $this->agent->notifications()->first()->data['title']);
+        $this->assertStringContainsString('701', $this->agent->notifications()->first()->data['title']);
 
         // استطلاع ثانٍ لا يكرّر التذكير
         $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))->assertOk();

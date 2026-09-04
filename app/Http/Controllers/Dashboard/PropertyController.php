@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Amenity;
 use App\Models\Area;
+use App\Models\City;
 use App\Models\Property;
 use App\Models\PropertyCategory;
 use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
+use App\Models\PublishingChannel;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\PropertyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PropertyController extends Controller
@@ -22,14 +26,16 @@ class PropertyController extends Controller
 
     public function index(Request $request): View
     {
-        $filterKeys = ['search', 'status_id', 'area_id', 'unit_type_id', 'purpose'];
+        $filters = $request->only(PropertyService::FILTER_KEYS);
 
         return view('dashboard.properties.index', [
-            'properties' => $this->properties->paginate($request->only($filterKeys)),
-            'statuses' => PropertyStatus::where('is_active', true)->get(),
-            'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
+            'properties' => $this->properties->paginate($filters),
+            'statuses' => PropertyStatus::where('is_active', true)->orderBy('sort_order')->get(),
+            'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
+            'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
-            'filters' => $request->only($filterKeys),
+            'channels' => $this->channelsByKind(),
+            'filters' => $filters,
         ]);
     }
 
@@ -52,12 +58,12 @@ class PropertyController extends Controller
 
         return redirect()
             ->route('dashboard.properties.show', $property)
-            ->with('success', 'تم إضافة العقار '.$property->reference_code.'.');
+            ->with('success', 'تم إضافة العقار رقم '.$property->reference_code.'.');
     }
 
     public function show(Property $property): View
     {
-        $property->load(['area', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy', 'activeReservation.client', 'activeReservation.reservedBy']);
+        $property->load(['area', 'city', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy', 'channels.media']);
 
         return view('dashboard.properties.show', ['property' => $property]);
     }
@@ -65,7 +71,7 @@ class PropertyController extends Controller
     public function edit(Property $property): View
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
-        $property->load('amenities', 'media', 'activeReservation.client');
+        $property->load('amenities', 'media');
 
         return view('dashboard.properties.form', $this->formData($property));
     }
@@ -104,17 +110,47 @@ class PropertyController extends Controller
         return back()->with('success', 'تمت إضافة التقييم.');
     }
 
+    /** حفظ قنوات النشر (مواقع أو سوشال) التي نُشر عليها العقار مع روابط الإعلانات */
+    public function updateChannels(Request $request, Property $property): RedirectResponse
+    {
+        abort_unless(auth()->user()->can('properties.edit'), 403);
+
+        $data = $request->validate([
+            'kind' => ['required', Rule::in(array_keys(PublishingChannel::KINDS))],
+            'channels' => ['nullable', 'array'],
+            'channels.*.on' => ['nullable', 'boolean'],
+            'channels.*.url' => ['nullable', 'url', 'max:500'],
+        ], [
+            'channels.*.url.url' => 'رابط الإعلان غير صالح — يجب أن يبدأ بـ http:// أو https://',
+        ]);
+
+        $this->properties->syncChannels($property, $data['kind'], (array) ($data['channels'] ?? []));
+
+        return back()->with('success', 'تم حفظ قنوات النشر للعقار رقم '.$property->reference_code.'.');
+    }
+
     // ===== Helpers =====
+
+    /** @return array<string, \Illuminate\Support\Collection> */
+    private function channelsByKind(): array
+    {
+        $all = PublishingChannel::query()->active()->with('media')->orderBy('sort_order')->orderBy('id')->get();
+
+        return [
+            PublishingChannel::KIND_WEBSITE => $all->where('kind', PublishingChannel::KIND_WEBSITE)->values(),
+            PublishingChannel::KIND_SOCIAL => $all->where('kind', PublishingChannel::KIND_SOCIAL)->values(),
+        ];
+    }
 
     private function formData(Property $property): array
     {
-        // المناطق مع مدنها لتجميع القائمة المنسدلة حسب المدينة
         return [
             'property' => $property,
-            'areas' => Area::with('city')->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
-            'categories' => PropertyCategory::where('is_active', true)->get(),
-            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
-            'statuses' => PropertyStatus::where('is_active', true)->where('key', '!=', 'reserved')->get(),
+            'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
+            'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
+            'categories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
+            'statuses' => PropertyStatus::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
             'owners' => PropertyOwner::orderBy('name')->get(['id', 'name']),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'amenities' => Amenity::where('is_active', true)->orderBy('sort_order')->get(),
@@ -132,6 +168,7 @@ class PropertyController extends Controller
             'description.en' => ['nullable', 'string'],
             'specifications.ar' => ['nullable', 'string'],
             'specifications.en' => ['nullable', 'string'],
+            'city_id' => ['nullable', 'exists:cities,id'],
             'area_id' => ['required', 'exists:areas,id'],
             'category_id' => ['required', 'exists:property_categories,id'],
             'unit_type_id' => ['required', 'exists:unit_types,id'],
@@ -140,29 +177,49 @@ class PropertyController extends Controller
             'price_period' => ['nullable', 'in:monthly,yearly'],
             'status_id' => ['required', 'exists:property_statuses,id'],
             'owner_id' => ['nullable', 'exists:property_owners,id'],
+            'owner_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'agent_id' => ['nullable', 'exists:users,id'],
             'bedrooms' => ['nullable', 'integer', 'min:0'],
             'bathrooms' => ['nullable', 'integer', 'min:0'],
             'area_size' => ['nullable', 'numeric', 'min:0'],
+            'is_furnished' => ['nullable', 'boolean'],
+            'building_name' => ['nullable', 'string', 'max:150'],
             'block' => ['nullable', 'string', 'max:60'],
             'street' => ['nullable', 'string', 'max:120'],
             'building' => ['nullable', 'string', 'max:120'],
+            'map_url' => ['nullable', 'url', 'max:500'],
+            'guard_name' => ['nullable', 'string', 'max:150'],
+            'guard_phone' => ['nullable', 'string', 'max:40'],
             'video_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['nullable', 'boolean'],
             'cover' => Property::imageRules(),
             'gallery.*' => Property::imageRules(),
             'amenities' => ['array'],
             'amenities.*' => ['exists:amenities,id'],
-        ], [], [
-            'title.ar' => 'العنوان (عربي)', 'area_id' => 'المنطقة', 'category_id' => 'التصنيف',
+        ], [
+            'map_url.url' => 'رابط الموقع يجب أن يكون رابط خرائط جوجل صالحًا (يبدأ بـ https://).',
+        ], [
+            'title.ar' => 'العنوان (عربي)', 'city_id' => 'المحافظة', 'area_id' => 'المنطقة', 'category_id' => 'التصنيف',
             'unit_type_id' => 'نوع الوحدة', 'purpose' => 'الغرض', 'price' => 'السعر', 'status_id' => 'الحالة',
+            'owner_commission_rate' => 'نسبة العمولة من المالك', 'building_name' => 'إسم المبنى',
+            'map_url' => 'رابط موقع العقار', 'guard_name' => 'حارس العقار', 'guard_phone' => 'رقم الحارس',
         ]);
+
+        // المنطقة تتبع المحافظة، ونوع الوحدة يتبع التصنيف
+        $area = Area::find($v['area_id']);
+        $category = PropertyCategory::find($v['category_id']);
+        $unitType = UnitType::find($v['unit_type_id']);
+        $this->crossChecks($v, $area, $category, $unitType);
+
+        $cityId = ($v['city_id'] ?? null) ?: $area?->city_id;
+        $isResidential = $category?->key !== PropertyCategory::COMMERCIAL;
 
         return [
             'title' => array_filter($request->input('title', []), fn ($x) => $x !== null),
             'short_description' => array_filter($request->input('short_description', []), fn ($x) => $x !== null),
             'description' => array_filter($request->input('description', []), fn ($x) => $x !== null),
             'specifications' => array_filter($request->input('specifications', []), fn ($x) => $x !== null),
+            'city_id' => $cityId,
             'area_id' => $v['area_id'],
             'category_id' => $v['category_id'],
             'unit_type_id' => $v['unit_type_id'],
@@ -171,16 +228,40 @@ class PropertyController extends Controller
             'price_period' => $v['purpose'] === 'rent' ? ($v['price_period'] ?? 'monthly') : null,
             'status_id' => $v['status_id'],
             'owner_id' => $v['owner_id'] ?? null,
+            'owner_commission_rate' => $v['owner_commission_rate'] ?? null,
             'agent_id' => $v['agent_id'] ?? null,
-            'bedrooms' => $v['bedrooms'] ?? null,
+            'bedrooms' => $isResidential ? ($v['bedrooms'] ?? null) : null,
             'bathrooms' => $v['bathrooms'] ?? null,
             'area_size' => $v['area_size'] ?? null,
+            'is_furnished' => $request->boolean('is_furnished'),
+            'building_name' => $v['building_name'] ?? null,
             'block' => $v['block'] ?? null,
             'street' => $v['street'] ?? null,
             'building' => $v['building'] ?? null,
+            'map_url' => $v['map_url'] ?? null,
+            'guard_name' => $v['guard_name'] ?? null,
+            'guard_phone' => $v['guard_phone'] ?? null,
             'video_url' => $v['video_url'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
         ];
+    }
+
+    /** تحقق مترابط: المنطقة داخل المحافظة المختارة، ونوع الوحدة من تصنيف العقار */
+    private function crossChecks(array $v, ?Area $area, ?PropertyCategory $category, ?UnitType $unitType): void
+    {
+        $errors = [];
+
+        if ($area && ! empty($v['city_id']) && $area->city_id && (int) $area->city_id !== (int) $v['city_id']) {
+            $errors['area_id'] = 'المنطقة المختارة لا تتبع المحافظة المختارة.';
+        }
+
+        if ($category && $unitType && $category->key && $unitType->category && $unitType->category !== $category->key) {
+            $errors['unit_type_id'] = 'نوع الوحدة لا يتبع التصنيف المختار.';
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     /** الغلاف والمعرض عبر media library (٦ ميجا · ارتفاع ١٠٨٠) */

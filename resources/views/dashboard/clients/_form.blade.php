@@ -97,7 +97,7 @@
                 </select>
             </div>
             <div>
-                <label class="{{ $label }}">مسؤول العقار</label>
+                <label class="{{ $label }}">مندوب المبيعات</label>
                 <select name="agent_id" class="{{ $field }}">
                     <option value="">— اختر —</option>
                     @foreach ($agents as $user)<option value="{{ $user->id }}" @selected(old('agent_id', $client?->agent_id) == $user->id)>{{ $user->name }}</option>@endforeach
@@ -107,7 +107,7 @@
 
         <div class="flex items-center justify-between gap-3 mb-3">
             <h5 class="font-semibold text-sm text-ink">المعاينات</h5>
-            <p class="text-xs text-gray-400">اختر العقار وموعد المعاينة — يصل تذكير لمسؤول العقار قبل الموعد.</p>
+            <p class="text-xs text-gray-400">اختر العقار وموعد المعاينة — يصل تذكير لمندوب المبيعات قبل الموعد.</p>
         </div>
         @include('dashboard.clients._viewings', ['form' => $form, 'rowErrors' => $rowErrors, 'field' => $field, 'label' => $label])
 

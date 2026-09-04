@@ -91,7 +91,7 @@ abstract class ClientFormRequest extends FormRequest
                 $cityId = Area::whereKey($row['area_id'])->value('city_id');
 
                 if ($cityId && (int) $cityId !== (int) $row['city_id']) {
-                    $validator->errors()->add("needs.{$index}.area_id", 'المنطقة المختارة لا تتبع هذه المدينة.');
+                    $validator->errors()->add("needs.{$index}.area_id", 'المنطقة المختارة لا تتبع هذه المحافظة.');
                 }
             }
         });
@@ -120,10 +120,10 @@ abstract class ClientFormRequest extends FormRequest
             'household_size' => 'عدد الأفراد',
             'workplace' => 'مكان العمل',
             'stage_id' => 'الحالة',
-            'agent_id' => 'مسؤول العقار',
+            'agent_id' => 'مندوب المبيعات',
             'notes' => 'الملاحظات',
             'needs.*.unit_type_id' => 'نوع الوحدة',
-            'needs.*.city_id' => 'المدينة',
+            'needs.*.city_id' => 'المحافظة',
             'needs.*.area_id' => 'المنطقة',
             'viewings.*.property_id' => 'العقار',
             'viewings.*.scheduled_at' => 'موعد المعاينة',

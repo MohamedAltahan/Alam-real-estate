@@ -41,7 +41,6 @@ final class ClientFields
     public const RELATIONS = [
         'interested' => 'مهتم',
         'viewed' => 'تمت المعاينة',
-        'reserved' => 'محجوز',
     ];
 
     public const OUTCOMES = [
@@ -69,14 +68,14 @@ final class ClientFields
         'household_size' => 'عدد الأفراد',
         'workplace' => 'مكان العمل',
         'stage_id' => 'الحالة',
-        'agent_id' => 'مسؤول العقار',
+        'agent_id' => 'مندوب المبيعات',
         'type_id' => 'نوع العميل',
         'source_id' => 'مصدر التسويق',
         'rating' => 'التقييم',
         'notes' => 'الملاحظات',
         'recorded_by' => 'سجّل البيانات',
         'unit_type_id' => 'نوع الوحدة',
-        'city_id' => 'المدينة',
+        'city_id' => 'المحافظة',
         'area_id' => 'المنطقة',
         'property_id' => 'العقار',
         'scheduled_at' => 'موعد المعاينة',

@@ -52,6 +52,7 @@ mysql -h 127.0.0.1 -u azra_alam -p azra_alam < database/backups/azra_alam_mariad
 
 ```bash
 php artisan db:seed --class=KuwaitAreasSeeder --force
+php artisan db:seed --class=PublishingChannelSeeder --force   # OLX + فيسبوك + إنستجرام (قنوات النشر)
 ```
 
 ## إكمال التجهيز

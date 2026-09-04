@@ -214,8 +214,9 @@
                                 @if ($p->status)
                                     <span class="inline-block mt-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold
                                         @class([
+                                            'bg-gray-100 text-gray-600' => $p->status->key === 'pending',
+                                            'bg-warning-soft text-warning' => $p->status->key === 'review',
                                             'bg-success-soft text-success' => $p->status->key === 'available',
-                                            'bg-warning-soft text-warning' => $p->status->key === 'reserved',
                                             'bg-danger-soft text-danger' => $p->status->key === 'sold',
                                         ])">{{ $p->status->name }}</span>
                                 @endif

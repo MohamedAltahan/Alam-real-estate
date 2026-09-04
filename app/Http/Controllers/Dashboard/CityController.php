@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-/** إدارة المدن (المحافظات) — تستخدم صلاحيات المناطق نفسها */
+/** إدارة المحافظات — تستخدم صلاحيات المناطق نفسها */
 class CityController extends Controller
 {
     public function index(Request $request): View
@@ -40,7 +40,7 @@ class CityController extends Controller
         $this->ensureUniqueNames($data['name']);
         City::create($data);
 
-        return back()->with('success', 'تمت إضافة المدينة بنجاح.');
+        return back()->with('success', 'تمت إضافة المحافظة بنجاح.');
     }
 
     public function update(Request $request, City $city): RedirectResponse
@@ -51,7 +51,7 @@ class CityController extends Controller
         $this->ensureUniqueNames($data['name'], $city);
         $city->update($data);
 
-        return back()->with('success', 'تم تحديث المدينة بنجاح.');
+        return back()->with('success', 'تم تحديث المحافظة بنجاح.');
     }
 
     public function destroy(Request $request, City $city): RedirectResponse
@@ -59,12 +59,12 @@ class CityController extends Controller
         abort_unless($request->user()->can('areas.delete'), 403);
 
         if ($city->areas()->exists()) {
-            return back()->with('error', 'لا يمكن حذف المدينة لأنها تحتوي على مناطق. انقل المناطق أو عطّل المدينة بدلًا من الحذف.');
+            return back()->with('error', 'لا يمكن حذف المحافظة لأنها تحتوي على مناطق. انقل المناطق أو عطّل المحافظة بدلًا من الحذف.');
         }
 
         $city->delete();
 
-        return back()->with('success', 'تم حذف المدينة بنجاح.');
+        return back()->with('success', 'تم حذف المحافظة بنجاح.');
     }
 
     /** @return array{name: array<string, string>, sort_order: int, is_active: bool} */
@@ -76,8 +76,8 @@ class CityController extends Controller
             'sort_order' => ['required', 'integer', 'min:0', 'max:999999'],
             'is_active' => ['nullable', 'boolean'],
         ], [], [
-            'name.ar' => 'اسم المدينة بالعربية',
-            'name.en' => 'اسم المدينة بالإنجليزية',
+            'name.ar' => 'اسم المحافظة بالعربية',
+            'name.en' => 'اسم المحافظة بالإنجليزية',
             'sort_order' => 'الترتيب',
             'is_active' => 'الحالة',
         ]);
@@ -113,7 +113,7 @@ class CityController extends Controller
 
         if ($duplicate) {
             throw ValidationException::withMessages([
-                'name.ar' => 'توجد مدينة مسجلة بالفعل بنفس الاسم.',
+                'name.ar' => 'توجد محافظة مسجلة بالفعل بنفس الاسم.',
             ]);
         }
     }

@@ -84,7 +84,7 @@ class ContactRequestService
             // العقار محل الاستفسار يُربط بسجل العميل
             if ($request->property_id) {
                 $client->properties()->syncWithoutDetaching([
-                    $request->property_id => ['relation' => 'استفسار'],
+                    $request->property_id => ['relation' => 'interested'],
                 ]);
             }
 

@@ -23,7 +23,7 @@ class ViewingsPageAndReportTest extends TestCase
         parent::setUp();
 
         $status = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
-        $this->property = Property::create(['reference_code' => 'ALM-801', 'title' => ['ar' => 'عقار التقرير', 'en' => 'Report Property'], 'status_id' => $status->id]);
+        $this->property = Property::create(['reference_code' => '801', 'title' => ['ar' => 'عقار التقرير', 'en' => 'Report Property'], 'status_id' => $status->id]);
     }
 
     public function test_viewings_page_lists_filters_and_numbers_rows(): void

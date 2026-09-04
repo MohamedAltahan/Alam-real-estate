@@ -44,12 +44,9 @@ class SiteController extends Controller
             'testimonials' => Testimonial::where('is_active', true)->orderBy('sort_order')->get(),
             'searchAreas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
-            // تبويبات البحث في الهيرو: سكني/تجاري فقط — "مفروش" مستبعَد هنا وحده
-            // ويبقى متاحاً في باقي النظام (نماذج العقارات وصفحة العروض).
-            'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get()
-                ->reject(fn ($cat) => $cat->getTranslation('name', 'ar') === 'مفروش')
-                ->values(),
-            'searchReferences' => Property::orderBy('reference_code')->pluck('reference_code')->filter()->values(),
+            'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(),
+            // الأرقام المرجعية رقمية — نرتبها عدديًا لا نصيًا
+            'searchReferences' => Property::orderBy('id')->pluck('reference_code')->filter()->values(),
             'videoProperties' => $this->homeVideos($c['videos'] ?? []),
         ]);
     }

@@ -67,7 +67,7 @@
 
         {{-- حسب المسؤول --}}
         <section class="xl:col-span-2 rounded-2xl bg-white border border-gray-100 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100"><h3 class="font-bold text-ink">حسب مسؤول العقار</h3></div>
+            <div class="px-5 py-4 border-b border-gray-100"><h3 class="font-bold text-ink">حسب مندوب المبيعات</h3></div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>

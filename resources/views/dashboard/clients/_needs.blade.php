@@ -1,4 +1,4 @@
-{{-- أسطر احتياج العقار: نوع الوحدة + المدينة + المنطقة (تعتمد على المدينة) --}}
+{{-- أسطر احتياج العقار: نوع الوحدة + المحافظة + المنطقة (تعتمد على المحافظة) --}}
 <div x-data="clientNeeds({ rows: @js($form['needs']), cities: @js($form['cities']), areas: @js($form['areas']), errors: @js($rowErrors) })" class="space-y-3">
     <template x-for="(row, i) in rows" :key="row._key">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-start rounded-2xl border p-3"
@@ -15,7 +15,7 @@
             </div>
 
             <div>
-                <label class="{{ $label }}">المدينة</label>
+                <label class="{{ $label }}">المحافظة</label>
                 <select :name="name(i, 'city_id')" x-model="row.city_id" @change="onCityChange(row)" class="{{ $field }}">
                     <option value="">— اختر —</option>
                     @foreach ($form['cities'] as $city)<option value="{{ $city['id'] }}">{{ $city['name'] }}</option>@endforeach

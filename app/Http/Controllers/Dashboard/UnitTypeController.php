@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\UnitType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -19,6 +20,7 @@ class UnitTypeController extends Controller
                 $term = '%'.mb_strtolower(trim($search)).'%';
                 $query->whereRaw('LOWER(name) LIKE ?', [$term]);
             })
+            ->when($request->input('category'), fn ($query, $category) => $query->where('category', $category))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate(20)
@@ -26,8 +28,7 @@ class UnitTypeController extends Controller
 
         return view('dashboard.unit-types.index', [
             'unitTypes' => $unitTypes,
-            'filters' => $request->only('search'),
-            'nextSortOrder' => ((int) UnitType::max('sort_order')) + 1,
+            'filters' => $request->only('search', 'category'),
         ]);
     }
 
@@ -37,7 +38,8 @@ class UnitTypeController extends Controller
 
         $data = $this->validated($request);
         $this->ensureUniqueNames($data['name']);
-        UnitType::create($data);
+        // الترتيب يُضبط تلقائيًا (آخر نوع + 1)
+        UnitType::create($data + ['sort_order' => ((int) UnitType::max('sort_order')) + 1]);
 
         return back()->with('success', 'تمت إضافة نوع العقار بنجاح.');
     }
@@ -68,18 +70,18 @@ class UnitTypeController extends Controller
         return back()->with('success', 'تم حذف نوع العقار بنجاح.');
     }
 
-    /** @return array{name: array<string, string>, sort_order: int, is_active: bool} */
+    /** @return array{name: array<string, string>, category: string, is_active: bool} */
     private function validated(Request $request): array
     {
         $validated = $request->validate([
             'name.ar' => ['required', 'string', 'max:255'],
             'name.en' => ['nullable', 'string', 'max:255'],
-            'sort_order' => ['required', 'integer', 'min:0', 'max:999999'],
+            'category' => ['required', Rule::in(array_keys(UnitType::CATEGORIES))],
             'is_active' => ['nullable', 'boolean'],
         ], [], [
             'name.ar' => 'اسم النوع بالعربية',
             'name.en' => 'اسم النوع بالإنجليزية',
-            'sort_order' => 'الترتيب',
+            'category' => 'التصنيف',
             'is_active' => 'الحالة',
         ]);
 
@@ -90,7 +92,7 @@ class UnitTypeController extends Controller
 
         return [
             'name' => $names,
-            'sort_order' => (int) $validated['sort_order'],
+            'category' => $validated['category'],
             'is_active' => $request->boolean('is_active'),
         ];
     }

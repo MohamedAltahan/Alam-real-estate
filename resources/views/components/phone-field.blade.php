@@ -1,9 +1,32 @@
-@props(['countries' => [], 'code' => '+965', 'national' => '', 'field' => '', 'required' => true])
+@props([
+    'countries' => [],
+    'code' => '+965',
+    'national' => '',
+    'field' => '',
+    'required' => true,
+    'codeName' => 'phone_code',   // اسم حقل مفتاح الدولة
+    'phoneName' => 'phone',       // اسم حقل الرقم المحلي
+    'dynamic' => false,           // true: الأسماء تعبيرات Alpine (داخل أسطر متكررة)
+    'showErrors' => true,
+])
+
+@php
+    // في الوضع الديناميكي تُمرَّر تعبيرات Alpine كما هي (countries, row.phone_code, row.phone)
+    $js = fn ($value) => \Illuminate\Support\Js::from($value)->toHtml();
+    $countriesExpr = is_string($countries) ? $countries : $js($countries);
+    $codeExpr = $dynamic ? $code : $js($code ?: '+965');
+    $nationalExpr = $dynamic ? $national : $js((string) $national);
+@endphp
 
 {{-- حقل الهاتف: مفتاح دولة قابل للبحث (الكويت افتراضياً) + رقم محلي --}}
-<div x-data="phoneField({ countries: @js($countries), code: @js($code ?: '+965'), national: @js((string) $national) })"
+<div x-data="phoneField({ countries: {!! $countriesExpr !!}, code: {!! $codeExpr !!}, national: {!! $nationalExpr !!} })"
+     {{ $attributes->only('x-init') }}
      @click.outside="close()" class="relative">
-    <input type="hidden" name="phone_code" :value="code">
+    @if ($dynamic)
+        <input type="hidden" :name="{{ $codeName }}" :value="code">
+    @else
+        <input type="hidden" name="{{ $codeName }}" :value="code">
+    @endif
 
     <div class="flex rounded-field border border-gray-200 bg-gray-50 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/15 focus-within:bg-white transition" dir="ltr">
         <button type="button" @click="toggle()" :title="current.ar"
@@ -12,7 +35,7 @@
             <span x-text="current.code" class="font-semibold text-ink tabular-nums"></span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="text-gray-400 transition-transform" :class="open && 'rotate-180'"><path d="m6 9 6 6 6-6"/></svg>
         </button>
-        <input x-ref="national" name="phone" x-model="national" @input="sanitize()" @required($required)
+        <input x-ref="national" @if ($dynamic) :name="{{ $phoneName }}" @else name="{{ $phoneName }}" @endif x-model="national" @input="sanitize()" @required($required)
                inputmode="numeric" autocomplete="tel-national" placeholder="5XXXXXXX"
                class="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none">
     </div>
@@ -41,6 +64,8 @@
         </ul>
     </div>
 
-    @error('phone')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
-    @error('phone_code')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+    @if ($showErrors)
+        @error('phone')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+        @error('phone_code')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+    @endif
 </div>

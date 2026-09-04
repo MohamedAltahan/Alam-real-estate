@@ -68,7 +68,7 @@ class ViewingReminderService
         return $sent;
     }
 
-    /** المسؤول: مسؤول العميل، وإلا مسؤول العقار، وإلا من سجّل العميل */
+    /** المسؤول: مسؤول العميل، وإلا مندوب مبيعات العقار، وإلا من سجّل العميل */
     public function responsibleUser(ClientViewing $viewing, array &$cache = []): ?User
     {
         $id = $viewing->client?->agent_id

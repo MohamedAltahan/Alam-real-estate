@@ -30,7 +30,7 @@ class WebsiteController extends Controller
         'areas' => 'أفضل المناطق',
         'contact' => 'تواصل معنا',
         'property-details' => 'تفاصيل العقار',
-        'agent' => 'تفاصيل مسؤول العقار',
+        'agent' => 'تفاصيل مندوب المبيعات',
     ];
 
     public function index(): View

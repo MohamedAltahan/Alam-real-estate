@@ -149,19 +149,19 @@
             }">
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                 <div>
-                    <label class="{{ $filterLabel }}">مسؤول العقار</label>
+                    <label class="{{ $filterLabel }}">مندوب المبيعات</label>
                     <select name="agent_id" form="clients-filters" class="{{ $filterSelect }}">
-                        <option value="">كل مسؤولي العقارات</option>
+                        <option value="">كل مندوبي المبيعات</option>
                         @foreach ($agents as $u)
                             <option value="{{ $u->id }}" @selected(($filters['agent_id'] ?? '') == $u->id)>{{ $u->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label class="{{ $filterLabel }}">المدينة المطلوبة</label>
+                    <label class="{{ $filterLabel }}">المحافظة المطلوبة</label>
                     <select name="city_id" form="clients-filters" x-model="city"
                         @change="area = ''; $refs.areaSelect.value = ''" class="{{ $filterSelect }}">
-                        <option value="">كل المدن</option>
+                        <option value="">كل المحافظات</option>
                         @foreach ($cities as $city)
                             <option value="{{ $city->id }}">{{ $city->name }}</option>
                         @endforeach
@@ -280,7 +280,7 @@
                                 <th class="text-start font-medium px-4 py-3">العميل</th>
                                 <th class="text-start font-medium px-4 py-3">الهاتف</th>
                                 <th class="text-start font-medium px-4 py-3">العقار المستهدف</th>
-                                <th class="text-start font-medium px-4 py-3">مسؤول العقار</th>
+                                <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                                 <th class="text-start font-medium px-4 py-3">المرحلة</th>
                                 <th class="text-start font-medium px-4 py-3">الملاحظات</th>
                                 <th class="text-start font-medium px-4 py-3">إجراءات</th>
@@ -553,7 +553,8 @@
                                 </div>
                                 <p class="text-sm text-gray-600 whitespace-pre-line"
                                     x-text="item.notes || 'بدون ملاحظات'"></p>
-                                <p class="text-xs text-primary-600 mt-2"><span
+                                {{-- محاذاة لليسار (المستند RTL) بطلب المستخدم --}}
+                                <p class="text-xs text-primary-600 mt-2 text-left"><span
                                         x-text="item.stage || 'لم تتغير الحالة'"></span><span x-show="item.user"> · بواسطة
                                         <span x-text="item.user"></span></span></p>
                             </article>

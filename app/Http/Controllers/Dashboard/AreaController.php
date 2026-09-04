@@ -88,7 +88,7 @@ class AreaController extends Controller
         ], [], [
             'name.ar' => 'اسم المنطقة بالعربية',
             'name.en' => 'اسم المنطقة بالإنجليزية',
-            'city_id' => 'المدينة',
+            'city_id' => 'المحافظة',
             'sort_order' => 'الترتيب',
             'is_active' => 'الحالة',
         ]);

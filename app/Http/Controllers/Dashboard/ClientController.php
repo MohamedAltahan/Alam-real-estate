@@ -60,7 +60,7 @@ class ClientController extends Controller
             'agents' => $this->agents(),
             'auditLogs' => ClientAuditPresenter::present($client->auditLogs),
             'form' => ClientFormData::for($client),
-            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media', 'activeReservation.client'])
+            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media'])
                 ->latest()->take(100)->get(),
         ]);
     }
@@ -96,34 +96,13 @@ class ClientController extends Controller
 
         $data = $request->validate([
             'property_id' => ['required', 'exists:properties,id'],
-            'relation' => ['nullable', 'in:interested,viewed,reserved'],
+            'relation' => ['nullable', 'in:interested,viewed'],
             'notes' => ['nullable', 'string'],
         ]);
 
         $this->clients->attachProperty($client, (int) $data['property_id'], $data['relation'] ?? null, $data['notes'] ?? null);
 
-        return back()->with('success', ($data['relation'] ?? null) === 'reserved'
-            ? 'تم حجز العقار للعميل.'
-            : 'تم ربط العقار بالعميل.');
-    }
-
-    public function reserveProperty(Request $request, Client $client, Property $property): RedirectResponse
-    {
-        abort_unless(auth()->user()->can('clients.edit'), 403);
-
-        $data = $request->validate(['notes' => ['nullable', 'string']]);
-        $this->clients->reserveProperty($client, $property->id, $data['notes'] ?? null);
-
-        return back()->with('success', 'تم حجز العقار للعميل.');
-    }
-
-    public function releaseProperty(Client $client, Property $property): RedirectResponse
-    {
-        abort_unless(auth()->user()->can('clients.edit'), 403);
-
-        $this->clients->releaseReservation($client, $property->id);
-
-        return back()->with('success', 'تم إلغاء الحجز وأصبح العقار متاحًا.');
+        return back()->with('success', 'تم ربط العقار بالعميل.');
     }
 
     public function detachProperty(Client $client, Property $property): RedirectResponse
@@ -142,7 +121,7 @@ class ClientController extends Controller
         $term = '%'.mb_strtolower($q).'%';
 
         $properties = Property::query()
-            ->with(['status', 'area', 'activeReservation.client'])
+            ->with(['status', 'area'])
             ->when($q !== '', fn ($query) => $query->where(function ($w) use ($term) {
                 $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
                     ->orWhereRaw('LOWER(title) LIKE ?', [$term]);
@@ -152,7 +131,6 @@ class ClientController extends Controller
             ->get();
 
         return response()->json($properties->map(function (Property $property) {
-            $reservation = $property->activeReservation;
             $statusKey = $property->status?->key;
 
             return [
@@ -163,12 +141,7 @@ class ClientController extends Controller
                 'area' => $property->area?->name,
                 'status' => $property->status?->name,
                 'status_key' => $statusKey,
-                'blocked' => match (true) {
-                    $statusKey === 'sold' => 'مباع',
-                    $reservation !== null => 'محجوز للعميل '.($reservation->client?->name ?: 'آخر'),
-                    $statusKey === 'reserved' => 'محجوز',
-                    default => null,
-                },
+                'blocked' => $statusKey === 'sold' ? 'مباع' : null,
             ];
         })->values());
     }

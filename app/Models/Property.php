@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
@@ -26,6 +25,8 @@ class Property extends Model implements HasMedia
         'status_id', 'owner_id', 'agent_id', 'bedrooms', 'bathrooms', 'area_size',
         'block', 'street', 'building', 'latitude', 'longitude',
         'video_url', 'is_featured', 'rating', 'reviews_count',
+        'city_id', 'map_url', 'building_name', 'owner_commission_rate',
+        'guard_name', 'guard_phone', 'is_furnished',
     ];
 
     /** حقول قابلة للترجمة AR/EN */
@@ -41,6 +42,8 @@ class Property extends Model implements HasMedia
         'bathrooms' => 'integer',
         'reviews_count' => 'integer',
         'is_featured' => 'boolean',
+        'is_furnished' => 'boolean',
+        'owner_commission_rate' => 'decimal:2',
     ];
 
     // ===== العلاقات =====
@@ -48,6 +51,12 @@ class Property extends Model implements HasMedia
     public function area(): BelongsTo
     {
         return $this->belongsTo(Area::class);
+    }
+
+    /** المحافظة */
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
     }
 
     public function category(): BelongsTo
@@ -100,18 +109,23 @@ class Property extends Model implements HasMedia
         return $this->hasMany(ClientViewing::class);
     }
 
-    /** سجل الحجوزات التاريخي للعقار. */
-    public function reservations(): HasMany
+    /** قنوات النشر التي نُشر عليها العقار (مع رابط الإعلان) */
+    public function channels(): BelongsToMany
     {
-        return $this->hasMany(PropertyReservation::class);
+        return $this->belongsToMany(PublishingChannel::class, 'property_channel', 'property_id', 'channel_id')
+            ->withPivot('url')
+            ->withTimestamps()
+            ->orderBy('publishing_channels.sort_order');
     }
 
-    /** الحجز النشط الوحيد — هو مصدر حقيقة حالة الحجز. */
-    public function activeReservation(): HasOne
+    public function websites(): BelongsToMany
     {
-        return $this->hasOne(PropertyReservation::class)
-            ->where('status', PropertyReservation::STATUS_ACTIVE)
-            ->whereNotNull('active_property_id');
+        return $this->channels()->where('publishing_channels.kind', PublishingChannel::KIND_WEBSITE);
+    }
+
+    public function socialChannels(): BelongsToMany
+    {
+        return $this->channels()->where('publishing_channels.kind', PublishingChannel::KIND_SOCIAL);
     }
 
     // ===== Accessors =====

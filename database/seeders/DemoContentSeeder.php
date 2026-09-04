@@ -33,7 +33,10 @@ class DemoContentSeeder extends Seeder
         File::ensureDirectoryExists($this->disk.'/agents');
 
         $agents = $this->agents();
-        $owner = PropertyOwner::first() ?? PropertyOwner::create(['name' => 'مالك تجريبي', 'phone' => '+96590000000']);
+        $owner = PropertyOwner::first() ?? PropertyOwner::create(['name' => 'مالك تجريبي', 'phone_code' => '+965', 'phone' => '90000000']);
+        if ($owner->contacts()->doesntExist()) {
+            $owner->contacts()->create(['phone_code' => $owner->phone_code ?: '+965', 'phone' => $owner->phone, 'role' => 'المالك', 'name' => $owner->name]);
+        }
         $this->properties($agents, $owner);
         $this->testimonialAvatars();
         $this->aboutPage();
@@ -99,6 +102,8 @@ class DemoContentSeeder extends Seeder
     private function properties(array $agents, PropertyOwner $owner): void
     {
         $amenities = Amenity::pluck('id')->all();
+        $residentialId = \App\Models\PropertyCategory::where('key', 'residential')->value('id') ?? 1;
+        $availableId = \App\Models\PropertyStatus::where('key', 'available')->value('id') ?? 1;
 
         // [عنوان, منطقة, تصنيف, نوع وحدة, غرض, سعر, فترة, غرف, حمامات, مساحة, مميز, تقييم, ألوان الصورة]
         $rows = [
@@ -120,7 +125,7 @@ class DemoContentSeeder extends Seeder
         foreach ($rows as $i => $r) {
             [$title, $areaId, $catId, $unitId, $purpose, $price, $period, $bed, $bath, $size, $featured, $rating, $colors] = $r;
 
-            $ref = 'ALM-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT);
+            $ref = (string) ($i + 1);
             $agent = $agents[$i % count($agents)];
 
             $p = Property::updateOrCreate(['reference_code' => $ref], [
@@ -128,9 +133,11 @@ class DemoContentSeeder extends Seeder
                 'short_description' => ['ar' => 'فرصة مميزة بموقع حيوي وتشطيب راقٍ.', 'en' => 'A great opportunity in a prime location.'],
                 'description' => ['ar' => $desc, 'en' => $desc],
                 'specifications' => ['ar' => $specs, 'en' => $specs],
-                'area_id' => $areaId, 'category_id' => $catId, 'unit_type_id' => $unitId,
+                // التصنيف 3 (مفروش سابقًا) → سكني + مفروشة
+                'area_id' => $areaId, 'category_id' => $catId === 3 ? $residentialId : $catId, 'unit_type_id' => $unitId,
+                'is_furnished' => $catId === 3,
                 'purpose' => $purpose, 'price' => $price, 'price_period' => $period,
-                'status_id' => 1, 'owner_id' => $owner->id, 'agent_id' => $agent->id,
+                'status_id' => $availableId, 'owner_id' => $owner->id, 'agent_id' => $agent->id,
                 'bedrooms' => $bed, 'bathrooms' => $bath, 'area_size' => $size,
                 'block' => (string) (($i % 9) + 1), 'street' => (string) (600 + $i * 7), 'building' => (string) (($i % 12) + 1),
                 // ستة فيديوهات تجريبية حتى يظهر شريط الفيديوهات ممتلئًا في نسخة العرض.

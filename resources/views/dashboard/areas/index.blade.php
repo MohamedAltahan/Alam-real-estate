@@ -30,7 +30,7 @@
         </div>
         <div class="relative">
             <select name="city_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                <option value="">كل المدن</option>
+                <option value="">كل المحافظات</option>
                 @foreach ($cities as $city)<option value="{{ $city->id }}" @selected(($filters['city_id'] ?? '') == $city->id)>{{ $city->name }}</option>@endforeach
             </select>
             <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
@@ -46,7 +46,7 @@
                             <th class="text-start font-medium px-4 py-3 w-12">#</th>
                             <th class="text-start font-medium px-4 py-3">اسم المنطقة</th>
                             <th class="text-start font-medium px-4 py-3">الاسم بالإنجليزية</th>
-                            <th class="text-start font-medium px-4 py-3">المدينة</th>
+                            <th class="text-start font-medium px-4 py-3">المحافظة</th>
                             <th class="text-start font-medium px-4 py-3">الاستخدام</th>
                             <th class="text-start font-medium px-4 py-3">الترتيب</th>
                             <th class="text-start font-medium px-4 py-3">الحالة</th>
@@ -153,9 +153,9 @@
                     <input name="name[en]" x-model="form.name_en" dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">المدينة</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">المحافظة</label>
                     <select name="city_id" x-model="form.city_id" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
-                        <option value="">— بدون مدينة —</option>
+                        <option value="">— بدون محافظة —</option>
                         @foreach ($cities as $city)<option value="{{ $city->id }}">{{ $city->name }}</option>@endforeach
                     </select>
                     @error('city_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror

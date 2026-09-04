@@ -21,8 +21,8 @@ class CityManagementTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard.cities.index'))
             ->assertOk()
-            ->assertSee('إدارة المدن')
-            ->assertSee('إضافة مدينة');
+            ->assertSee('إدارة المحافظات')
+            ->assertSee('إضافة محافظة');
 
         $this->actingAs($user)->post(route('dashboard.cities.store'), [
             'name' => ['ar' => 'محافظة الجهراء', 'en' => 'Jahra'],

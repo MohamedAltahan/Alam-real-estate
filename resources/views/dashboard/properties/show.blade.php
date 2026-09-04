@@ -28,18 +28,21 @@
                 </div>
                 <div class="p-6">
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-xs text-gray-400"><span dir="ltr">{{ $property->reference_code }}</span></span>
+                        <span class="text-xs text-gray-400">رقم <span dir="ltr" class="font-semibold text-ink">{{ $property->reference_code }}</span></span>
                         @if ($property->status)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $property->status->color }}; background-color: {{ $property->status->color }}1a;">{{ $property->status->name }}</span>@endif
+                        @if ($property->is_furnished)<span class="rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs font-medium">مفروشة</span>@endif
                         @if ($property->is_featured)<span class="rounded-full bg-accent-100 text-accent-800 px-2.5 py-1 text-xs font-medium">مميّز</span>@endif
                     </div>
                     <h2 class="text-xl font-bold text-ink">{{ $property->title }}</h2>
                     <p class="text-primary-700 font-bold text-lg mt-1 tabular-nums">{{ number_format($property->price, 3) }} {{ auth()->user()->currencySymbol() }} <span class="text-sm text-gray-400 font-normal">{{ $property->purpose === 'rent' ? '/'.($property->price_period === 'yearly' ? 'سنة' : 'شهر') : 'للبيع' }}</span></p>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100 text-sm">
-                        <div><p class="text-gray-400 text-xs">غرف النوم</p><p class="font-semibold text-ink">{{ $property->bedrooms ?? '—' }}</p></div>
+                        @if ($property->category?->key !== 'commercial')
+                            <div><p class="text-gray-400 text-xs">غرف النوم</p><p class="font-semibold text-ink">{{ $property->bedrooms ?? '—' }}</p></div>
+                        @endif
                         <div><p class="text-gray-400 text-xs">الحمامات</p><p class="font-semibold text-ink">{{ $property->bathrooms ?? '—' }}</p></div>
                         <div><p class="text-gray-400 text-xs">المساحة</p><p class="font-semibold text-ink">{{ $property->area_size ? $property->area_size.' م²' : '—' }}</p></div>
-                        <div><p class="text-gray-400 text-xs">المنطقة</p><p class="font-semibold text-ink">{{ $property->area?->name ?? '—' }}</p></div>
+                        <div><p class="text-gray-400 text-xs">المنطقة</p><p class="font-semibold text-ink">{{ $property->area?->name ?? '—' }}@if ($property->city) <span class="text-xs text-gray-400 font-normal">({{ $property->city->name }})</span>@endif</p></div>
                     </div>
 
                     @if ($property->getTranslation('description', app()->getLocale(), false))
@@ -96,46 +99,75 @@
             </div>
         </div>
 
-        {{-- الجانب: المالك ومسؤول العقار والموقع --}}
+        {{-- الجانب: المالك ومندوب المبيعات والموقع --}}
         <div class="space-y-5">
-            @if ($property->activeReservation)
-                <div class="rounded-card bg-warning-soft border border-warning/20 shadow-sm p-6">
-                    <h3 class="font-bold text-ink mb-3">الحجز النشط</h3>
-                    <div class="space-y-2 text-sm">
-                        <div><p class="text-gray-500 text-xs">العميل صاحب الحجز</p>
-                            @can('clients.view')
-                                <a href="{{ route('dashboard.clients.show', $property->activeReservation->client) }}" class="font-semibold text-primary-800 hover:underline">{{ $property->activeReservation->client?->name }}</a>
-                            @else
-                                <p class="font-semibold text-ink">{{ $property->activeReservation->client?->name }}</p>
-                            @endcan
-                        </div>
-                        <div><p class="text-gray-500 text-xs">تاريخ الحجز</p><p class="font-medium text-ink">{{ $property->activeReservation->reserved_at?->format('Y-m-d H:i') ?? '—' }}</p></div>
-                        <div><p class="text-gray-500 text-xs">تم بواسطة</p><p class="font-medium text-ink">{{ $property->activeReservation->reservedBy?->name ?? 'النظام' }}</p></div>
-                    </div>
-                </div>
-            @endif
-
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                <h3 class="font-bold text-ink mb-3">المالك ومسؤول العقار</h3>
+                <h3 class="font-bold text-ink mb-3">المالك ومندوب المبيعات</h3>
                 <div class="space-y-3 text-sm">
-                    <div><p class="text-gray-400 text-xs">المالك</p><p class="font-medium text-ink">{{ $property->owner?->name ?? '—' }}</p></div>
-                    <div><p class="text-gray-400 text-xs">مسؤول العقار</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
+                    <div><p class="text-gray-400 text-xs">المالك</p>
+                        @if ($property->owner && auth()->user()->can('property_owners.view'))
+                            <a href="{{ route('dashboard.owners.show', $property->owner) }}" class="font-medium text-primary-800 hover:underline">{{ $property->owner->name }}</a>
+                        @else
+                            <p class="font-medium text-ink">{{ $property->owner?->name ?? '—' }}</p>
+                        @endif
+                    </div>
+                    @if ($property->owner_commission_rate !== null)
+                        <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums">{{ rtrim(rtrim(number_format((float) $property->owner_commission_rate, 2), '0'), '.') }}%</p></div>
+                    @endif
+                    <div><p class="text-gray-400 text-xs">مندوب المبيعات</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">التصنيف / النوع</p><p class="font-medium text-ink">{{ $property->category?->name }} · {{ $property->unitType?->name }}</p></div>
                 </div>
             </div>
 
-            @if ($property->block || $property->street || $property->building)
-                @php
-                    $addr = collect([
-                        $property->area?->name,
-                        $property->block ? 'قطعة '.$property->block : null,
-                        $property->street ? 'شارع '.$property->street : null,
-                        $property->building ? 'عمارة '.$property->building : null,
-                    ])->filter()->implode(' · ');
-                @endphp
+            @php
+                $addr = collect([
+                    $property->city?->name,
+                    $property->area?->name,
+                    $property->building_name ? 'مبنى '.$property->building_name : null,
+                    $property->block ? 'قطعة '.$property->block : null,
+                    $property->street ? 'شارع '.$property->street : null,
+                    $property->building ? 'عمارة '.$property->building : null,
+                ])->filter()->implode(' · ');
+            @endphp
+            @if ($addr || $property->map_url)
                 <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                     <h3 class="font-bold text-ink mb-3">الموقع</h3>
-                    <p class="text-sm text-gray-600">{{ $addr }}</p>
+                    @if ($addr)<p class="text-sm text-gray-600">{{ $addr }}</p>@endif
+                    @if ($property->map_url)
+                        <a href="{{ $property->map_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-50 text-primary-800 hover:bg-primary-100 px-4 py-2 text-sm font-semibold transition">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                            فتح على خرائط جوجل
+                        </a>
+                    @endif
+                </div>
+            @endif
+
+            @if ($property->guard_name || $property->guard_phone)
+                <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
+                    <h3 class="font-bold text-ink mb-3">حارس العقار</h3>
+                    <div class="space-y-3 text-sm">
+                        <div><p class="text-gray-400 text-xs">الاسم</p><p class="font-medium text-ink">{{ $property->guard_name ?: '—' }}</p></div>
+                        <div><p class="text-gray-400 text-xs">رقم الهاتف</p><p class="font-medium text-ink" dir="ltr">{{ $property->guard_phone ?: '—' }}</p></div>
+                    </div>
+                </div>
+            @endif
+
+            @if ($property->channels->count())
+                <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
+                    <h3 class="font-bold text-ink mb-3">منشور على</h3>
+                    <ul class="space-y-2 text-sm">
+                        @foreach ($property->channels as $channel)
+                            <li class="flex items-center gap-3">
+                                <span class="grid place-items-center w-8 h-8 shrink-0 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden">
+                                    @if ($channel->icon_url)<img src="{{ $channel->icon_url }}" class="w-full h-full object-contain" alt="">@else<span class="text-xs font-bold text-primary-800">{{ mb_substr($channel->name, 0, 1) }}</span>@endif
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-medium text-ink">{{ $channel->name }} <span class="text-[11px] text-gray-400">({{ $channel->kind === 'website' ? 'موقع' : 'سوشال' }})</span></span>
+                                    @if ($channel->pivot->url)<a href="{{ $channel->pivot->url }}" target="_blank" rel="noopener" class="block text-[11px] text-primary-700 hover:underline truncate" dir="ltr">{{ $channel->pivot->url }}</a>@endif
+                                </span>
+                            </li>
+                        @endforeach
+                    </ul>
                 </div>
             @endif
 

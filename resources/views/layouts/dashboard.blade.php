@@ -50,6 +50,8 @@
         ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail', 'permission' => 'contact_requests.view'],
         ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega', 'permission' => 'marketing_sources.view'],
         ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
+        ['label' => 'المواقع الإلكترونية', 'route' => 'dashboard.websites.index', 'active' => 'dashboard.websites.*', 'icon' => 'link', 'permission' => 'publishing_channels.view'],
+        ['label' => 'السوشال ميديا',  'route' => 'dashboard.social-channels.index', 'active' => 'dashboard.social-channels.*', 'icon' => 'share', 'permission' => 'publishing_channels.view'],
         ['label' => 'تقارير التحول',  'route' => 'dashboard.reports.conversion', 'active' => 'dashboard.reports.*', 'icon' => 'chart', 'permission' => 'reports.view'],
         ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield', 'permission' => 'roles.view'],
         ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock', 'permission' => 'permissions.view'],
@@ -78,6 +80,8 @@
         'calendar' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
         'chart'    => '<path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/>',
         'bell'     => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+        'link'     => '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+        'share'    => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
     ];
 
     $feedTone = [

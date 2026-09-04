@@ -87,7 +87,7 @@
             <span class="flex items-center gap-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM9 3v18M3 9h18"/></svg>{{ $p->area_size ? rtrim(rtrim(number_format($p->area_size, 0), '0'), '.') : 0 }} {{ $t('م²', 'm²') }}</span>
         </div>
 
-        {{-- الفوتر: مسؤول العقار يمين + زر التفاصيل شمال --}}
+        {{-- الفوتر: مندوب المبيعات يمين + زر التفاصيل شمال --}}
         <div class="flex items-center justify-between gap-2 mt-auto">
             @if ($p->agent)
                 <div class="flex items-center gap-2 min-w-0">

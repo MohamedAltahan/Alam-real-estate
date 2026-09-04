@@ -15,7 +15,7 @@
     $roleLabel = match ($roleName) {
         'super-admin' => 'مدير النظام',
         'admin' => 'مشرف',
-        'agent' => 'مسؤول عقار',
+        'agent' => 'مندوب مبيعات',
         default => $roleName ?: 'مستخدم',
     };
     $dateFormat = data_get($displayPreferences, 'date_format', 'd/m/Y');
@@ -145,7 +145,7 @@
                         <div class="flex items-center gap-4">
                             <div class="flex-1">
                                 <p class="text-sm font-bold text-ink">تذكير مواعيد المعاينات</p>
-                                <p class="text-xs text-gray-400 mt-0.5">إشعار بصوت «بيب بيب» قبل موعد المعاينة بالمدة المحددة. يصل التذكير لمسؤول العقار الخاص بالعميل ويُفحص كل دقيقة أثناء فتح لوحة التحكم.</p>
+                                <p class="text-xs text-gray-400 mt-0.5">إشعار بصوت «بيب بيب» قبل موعد المعاينة بالمدة المحددة. يصل التذكير لمندوب المبيعات الخاص بالعميل ويُفحص كل دقيقة أثناء فتح لوحة التحكم.</p>
                             </div>
                             <input type="hidden" name="viewing_enabled" :value="enabled ? 1 : 0">
                             <button type="button" role="switch" :aria-checked="enabled" @click="enabled = ! enabled"

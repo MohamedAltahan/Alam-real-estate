@@ -125,11 +125,11 @@
             @endif
         </div>
 
-        {{-- كارت مسؤول العقار --}}
+        {{-- كارت مندوب المبيعات --}}
         @if ($agent)
             <aside>
                 <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 sticky top-24">
-                    <h3 class="font-bold text-ink mb-5">{{ $t('مسؤول العقار', 'Property Manager') }}</h3>
+                    <h3 class="font-bold text-ink mb-5">{{ $t('مندوب المبيعات', 'Sales Agent') }}</h3>
 
                     {{-- الصورة يمين + الاسم + التقييم شمال --}}
                     <div class="flex items-center justify-between gap-3 mb-5">
@@ -181,7 +181,7 @@
                             </a>
                         </div>
                     @endif
-                    <a href="{{ route('site.agent', $agent) }}" class="flex items-center justify-center w-full rounded-full border border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 text-sm transition">{{ $t('عرض ملف مسؤول العقار كاملاً', 'Full property manager profile') }}</a>
+                    <a href="{{ route('site.agent', $agent) }}" class="flex items-center justify-center w-full rounded-full border border-gray-200 hover:border-primary-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 text-sm transition">{{ $t('عرض ملف مندوب المبيعات كاملاً', 'Full sales agent profile') }}</a>
                 </div>
             </aside>
         @endif

@@ -26,7 +26,7 @@ class UnitTypeManagementTest extends TestCase
         $this->actingAs($user)
             ->post(route('dashboard.unit-types.store'), [
                 'name' => ['ar' => 'شاليه', 'en' => 'Chalet'],
-                'sort_order' => 8,
+                'category' => 'residential',
                 'is_active' => 1,
             ])
             ->assertSessionHasNoErrors();
@@ -34,19 +34,22 @@ class UnitTypeManagementTest extends TestCase
         $unitType = UnitType::latest('id')->firstOrFail();
         $this->assertSame('شاليه', $unitType->getTranslation('name', 'ar'));
         $this->assertSame('Chalet', $unitType->getTranslation('name', 'en'));
+        $this->assertSame('residential', $unitType->category);
         $this->assertTrue($unitType->is_active);
+        $autoSortOrder = $unitType->sort_order;
 
         $this->actingAs($user)
             ->put(route('dashboard.unit-types.update', $unitType), [
                 'name' => ['ar' => 'شاليه فاخر', 'en' => 'Luxury Chalet'],
-                'sort_order' => 3,
+                'category' => 'commercial',
                 'is_active' => 0,
             ])
             ->assertSessionHasNoErrors();
 
         $unitType->refresh();
         $this->assertSame('شاليه فاخر', $unitType->getTranslation('name', 'ar'));
-        $this->assertSame(3, $unitType->sort_order);
+        $this->assertSame('commercial', $unitType->category);
+        $this->assertSame($autoSortOrder, $unitType->sort_order); // الترتيب يُضبط تلقائيًا ولا يتغير بالتعديل
         $this->assertFalse($unitType->is_active);
 
         $this->actingAs($user)
@@ -90,7 +93,7 @@ class UnitTypeManagementTest extends TestCase
         $this->actingAs($viewer)
             ->post(route('dashboard.unit-types.store'), [
                 'name' => ['ar' => 'غير مسموح'],
-                'sort_order' => 1,
+                'category' => 'residential',
                 'is_active' => 1,
             ])
             ->assertForbidden();

@@ -1,6 +1,6 @@
 @extends('layouts.dashboard')
 
-@section('title', 'إدارة المدن')
+@section('title', 'إدارة المحافظات')
 @section('page-title', 'إدارة المناطق')
 
 @section('content')
@@ -9,13 +9,13 @@
 
     <div class="flex items-center justify-between gap-4 mb-5">
         <div>
-            <h2 class="text-xl font-bold text-ink">إدارة المدن</h2>
-            <p class="text-sm text-gray-500">{{ number_format($cities->total()) }} مدينة مسجلة</p>
+            <h2 class="text-xl font-bold text-ink">إدارة المحافظات</h2>
+            <p class="text-sm text-gray-500">{{ number_format($cities->total()) }} محافظة مسجلة</p>
         </div>
         @can('areas.create')
             <button type="button" @click="startAdd()" class="inline-flex items-center gap-2 rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2.5 text-sm transition">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                إضافة مدينة
+                إضافة محافظة
             </button>
         @endcan
     </div>
@@ -25,7 +25,7 @@
     <form method="GET" id="cities-filters" data-live-filters class="mb-4">
         <div class="relative max-w-md">
             <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم المدينة..." autocomplete="off"
+            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم المحافظة..." autocomplete="off"
                    class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
         </div>
     </form>
@@ -37,7 +37,7 @@
                     <thead>
                         <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
                             <th class="text-start font-medium px-4 py-3 w-12">#</th>
-                            <th class="text-start font-medium px-4 py-3">اسم المدينة</th>
+                            <th class="text-start font-medium px-4 py-3">اسم المحافظة</th>
                             <th class="text-start font-medium px-4 py-3">الاسم بالإنجليزية</th>
                             <th class="text-start font-medium px-4 py-3">عدد المناطق</th>
                             <th class="text-start font-medium px-4 py-3">الترتيب</th>
@@ -82,7 +82,7 @@
                                         @endcan
                                         @can('areas.delete')
                                             @if ($city->areas_count)
-                                                <span class="grid place-items-center w-8 h-8 rounded-full text-gray-300 cursor-not-allowed" title="لا يمكن حذف مدينة بها مناطق"><x-icon.trash /></span>
+                                                <span class="grid place-items-center w-8 h-8 rounded-full text-gray-300 cursor-not-allowed" title="لا يمكن حذف محافظة بها مناطق"><x-icon.trash /></span>
                                             @else
                                                 <button type="button" @click="startDelete('{{ route('dashboard.cities.destroy', $city) }}', @js($nameAr))" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف"><x-icon.trash /></button>
                                             @endif
@@ -91,7 +91,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا توجد مدن مطابقة.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-16 text-center text-gray-400">لا توجد محافظات مطابقة.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -108,7 +108,7 @@
             <template x-if="mode === 'edit'"><input type="hidden" name="_method" value="PUT"></template>
 
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 class="font-bold text-ink" x-text="mode === 'edit' ? 'تعديل المدينة' : 'إضافة مدينة جديدة'"></h3>
+                <h3 class="font-bold text-ink" x-text="mode === 'edit' ? 'تعديل المحافظة' : 'إضافة محافظة جديدة'"></h3>
                 <button type="button" @click="$dispatch('close-modal', 'city-form')" class="text-gray-400 hover:text-gray-700">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
@@ -116,12 +116,12 @@
 
             <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">اسم المدينة بالعربية <span class="text-danger">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">اسم المحافظة بالعربية <span class="text-danger">*</span></label>
                     <input name="name[ar]" x-model="form.name_ar" required class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                     @error('name.ar')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">اسم المدينة بالإنجليزية</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">اسم المحافظة بالإنجليزية</label>
                     <input name="name[en]" x-model="form.name_en" dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                 </div>
                 <div>
@@ -132,14 +132,14 @@
                     <label class="inline-flex items-center gap-3 cursor-pointer rounded-field border border-gray-200 bg-gray-50 px-4 h-[42px] w-full">
                         <input type="hidden" name="is_active" value="0">
                         <input type="checkbox" name="is_active" value="1" x-model="form.is_active">
-                        <span class="text-sm font-medium text-gray-700">مدينة نشطة ومتاحة للاختيار</span>
+                        <span class="text-sm font-medium text-gray-700">محافظة نشطة ومتاحة للاختيار</span>
                     </label>
                 </div>
             </div>
 
             <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
                 <button type="button" @click="$dispatch('close-modal', 'city-form')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">إلغاء</button>
-                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm" x-text="mode === 'edit' ? 'حفظ التعديلات' : 'إضافة المدينة'"></button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm" x-text="mode === 'edit' ? 'حفظ التعديلات' : 'إضافة المحافظة'"></button>
             </div>
         </form>
     </x-modal>
@@ -149,7 +149,7 @@
     <x-modal name="city-delete" maxWidth="md">
         <div class="p-6 text-center">
             <span class="grid place-items-center w-12 h-12 rounded-full bg-danger/10 text-danger mx-auto mb-4"><x-icon.trash size="24" /></span>
-            <h3 class="font-bold text-ink mb-1">حذف المدينة</h3>
+            <h3 class="font-bold text-ink mb-1">حذف المحافظة</h3>
             <p class="text-sm text-gray-500 mb-6">هل أنت متأكد من حذف «<span x-text="delName" class="font-semibold text-ink"></span>»؟</p>
             <form :action="delAction" method="POST" class="flex items-center justify-center gap-3">
                 @csrf @method('DELETE')

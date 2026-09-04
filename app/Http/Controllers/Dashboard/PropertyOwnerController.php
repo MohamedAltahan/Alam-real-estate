@@ -3,51 +3,41 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PropertyOwnerFormRequest;
 use App\Models\Area;
+use App\Models\City;
 use App\Models\PropertyOwner;
+use App\Models\User;
+use App\Services\PropertyOwnerService;
+use App\Support\PhoneCountries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PropertyOwnerController extends Controller
 {
+    public function __construct(private PropertyOwnerService $owners) {}
+
     public function index(Request $request): View
     {
-        $owners = PropertyOwner::query()
-            ->with([
-                'area', 'latestProperty.agent', 'media',
-                'properties.area', 'properties.status', 'properties.unitType', 'properties.media',
-            ])
-            ->withCount('properties')
-            ->when($request->search, fn ($q, $s) => $q->where(fn ($q) => $q
-                ->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")))
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
+        $filters = $request->only(PropertyOwnerService::FILTER_KEYS);
 
         return view('dashboard.owners.index', [
-            'owners' => $owners,
-            'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
-            'filters' => $request->only('search'),
-        ]);
+            'owners' => $this->owners->paginate($filters),
+            'filters' => $filters,
+        ] + $this->formData());
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(PropertyOwnerFormRequest $request): RedirectResponse
     {
-        abort_unless($request->user()->can('property_owners.create'), 403);
-        $data = $this->validated($request);
-        $owner = PropertyOwner::create(collect($data)->except('contract')->all());
-        $this->storeContract($request, $owner);
+        $this->owners->create($request->validated(), $request);
 
         return back()->with('success', 'تم إضافة المالك بنجاح.');
     }
 
-    public function update(Request $request, PropertyOwner $owner): RedirectResponse
+    public function update(PropertyOwnerFormRequest $request, PropertyOwner $owner): RedirectResponse
     {
-        abort_unless($request->user()->can('property_owners.edit'), 403);
-        $data = $this->validated($request);
-        $owner->update(collect($data)->except('contract')->all());
-        $this->storeContract($request, $owner);
+        $this->owners->update($owner, $request->validated(), $request);
 
         return back()->with('success', 'تم تحديث بيانات المالك.');
     }
@@ -57,40 +47,28 @@ class PropertyOwnerController extends Controller
         abort_unless($request->user()->can('property_owners.delete'), 403);
         $owner->delete();
 
-        return back()->with('success', 'تم حذف المالك.');
+        return redirect()->route('dashboard.owners.index')->with('success', 'تم حذف المالك.');
     }
 
     public function show(PropertyOwner $owner): View
     {
         $owner->load([
-            'area', 'media',
-            'properties.area', 'properties.status', 'properties.unitType',
+            'area.city', 'contacts', 'media',
+            'properties.area.city', 'properties.status', 'properties.unitType',
             'properties.agent', 'properties.media',
         ]);
 
-        return view('dashboard.owners.show', compact('owner'));
+        return view('dashboard.owners.show', ['owner' => $owner] + $this->formData());
     }
 
-    private function validated(Request $request): array
+    /** قوائم الفورم والفلاتر المشتركة بين القائمة وصفحة المالك */
+    private function formData(): array
     {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:40'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'area_id' => ['nullable', 'exists:areas,id'],
-            'nationality' => ['nullable', 'string', 'max:120'],
-            'registered_address' => ['nullable', 'string', 'max:500'],
-            'status' => ['required', 'in:active,inactive'],
-            'contract' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx', 'max:15360'],
-        ], [], [
-            'name' => 'الاسم', 'phone' => 'رقم الهاتف', 'status' => 'الحالة',
-        ]);
-    }
-
-    private function storeContract(Request $request, PropertyOwner $owner): void
-    {
-        if ($request->hasFile('contract')) {
-            $owner->addMediaFromRequest('contract')->toMediaCollection('contract');
-        }
+        return [
+            'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
+            'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
+            'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
+            'countries' => PhoneCountries::all(),
+        ];
     }
 }

@@ -44,7 +44,7 @@ export function rowRepeater(opts = {}) {
 withAlpine((Alpine) => {
     Alpine.data('rowRepeater', rowRepeater);
 
-    /** احتياجات العقار: المنطقة تعتمد على المدينة المختارة */
+    /** احتياجات العقار: المنطقة تعتمد على المحافظة المختارة */
     Alpine.data('clientNeeds', (opts = {}) => ({
         ...rowRepeater({ prefix: 'needs', blank: { id: '', unit_type_id: '', city_id: '', area_id: '' }, ...opts }),
         cities: opts.cities ?? [],

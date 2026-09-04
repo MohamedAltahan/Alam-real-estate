@@ -37,37 +37,41 @@ class LookupSeeder extends Seeder
             }
         }
 
-        // تصنيف العقار
+        // تصنيف العقار: سكني وتجاري فقط (بمفتاح ثابت)
         foreach ([
-            ['ar' => 'سكني', 'en' => 'Residential'],
-            ['ar' => 'تجاري', 'en' => 'Commercial'],
-            ['ar' => 'مفروش', 'en' => 'Furnished'],
+            ['key' => 'residential', 'ar' => 'سكني', 'en' => 'Residential'],
+            ['key' => 'commercial', 'ar' => 'تجاري', 'en' => 'Commercial'],
         ] as $i => $c) {
-            PropertyCategory::create(['name' => $c, 'sort_order' => $i]);
+            PropertyCategory::updateOrCreate(['key' => $c['key']], [
+                'name' => ['ar' => $c['ar'], 'en' => $c['en']], 'sort_order' => $i, 'is_active' => true,
+            ]);
         }
 
-        // نوع الوحدة
-        foreach ([
-            ['ar' => 'شقة', 'en' => 'Apartment'],
-            ['ar' => 'فيلا', 'en' => 'Villa'],
-            ['ar' => 'منزل', 'en' => 'House'],
-            ['ar' => 'دور', 'en' => 'Floor'],
-            ['ar' => 'أرض', 'en' => 'Land'],
-            ['ar' => 'مكتب', 'en' => 'Office'],
-            ['ar' => 'محل', 'en' => 'Shop'],
-        ] as $i => $u) {
-            UnitType::create(['name' => $u, 'sort_order' => $i]);
+        // نوع الوحدة — بتصنيفه (سكني/تجاري)
+        if (UnitType::count() === 0) {
+            foreach ([
+                ['ar' => 'شقة', 'en' => 'Apartment', 'category' => 'residential'],
+                ['ar' => 'فيلا', 'en' => 'Villa', 'category' => 'residential'],
+                ['ar' => 'منزل', 'en' => 'House', 'category' => 'residential'],
+                ['ar' => 'دور', 'en' => 'Floor', 'category' => 'residential'],
+                ['ar' => 'أرض', 'en' => 'Land', 'category' => 'residential'],
+                ['ar' => 'مكتب', 'en' => 'Office', 'category' => 'commercial'],
+                ['ar' => 'محل', 'en' => 'Shop', 'category' => 'commercial'],
+            ] as $i => $u) {
+                UnitType::create(['name' => ['ar' => $u['ar'], 'en' => $u['en']], 'category' => $u['category'], 'sort_order' => $i]);
+            }
         }
 
-        // حالة العقار (بمفتاح ولون للبادج)
+        // حالة العقار (بمفتاح ولون للبادج) — أربع حالات فقط
         foreach ([
+            ['key' => 'pending', 'color' => '#6B7280', 'ar' => 'قيد الإنتظار', 'en' => 'Pending'],
+            ['key' => 'review', 'color' => '#B5842A', 'ar' => 'قيد التدقيق', 'en' => 'Under Review'],
             ['key' => 'available', 'color' => '#2E7D5B', 'ar' => 'متاح', 'en' => 'Available'],
-            ['key' => 'reserved', 'color' => '#B5842A', 'ar' => 'محجوز', 'en' => 'Reserved'],
             ['key' => 'sold', 'color' => '#C0392B', 'ar' => 'مباع', 'en' => 'Sold'],
         ] as $i => $s) {
-            PropertyStatus::create([
+            PropertyStatus::updateOrCreate(['key' => $s['key']], [
                 'name' => ['ar' => $s['ar'], 'en' => $s['en']],
-                'key' => $s['key'], 'color' => $s['color'], 'sort_order' => $i,
+                'color' => $s['color'], 'sort_order' => $i, 'is_active' => true,
             ]);
         }
 

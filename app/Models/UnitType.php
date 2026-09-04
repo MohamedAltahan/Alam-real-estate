@@ -10,11 +10,31 @@ class UnitType extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'sort_order', 'is_active'];
+    public const RESIDENTIAL = 'residential';
+
+    public const COMMERCIAL = 'commercial';
+
+    /** التصنيف: يحدد أنواع الوحدات المتاحة حسب تصنيف العقار */
+    public const CATEGORIES = [
+        self::RESIDENTIAL => 'سكني',
+        self::COMMERCIAL => 'تجاري',
+    ];
+
+    protected $fillable = ['name', 'category', 'sort_order', 'is_active'];
 
     public array $translatable = ['name'];
 
     protected $casts = ['is_active' => 'boolean'];
+
+    public function scopeCategory($query, ?string $category)
+    {
+        return $category ? $query->where('category', $category) : $query;
+    }
+
+    public function categoryLabel(): string
+    {
+        return self::CATEGORIES[$this->category] ?? ($this->category ?? '');
+    }
 
     public function properties(): HasMany
     {

@@ -10,7 +10,11 @@ class PropertyCategory extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'sort_order', 'is_active'];
+    public const RESIDENTIAL = 'residential';
+
+    public const COMMERCIAL = 'commercial';
+
+    protected $fillable = ['name', 'key', 'sort_order', 'is_active'];
 
     public array $translatable = ['name'];
 

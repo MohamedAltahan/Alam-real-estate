@@ -20,20 +20,20 @@ class PropertyFiltersTest extends TestCase
         $user = $this->propertyViewer();
         [$firstArea, $secondArea, $apartment, $villa, $status] = $this->lookups();
 
-        $this->property('ALM-701', 'شقة مميزة في السالمية', $firstArea, $apartment, $status);
-        $this->property('ALM-702', 'فيلا هادئة في مشرف', $secondArea, $villa, $status);
+        $this->property('701', 'شقة مميزة في السالمية', $firstArea, $apartment, $status);
+        $this->property('702', 'فيلا هادئة في مشرف', $secondArea, $villa, $status);
 
         $this->actingAs($user)
             ->get(route('dashboard.properties.index', ['search' => 'السالمية']))
             ->assertOk()
-            ->assertSee('ALM-701')
-            ->assertDontSee('ALM-702');
+            ->assertSee('701')
+            ->assertDontSee('702');
 
         $this->actingAs($user)
-            ->get(route('dashboard.properties.index', ['search' => 'alm-702']))
+            ->get(route('dashboard.properties.index', ['search' => '702']))
             ->assertOk()
-            ->assertSee('ALM-702')
-            ->assertDontSee('ALM-701');
+            ->assertSee('702')
+            ->assertDontSee('701');
     }
 
     public function test_properties_can_be_filtered_by_area_and_unit_type(): void
@@ -41,22 +41,22 @@ class PropertyFiltersTest extends TestCase
         $user = $this->propertyViewer();
         [$firstArea, $secondArea, $apartment, $villa, $status] = $this->lookups();
 
-        $this->property('ALM-711', 'شقة للاختبار', $firstArea, $apartment, $status);
-        $this->property('ALM-712', 'فيلا للاختبار', $secondArea, $villa, $status);
+        $this->property('711', 'شقة للاختبار', $firstArea, $apartment, $status);
+        $this->property('712', 'فيلا للاختبار', $secondArea, $villa, $status);
 
         $this->actingAs($user)
             ->get(route('dashboard.properties.index', ['area_id' => $firstArea->id]))
             ->assertOk()
             ->assertSee('name="area_id"', false)
-            ->assertSee('ALM-711')
-            ->assertDontSee('ALM-712');
+            ->assertSee('711')
+            ->assertDontSee('712');
 
         $this->actingAs($user)
             ->get(route('dashboard.properties.index', ['unit_type_id' => $villa->id]))
             ->assertOk()
             ->assertSee('name="unit_type_id"', false)
-            ->assertSee('ALM-712')
-            ->assertDontSee('ALM-711');
+            ->assertSee('712')
+            ->assertDontSee('711');
     }
 
     private function propertyViewer(): User

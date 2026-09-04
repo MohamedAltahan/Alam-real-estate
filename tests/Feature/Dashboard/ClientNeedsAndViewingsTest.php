@@ -51,11 +51,10 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->unitType = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment']]);
 
         $this->available = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
-        PropertyStatus::create(['name' => ['ar' => 'محجوز', 'en' => 'Reserved'], 'key' => 'reserved']);
         PropertyStatus::create(['name' => ['ar' => 'مباع', 'en' => 'Sold'], 'key' => 'sold']);
 
         $this->property = Property::create([
-            'reference_code' => 'ALM-501', 'title' => ['ar' => 'شقة السالمية', 'en' => 'Salmiya Flat'],
+            'reference_code' => '501', 'title' => ['ar' => 'شقة السالمية', 'en' => 'Salmiya Flat'],
             'status_id' => $this->available->id, 'area_id' => $this->area->id,
         ]);
     }
@@ -161,24 +160,6 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertDatabaseCount('clients', 0);
     }
 
-    public function test_viewing_on_a_property_reserved_for_another_client_is_rejected(): void
-    {
-        $other = Client::create(['name' => 'عميل آخر', 'phone' => '111']);
-        $this->actingAs($this->user);
-        app(ClientService::class)->reserveProperty($other, $this->property->id);
-
-        $this->post(route('dashboard.clients.store'), [
-            'name' => 'عميل',
-            'phone_code' => '+965',
-            'phone' => '55000001',
-            'viewings' => [
-                ['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->format('Y-m-d H:i')],
-            ],
-        ])->assertSessionHasErrors('viewings.0.property_id');
-
-        $this->assertStringContainsString('محجوز', session('errors')->first('viewings.0.property_id'));
-    }
-
     public function test_moving_the_schedule_to_the_future_re_arms_the_reminder(): void
     {
         $client = $this->makeClient();
@@ -247,7 +228,7 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->actingAs($this->user)->get(route('dashboard.clients.index'))
             ->assertOk()
             ->assertSee('العقار المستهدف')
-            ->assertSee('ALM-501')
+            ->assertSee('501')
             ->assertSee('عميل محتمل')
             ->assertDontSee('كل الوكلاء');
     }

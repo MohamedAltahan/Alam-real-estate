@@ -61,7 +61,7 @@ class AreaManagementTest extends TestCase
         $user = $this->userWithAreaPermissions(['view', 'delete']);
         $area = Area::create(['name' => ['ar' => 'منطقة مستخدمة', 'en' => 'Used Area']]);
         Property::create([
-            'reference_code' => 'ALM-AREA-1',
+            'reference_code' => '77',
             'title' => ['ar' => 'عقار مرتبط', 'en' => 'Linked Property'],
             'area_id' => $area->id,
         ]);

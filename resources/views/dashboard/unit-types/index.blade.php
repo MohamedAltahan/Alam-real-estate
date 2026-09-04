@@ -20,11 +20,18 @@
         @endcan
     </div>
 
-    <form method="GET" id="unit-types-filters" data-live-filters class="mb-4">
-        <div class="relative max-w-md">
+    <form method="GET" id="unit-types-filters" data-live-filters class="flex flex-wrap items-center gap-3 mb-4">
+        <div class="relative flex-1 min-w-[220px] max-w-md">
             <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم النوع..." autocomplete="off"
                    class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+        </div>
+        <div class="relative">
+            <select name="category" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+                <option value="">كل التصنيفات</option>
+                @foreach (\App\Models\UnitType::CATEGORIES as $key => $text)<option value="{{ $key }}" @selected(($filters['category'] ?? '') === $key)>{{ $text }}</option>@endforeach
+            </select>
+            <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
         </div>
     </form>
 
@@ -37,8 +44,8 @@
                             <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">اسم النوع</th>
                             <th class="text-start font-medium px-4 py-3">الاسم بالإنجليزية</th>
+                            <th class="text-start font-medium px-4 py-3">التصنيف</th>
                             <th class="text-start font-medium px-4 py-3">الاستخدام</th>
-                            <th class="text-start font-medium px-4 py-3">الترتيب</th>
                             <th class="text-start font-medium px-4 py-3">الحالة</th>
                             <th class="text-start font-medium px-4 py-3">إجراءات</th>
                         </tr>
@@ -53,7 +60,7 @@
                                     'id' => $unitType->id,
                                     'name_ar' => $nameAr,
                                     'name_en' => $nameEn,
-                                    'sort_order' => $unitType->sort_order,
+                                    'category' => $unitType->category ?: 'residential',
                                     'is_active' => $unitType->is_active,
                                 ];
                             @endphp
@@ -61,6 +68,9 @@
                             <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $unitTypes->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $nameAr }}</td>
                                 <td class="px-4 py-3 text-gray-500" dir="ltr">{{ $nameEn ?: '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $unitType->category === 'commercial' ? 'bg-accent-100 text-accent-800' : 'bg-primary-50 text-primary-700' }}">{{ $unitType->categoryLabel() }}</span>
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-1.5">
                                         @if ($unitType->properties_count)
@@ -74,7 +84,6 @@
                                         @endunless
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 tabular-nums">{{ $unitType->sort_order }}</td>
                                 <td class="px-4 py-3">
                                     @if ($unitType->is_active)
                                         <span class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success px-2.5 py-1 text-xs font-medium"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>نشط</span>
@@ -133,9 +142,12 @@
                     <input name="name[en]" x-model="form.name_en" dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">الترتيب <span class="text-danger">*</span></label>
-                    <input name="sort_order" type="number" min="0" x-model="form.sort_order" required class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
-                    <p class="text-xs text-gray-400 mt-1">الرقم الأصغر يظهر أولًا في الفلاتر والقوائم.</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">التصنيف <span class="text-danger">*</span></label>
+                    <select name="category" x-model="form.category" required class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white">
+                        @foreach (\App\Models\UnitType::CATEGORIES as $key => $text)<option value="{{ $key }}">{{ $text }}</option>@endforeach
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">يحدد أنواع الوحدات التي تظهر عند اختيار تصنيف العقار.</p>
+                    @error('category')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
                 <div class="flex items-end pb-1">
                     <label class="inline-flex items-center gap-3 cursor-pointer rounded-field border border-gray-200 bg-gray-50 px-4 h-[42px] w-full">
@@ -174,10 +186,17 @@
     function unitTypeCrud() {
         return {
             mode: 'add', action: '', delAction: '', delName: '',
-            form: { name_ar: '', name_en: '', sort_order: {{ $nextSortOrder }}, is_active: true },
+            form: { name_ar: '', name_en: '', category: 'residential', is_active: true },
+            init() {
+                @if ($errors->any())
+                    this.action = '{{ route('dashboard.unit-types.store') }}';
+                    this.form = { name_ar: @js(old('name.ar', '')), name_en: @js(old('name.en', '')), category: @js(old('category', 'residential')), is_active: true };
+                    this.$nextTick(() => this.$dispatch('open-modal', 'unit-type-form'));
+                @endif
+            },
             startAdd() {
                 this.mode = 'add';
-                this.form = { name_ar: '', name_en: '', sort_order: {{ $nextSortOrder }}, is_active: true };
+                this.form = { name_ar: '', name_en: '', category: 'residential', is_active: true };
                 this.action = '{{ route('dashboard.unit-types.store') }}';
                 this.$dispatch('open-modal', 'unit-type-form');
             },
@@ -186,7 +205,7 @@
                 this.form = {
                     name_ar: unitType.name_ar ?? '',
                     name_en: unitType.name_en ?? '',
-                    sort_order: unitType.sort_order ?? 0,
+                    category: unitType.category ?? 'residential',
                     is_active: Boolean(unitType.is_active),
                 };
                 this.action = '{{ url('dashboard/unit-types') }}/' + unitType.id;

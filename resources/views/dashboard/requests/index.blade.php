@@ -180,7 +180,7 @@
                 {{-- حقول العميل الجديد --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" x-show="! convert.useExisting">
                     <div>
-                        <label class="{{ $lbl }}">مسؤول العقار</label>
+                        <label class="{{ $lbl }}">مندوب المبيعات</label>
                         <select name="agent_id" class="{{ $field }}">
                             <option value="">— اختر —</option>
                             @foreach ($agents as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach

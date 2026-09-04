@@ -58,7 +58,7 @@
                         ['الجنسية', $client->nationality, false],
                         ['الحالة الاجتماعية', ClientFields::enumLabel('social_status', $client->social_status), false],
                         ['عدد الأفراد', $client->household_size, false], ['مكان العمل', $client->workplace, false],
-                        ['مسؤول العقار', $client->agent?->name, false],
+                        ['مندوب المبيعات', $client->agent?->name, false],
                         ['المصدر', $client->source?->name, false], ['سجّل البيانات', $client->recordedBy?->name, false],
                         ['تاريخ التسجيل', $client->created_at?->format('Y-m-d'), true],
                     ] as [$label, $value, $ltr])
@@ -68,7 +68,7 @@
 
                 {{-- احتياج العقار --}}
                 <div class="mt-5 pt-4 border-t border-gray-100">
-                    <p class="text-xs text-gray-400 mb-2">احتياج العقار <span class="text-gray-300">(نوع الوحدة المطلوبة · المدينة · المنطقة)</span></p>
+                    <p class="text-xs text-gray-400 mb-2">احتياج العقار <span class="text-gray-300">(نوع الوحدة المطلوبة · المحافظة · المنطقة)</span></p>
                     @forelse ($client->needs as $need)
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-50 text-primary-800 text-xs font-medium px-3 py-1.5 me-1.5 mb-1.5">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
@@ -183,10 +183,6 @@
                 <h3 class="font-bold text-ink mb-4">عقارات العميل <span class="text-gray-400 font-normal text-sm">({{ $client->properties->count() }})</span></h3>
                 <div class="space-y-2 mb-5">
                     @forelse ($client->properties as $property)
-                        @php
-                            $activeReservation = $property->activeReservation;
-                            $reservedForThisClient = $activeReservation && (int) $activeReservation->client_id === (int) $client->id;
-                        @endphp
                         <div class="flex items-center gap-3 rounded-2xl border border-gray-100 p-3">
                             <span class="w-12 h-11 rounded-xl bg-gray-100 overflow-hidden shrink-0">@if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
                             <div class="flex-1 min-w-0">
@@ -195,23 +191,12 @@
                                 @else
                                     <span class="text-sm font-semibold text-ink" dir="ltr">{{ $property->reference_code }}</span>
                                 @endcan
-                                <p class="text-xs {{ $reservedForThisClient ? 'text-warning font-semibold' : 'text-gray-400' }} truncate">
-                                    @if ($reservedForThisClient)
-                                        حجز نشط منذ {{ $activeReservation->reserved_at?->format('Y-m-d') }}
-                                    @elseif ($activeReservation)
-                                        محجوز للعميل {{ $activeReservation->client?->name }}
-                                    @else
-                                        {{ ClientFields::RELATIONS[$property->pivot->relation] ?? 'مرتبط' }} · {{ $property->status?->name ?: 'بدون حالة' }}
-                                    @endif
+                                <p class="text-xs text-gray-400 truncate">
+                                    {{ ClientFields::RELATIONS[$property->pivot->relation] ?? 'مرتبط' }} · {{ $property->status?->name ?: 'بدون حالة' }}
                                 </p>
                             </div>
                             @can('clients.edit')
                                 <div class="flex flex-col items-end gap-1.5 shrink-0">
-                                    @if ($reservedForThisClient)
-                                        <form method="POST" action="{{ route('dashboard.clients.properties.release', [$client, $property]) }}" onsubmit="return confirm('هل تريد إلغاء حجز هذا العقار؟')">@csrf @method('DELETE')<button class="rounded-full bg-warning-soft text-warning px-2.5 py-1 text-[11px] font-semibold hover:bg-warning/20">إلغاء الحجز</button></form>
-                                    @elseif (! $activeReservation && $property->status?->key !== 'sold')
-                                        <form method="POST" action="{{ route('dashboard.clients.properties.reserve', [$client, $property]) }}" onsubmit="return confirm('هل تريد حجز هذا العقار للعميل؟')">@csrf<button class="rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-[11px] font-semibold hover:bg-primary-100">حجز العقار</button></form>
-                                    @endif
                                     <form method="POST" action="{{ route('dashboard.clients.properties.detach', [$client, $property]) }}" onsubmit="return confirm('هل تريد إزالة العقار من سجل العميل؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-gray-300 hover:text-danger hover:bg-danger/10" title="إلغاء الربط"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></form>
                                 </div>
                             @endcan
@@ -231,14 +216,9 @@
                             @foreach ($linkable as $property)
                                 @php
                                     $alreadyLinked = $client->properties->contains('id', $property->id);
-                                    $activeReservation = $property->activeReservation;
                                     $blockedReason = $alreadyLinked
                                         ? 'مضاف بالفعل لهذا العميل'
-                                        : ($activeReservation
-                                            ? 'محجوز للعميل '.$activeReservation->client?->name.' منذ '.$activeReservation->reserved_at?->format('Y-m-d')
-                                            : ($property->status?->key === 'reserved'
-                                                ? 'حالة العقار محجوزة — راجع تفاصيله'
-                                                : ($property->status?->key === 'sold' ? 'لا يمكن الإضافة — العقار مباع' : null)));
+                                        : ($property->status?->key === 'sold' ? 'لا يمكن الإضافة — العقار مباع' : null);
                                     $searchText = mb_strtolower(collect([$property->reference_code, $property->title, $property->area?->name, $property->unitType?->name])->filter()->implode(' '));
                                 @endphp
                                 <button type="button" x-show="!propertySearch || @js($searchText).includes(propertySearch.toLowerCase())" @if (! $blockedReason) @click="selectedProperty = @js(['id' => $property->id, 'reference' => $property->reference_code])" @endif @disabled($blockedReason)
@@ -250,7 +230,7 @@
                         </div>
                         <p x-show="selectedProperty" class="text-xs text-success font-semibold">تم اختيار <span dir="ltr" x-text="selectedProperty?.reference"></span></p>
                         @error('property_id')<p class="text-xs text-danger font-semibold">{{ $message }}</p>@enderror
-                        <select name="relation" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"><option value="interested">مهتم</option><option value="viewed">تمت معاينة العقار</option><option value="reserved">حجز العقار للعميل</option></select>
+                        <select name="relation" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"><option value="interested">مهتم</option><option value="viewed">تمت معاينة العقار</option></select>
                         <button :disabled="!selectedProperty" class="w-full rounded-full bg-primary-900 hover:bg-primary-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-medium py-2.5 text-sm">إضافة العقار للعميل</button>
                     </form>
                 @endcan

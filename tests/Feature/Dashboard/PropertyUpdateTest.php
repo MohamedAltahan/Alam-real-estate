@@ -28,14 +28,14 @@ class PropertyUpdateTest extends TestCase
         }
 
         $area = Area::create(['name' => ['ar' => 'السالمية', 'en' => 'Salmiya']]);
-        $category = PropertyCategory::create(['name' => ['ar' => 'سكني', 'en' => 'Residential']]);
-        $unitType = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment']]);
+        $category = PropertyCategory::create(['name' => ['ar' => 'سكني', 'en' => 'Residential'], 'key' => 'residential']);
+        $unitType = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment'], 'category' => 'residential']);
         $status = PropertyStatus::create([
             'name' => ['ar' => 'متاح', 'en' => 'Available'],
             'key' => 'available',
         ]);
         $property = Property::create([
-            'reference_code' => 'ALM-900',
+            'reference_code' => '900',
             'title' => ['ar' => 'عقار قديم', 'en' => 'Old property'],
             'area_id' => $area->id,
             'category_id' => $category->id,

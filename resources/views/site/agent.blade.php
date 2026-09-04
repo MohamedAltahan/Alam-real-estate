@@ -11,7 +11,7 @@
 @section('title', $agent->name)
 
 @section('content')
-{{-- ===================== هيرو مسؤول العقار ===================== --}}
+{{-- ===================== هيرو مندوب المبيعات ===================== --}}
 <section class="relative isolate text-white bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950 overflow-hidden">
     <x-site.page-hero-bg />
     <div class="absolute -top-16 -start-16 w-72 h-72 rounded-full bg-white/5"></div>
@@ -99,7 +99,7 @@
     </div>
 </section>
 
-{{-- ===================== عقارات مسؤول العقار ===================== --}}
+{{-- ===================== عقارات مندوب المبيعات ===================== --}}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
     <div class="flex items-center justify-between mb-6">
         <div>
@@ -117,7 +117,7 @@
         </div>
         <div class="mt-8">{{ $properties->links() }}</div>
     @else
-        <div class="rounded-card bg-white border border-gray-100 py-16 text-center text-gray-400">{{ $t('لا توجد عقارات منشورة لمسؤول العقار حالياً.', 'This property manager has no published listings yet.') }}</div>
+        <div class="rounded-card bg-white border border-gray-100 py-16 text-center text-gray-400">{{ $t('لا توجد عقارات منشورة لمندوب المبيعات حالياً.', 'This sales agent has no published listings yet.') }}</div>
     @endif
 </section>
 

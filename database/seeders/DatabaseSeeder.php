@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             LookupSeeder::class,
             KuwaitAreasSeeder::class,
             RolePermissionSeeder::class,
+            PublishingChannelSeeder::class,
         ]);
 
         $admin = User::firstOrCreate(

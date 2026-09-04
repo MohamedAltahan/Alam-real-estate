@@ -156,15 +156,19 @@ class DemoDashboardSeeder extends Seeder
 
             $owner = PropertyOwner::firstOrNew(['name' => $ownerName]);
             $owner->fill([
+                'phone_code' => '+965',
                 'phone' => '9'.random_int(1000000, 9999999),
                 'email' => 'owner'.($index + 1).'@example.com',
                 'area_id' => $areas ? $areas[array_rand($areas)] : null,
-                'nationality' => 'كويتي',
-                'status' => $index % 5 === 4 ? 'inactive' : 'active',
+                'notes' => $index % 2 ? 'مالك متعاون — يفضّل التواصل صباحًا.' : null,
             ]);
             $owner->created_at = $at;
             $owner->updated_at = $at;
             $owner->save();
+
+            if ($owner->contacts()->doesntExist()) {
+                $owner->contacts()->create(['phone_code' => '+965', 'phone' => $owner->phone, 'role' => 'المالك', 'name' => $ownerName]);
+            }
         }
 
         // توزيع العقارات على الملّاك حتى تختلف الأعداد والقيم الإجمالية

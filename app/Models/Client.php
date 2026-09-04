@@ -83,20 +83,6 @@ class Client extends Model
             ->withTimestamps();
     }
 
-    /** كل حجوزات العميل، بما فيها الحجوزات الملغاة. */
-    public function reservations(): HasMany
-    {
-        return $this->hasMany(PropertyReservation::class);
-    }
-
-    /** الحجوزات النشطة الحالية للعميل. */
-    public function activeReservations(): HasMany
-    {
-        return $this->hasMany(PropertyReservation::class)
-            ->where('status', PropertyReservation::STATUS_ACTIVE)
-            ->whereNotNull('active_property_id');
-    }
-
     // ===== Accessors =====
 
     /** "+965 55112233" */
@@ -151,7 +137,7 @@ class Client extends Model
             $this->preferred_contact ? 'طريقة التواصل: '.ClientFields::enumLabel('preferred_contact', $this->preferred_contact) : null,
             $needs ? "احتياج العقار:\n".$needs : null,
             $this->stage ? 'الحالة: '.$this->stage->name : null,
-            $this->agent ? 'مسؤول العقار: '.$this->agent->name : null,
+            $this->agent ? 'مندوب المبيعات: '.$this->agent->name : null,
             $this->recordedBy ? 'سجّل البيانات: '.$this->recordedBy->name : null,
             $viewings ? "المعاينات:\n".$viewings : null,
             $propertyRefs ? 'العقارات المرتبطة: '.$propertyRefs : null,
