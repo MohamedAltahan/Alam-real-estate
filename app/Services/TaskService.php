@@ -129,17 +129,10 @@ class TaskService
             }
 
             if ($assigneeChanged) {
-                $this->audit->record($task, 'assigned', ['assignee_id' => [
-                    'old' => $previousAssignee,
-                    'new' => $task->assignee_id,
-                ]]);
+                $this->recordAssignment($task, $previousAssignee, $me);
             }
 
             $this->syncFiles($request, $task);
-
-            if ($assigneeChanged && $task->assignee_id && (int) $task->assignee_id !== (int) $me->id) {
-                $task->assignee?->notify(new TaskEvent($task, TaskEvent::ASSIGNED));
-            }
 
             if ($statusChanged) {
                 $this->notify($task, $me, TaskEvent::MOVED, $assigneeChanged ? [$task->assignee_id] : []);
@@ -187,6 +180,37 @@ class TaskService
         return Task::query()->select('status', DB::raw('COUNT(*) AS total'))
             ->groupBy('status')->pluck('total', 'status')
             ->map(fn ($v) => (int) $v)->all();
+    }
+
+    /** إعادة إسناد المهمة لموظف آخر (أو رفع الإسناد) من نافذة التفاصيل */
+    public function assign(Task $task, ?int $assigneeId, User $me): Task
+    {
+        return DB::transaction(function () use ($task, $assigneeId, $me) {
+            $previous = $task->assignee_id !== null ? (int) $task->assignee_id : null;
+
+            if ($previous === $assigneeId) {
+                return $task;
+            }
+
+            $task->update(['assignee_id' => $assigneeId]);
+            $task->unsetRelation('assignee');
+            $this->recordAssignment($task, $previous, $me);
+
+            return $task;
+        });
+    }
+
+    /** سطر «إسناد» في السجل + إشعار المسند إليه الجديد (إلا إن كان هو من أسندها لنفسه) */
+    private function recordAssignment(Task $task, mixed $previous, User $me): void
+    {
+        $this->audit->record($task, 'assigned', ['assignee_id' => [
+            'old' => $previous,
+            'new' => $task->assignee_id,
+        ]]);
+
+        if ($task->assignee_id && (int) $task->assignee_id !== (int) $me->id) {
+            $task->assignee?->notify(new TaskEvent($task, TaskEvent::ASSIGNED));
+        }
     }
 
     public function comment(Task $task, string $body, User $me): TaskComment

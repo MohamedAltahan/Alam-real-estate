@@ -147,6 +147,38 @@ class TaskBoardTest extends TestCase
         $this->assertNull($mine->fresh()->completed_at);
     }
 
+    public function test_assignee_can_be_changed_from_the_detail_modal_after_saving(): void
+    {
+        $editor = $this->userWith(['tasks.view', 'tasks.edit']);
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $task = Task::create(['title' => 'مهمة', 'assignee_id' => $first->id, 'created_by' => $editor->id]);
+
+        // نافذة التفاصيل تعرض قائمة الإسناد لمن يملك التعديل
+        $this->actingAs($editor)->get(route('dashboard.tasks.show', $task), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()->assertSee('quickAssign('.$task->id, false);
+
+        $this->actingAs($editor)->patchJson(route('dashboard.tasks.assign', $task), ['assignee_id' => $second->id])
+            ->assertOk()->assertJsonPath('assignee_id', $second->id);
+
+        $this->assertSame($second->id, $task->fresh()->assignee_id);
+        $this->assertDatabaseHas('task_audit_logs', ['task_id' => $task->id, 'action' => 'assigned', 'user_id' => $editor->id]);
+        $this->assertSame(1, $second->notifications()->count());
+        $this->assertSame(0, $first->notifications()->count());
+
+        // نفس الشخص مرة أخرى: لا سجل ولا إشعار جديد
+        $this->actingAs($editor)->patchJson(route('dashboard.tasks.assign', $task), ['assignee_id' => $second->id])->assertOk();
+        $this->assertSame(1, $second->notifications()->count());
+
+        // رفع الإسناد
+        $this->actingAs($editor)->patchJson(route('dashboard.tasks.assign', $task), ['assignee_id' => null])->assertOk();
+        $this->assertNull($task->fresh()->assignee_id);
+
+        // بلا صلاحية تعديل وليس المسند إليه: ممنوع
+        $this->actingAs($this->userWith(['tasks.view']))
+            ->patchJson(route('dashboard.tasks.assign', $task), ['assignee_id' => $first->id])->assertForbidden();
+    }
+
     public function test_filters_narrow_the_board(): void
     {
         $me = $this->userWith(['tasks.view']);

@@ -35,28 +35,33 @@ function paintCounts(counts) {
     });
 }
 
+/** PATCH بصيغة JSON مع رمز CSRF — يرمي عند أي رد غير ناجح */
+async function patch(url, payload) {
+    const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrf(),
+            'X-Requested-With': 'XMLHttpRequest',
+            Accept: 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+    });
+
+    if (! response.ok) {
+        throw new Error('HTTP ' + response.status);
+    }
+
+    return response.json();
+}
+
 async function persistMove(card, column) {
     const status = column.dataset.status;
     const order = Array.from(column.querySelectorAll(CARD)).map((el) => Number(el.dataset.taskCard));
 
     try {
-        const response = await fetch(moveUrl(card.dataset.taskCard), {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrf(),
-                'X-Requested-With': 'XMLHttpRequest',
-                Accept: 'application/json',
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({ status, order }),
-        });
-
-        if (! response.ok) {
-            throw new Error('HTTP ' + response.status);
-        }
-
-        const data = await response.json();
+        const data = await patch(moveUrl(card.dataset.taskCard), { status, order });
         card.dataset.taskStatus = status;
         card.classList.toggle('is-done', status === 'done');
         paintCounts(data.counts ?? {});
@@ -184,27 +189,22 @@ withAlpine((Alpine) => {
         },
 
         /** نقل سريع من نافذة التفاصيل ثم إعادة تحميل النافذة واللوحة */
-        async quickMove(id, status) {
+        quickMove(id, status) {
+            return this.quickPatch(id, 'move', { status, order: [id] });
+        },
+
+        /** تغيير المسند إليه من نافذة التفاصيل */
+        quickAssign(id, assigneeId) {
+            return this.quickPatch(id, 'assign', { assignee_id: assigneeId || null });
+        },
+
+        async quickPatch(id, action, payload) {
             this.loading = true;
 
             try {
-                const response = await fetch(moveUrl(id), {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrf(),
-                        'X-Requested-With': 'XMLHttpRequest',
-                        Accept: 'application/json',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ status, order: [id] }),
-                });
-
-                if (! response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
+                await patch(`${opts.showBase}/${id}/${action}`, payload);
             } catch (error) {
-                console.error('task move:', error);
+                console.error(`task ${action}:`, error);
             }
 
             window.dispatchEvent(new CustomEvent('live-filters:refresh'));

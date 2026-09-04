@@ -60,6 +60,7 @@ class TaskController extends Controller
             'task' => $task,
             'auditLogs' => TaskAuditPresenter::present($task->auditLogs),
             'canTouch' => $this->tasks->canTouch($task, $request->user()),
+            'users' => $this->users(),
             'editPayload' => $this->editPayload($task),
         ]);
     }
@@ -88,6 +89,18 @@ class TaskController extends Controller
         $counts = $this->tasks->move($task, $data['status'], $data['order'] ?? [$task->id], $request->user());
 
         return response()->json(['ok' => true, 'status' => $task->status, 'counts' => $counts]);
+    }
+
+    /** إعادة الإسناد من نافذة التفاصيل بدون فتح فورم التعديل */
+    public function assign(Request $request, Task $task): JsonResponse
+    {
+        abort_unless($this->tasks->canTouch($task, $request->user()), 403);
+
+        $data = $request->validate(['assignee_id' => ['nullable', 'integer', 'exists:users,id']], [], ['assignee_id' => 'المسند إليه']);
+
+        $task = $this->tasks->assign($task, isset($data['assignee_id']) ? (int) $data['assignee_id'] : null, $request->user());
+
+        return response()->json(['ok' => true, 'assignee_id' => $task->assignee_id, 'assignee' => $task->assignee?->name]);
     }
 
     public function comment(Request $request, Task $task): RedirectResponse

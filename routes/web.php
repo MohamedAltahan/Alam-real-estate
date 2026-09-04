@@ -92,6 +92,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('tasks/{task}', [TaskController::class, 'show'])->whereNumber('task')->name('tasks.show');
             Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
             Route::patch('tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
+            Route::patch('tasks/{task}/assign', [TaskController::class, 'assign'])->name('tasks.assign');
             Route::post('tasks/{task}/comments', [TaskController::class, 'comment'])->name('tasks.comments.store');
             Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
         });
