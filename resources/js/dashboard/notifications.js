@@ -105,12 +105,13 @@ withAlpine((Alpine) => {
                     el = template.content.firstElementChild.cloneNode(true);
                     el.dataset.notificationId = item.id;
                     el.href = item.url;
-                    el.querySelector('[data-title]').textContent = item.title;
-                    el.querySelector('[data-time]').textContent = item.human ?? '';
                     list.querySelector('[data-empty]')?.remove();
                     list.prepend(el);
                 }
 
+                // النص والوقت يُحدَّثان في كل استطلاع حتى لا يتجمّد «بعد 30 دقيقة»
+                el.querySelector('[data-title]').textContent = item.title;
+                el.querySelector('[data-time]').textContent = item.human ?? '';
                 el.querySelector('[data-dot]')?.classList.toggle('hidden', Boolean(item.read));
             });
         },
@@ -124,11 +125,28 @@ withAlpine((Alpine) => {
             this.toasts = this.toasts.filter((toast) => pending.some((item) => item.id === toast.id));
 
             pending.forEach((item) => {
-                if (dismissed.includes(item.id) || this.toasts.some((toast) => toast.id === item.id)) {
+                if (dismissed.includes(item.id)) {
                     return;
                 }
 
-                this.toasts.push({ id: item.id, title: item.title, url: item.url, human: item.human ?? '' });
+                const existing = this.toasts.find((toast) => toast.id === item.id);
+
+                // نص التنبيه يُعاد حسابه من السيرفر في كل استطلاع (لا يتجمّد)
+                if (existing) {
+                    existing.title = item.title;
+                    existing.human = item.human ?? '';
+                    existing.overdue = Boolean(item.overdue);
+
+                    return;
+                }
+
+                this.toasts.push({
+                    id: item.id,
+                    title: item.title,
+                    url: item.url,
+                    human: item.human ?? '',
+                    overdue: Boolean(item.overdue),
+                });
             });
         },
 

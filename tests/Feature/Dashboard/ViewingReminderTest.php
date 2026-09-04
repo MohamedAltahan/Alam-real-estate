@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\PropertyStatus;
 use App\Models\User;
 use App\Notifications\ViewingReminder;
+use App\Support\NotificationFeed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -117,6 +118,29 @@ class ViewingReminderTest extends TestCase
         $stranger = User::factory()->create();
         $stranger->givePermissionTo(Permission::where('name', 'notifications.view')->firstOrFail());
         $this->actingAs($stranger)->get(route('dashboard.notifications.open', $notification->id))->assertNotFound();
+    }
+
+    public function test_reminder_text_is_recomputed_at_display_time(): void
+    {
+        $this->viewing(now()->addMinutes(30), agentId: $this->agent->id);
+        $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))->assertOk();
+
+        $stored = $this->agent->notifications()->firstOrFail()->data['title'];
+        $this->assertStringContainsString('بعد', $stored);
+        $this->assertStringNotContainsString('فات موعدها', $stored);
+
+        // بعد مرور الموعد يتغيّر النص المعروض رغم بقاء المحفوظ كما هو
+        $this->travel(3)->hours();
+
+        $item = NotificationFeed::items($this->agent->fresh())->firstWhere('kind', 'viewing');
+
+        $this->assertStringContainsString('فات موعدها', $item['title']);
+        $this->assertTrue($item['overdue']);
+        $this->assertSame($stored, $this->agent->notifications()->firstOrFail()->data['title']);
+
+        $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))
+            ->assertOk()
+            ->assertJsonPath('items.0.overdue', true);
     }
 
     public function test_poll_requires_the_notifications_permission(): void

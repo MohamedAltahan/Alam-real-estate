@@ -81,6 +81,7 @@
     ];
 
     $feedTone = [
+        'danger'  => 'bg-danger/10 text-danger',
         'accent'  => 'bg-accent-100 text-accent-700',
         'success' => 'bg-success-soft text-success',
         'info'    => 'bg-info-soft text-info',

@@ -213,6 +213,17 @@ class ClientOwnerWorkflowTest extends TestCase
             ->assertSee('سجّل البيانات');
     }
 
+    public function test_owner_rows_open_the_owner_profile_on_click(): void
+    {
+        $user = User::factory()->create();
+        $this->grant($user, ['property_owners.view']);
+        $owner = PropertyOwner::create(['name' => 'مالك النقر', 'phone' => '99000011']);
+
+        $this->actingAs($user)->get(route('dashboard.owners.index'))
+            ->assertOk()
+            ->assertSee("window.location = '".route('dashboard.owners.show', $owner)."'", false);
+    }
+
     public function test_property_whatsapp_message_contains_reference_code(): void
     {
         [$available] = $this->propertyStatuses();

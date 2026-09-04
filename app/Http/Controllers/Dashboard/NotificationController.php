@@ -40,6 +40,7 @@ class NotificationController extends Controller
                     'at' => $item['at']?->toIso8601String(),
                     'human' => $item['at']?->locale('ar')->diffForHumans(),
                     'read' => ! $item['unread'],
+                    'overdue' => (bool) ($item['overdue'] ?? false),
                 ];
             })
             ->values();

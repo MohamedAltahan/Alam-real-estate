@@ -100,7 +100,8 @@
                      x-transition:leave-end="opacity-0 translate-y-3"
                      class="rounded-2xl bg-white border border-gray-100 shadow-2xl shadow-primary-950/25 overflow-hidden">
                     <div class="flex items-start gap-3 p-3.5">
-                        <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full {{ $feedTone['accent'] }}">
+                        <span class="grid place-items-center w-10 h-10 shrink-0 rounded-full"
+                              :class="toast.overdue ? '{{ $feedTone['danger'] }}' : '{{ $feedTone['accent'] }}'">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">{!! $bellIcons['calendar'] !!}</svg>
                         </span>
                         <a :href="toast.url" class="min-w-0 flex-1 leading-snug group">
@@ -115,7 +116,7 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                         </button>
                     </div>
-                    <div class="h-1 bg-accent-500"></div>
+                    <div class="h-1" :class="toast.overdue ? 'bg-danger' : 'bg-accent-500'"></div>
                 </div>
             </template>
         </div>

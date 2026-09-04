@@ -52,7 +52,9 @@
                 <tbody class="divide-y divide-gray-50">
                     @forelse ($owners as $o)
                         @php $editData = $o->only(['id', 'name', 'phone', 'email', 'area_id', 'nationality', 'registered_address', 'status']); @endphp
-                        <tr class="hover:bg-gray-50/50">
+                        {{-- النقر على الصف كله يفتح ملف المالك --}}
+                        <tr class="hover:bg-gray-50/50 transition cursor-pointer"
+                            @click="window.location = '{{ route('dashboard.owners.show', $o) }}'">
                             <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $owners->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
@@ -90,15 +92,15 @@
                             <td class="px-4 py-3 text-gray-500">{{ $months[(int) $o->created_at->format('n')] }} {{ $o->created_at->format('Y') }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1">
-                                    <a href="{{ route('dashboard.owners.show', $o) }}" class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="عرض المالك"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                                    <a href="{{ route('dashboard.owners.show', $o) }}" @click.stop class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="عرض المالك"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                     @can('property_owners.edit')
-                                        <button @click='startEdit(@json($editData))'
+                                        <button @click.stop='startEdit(@json($editData))'
                                                 class="grid place-items-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-700 hover:bg-primary-50" title="تعديل">
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
                                         </button>
                                     @endcan
                                     @can('property_owners.delete')
-                                        <button @click="startDelete('{{ route('dashboard.owners.destroy', $o) }}', @js($o->name))"
+                                        <button @click.stop="startDelete('{{ route('dashboard.owners.destroy', $o) }}', @js($o->name))"
                                                 class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف">
                                             <x-icon.trash />
                                         </button>

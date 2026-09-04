@@ -8,6 +8,7 @@ use App\Models\ContactRequest;
 use App\Models\Property;
 use App\Models\PropertyStatus;
 use App\Models\User;
+use App\Notifications\ViewingReminder;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
@@ -42,6 +43,7 @@ class NotificationFeed
                     'title' => 'طلب تواصل جديد من '.$r->name,
                     'at' => $r->created_at,
                     'unread' => ! $r->is_read,
+                    'overdue' => false,
                     'icon' => 'phone',
                     'tone' => 'accent',
                     'url' => route('dashboard.requests.index'),
@@ -59,6 +61,7 @@ class NotificationFeed
                         : 'تم إضافة عقار جديد '.($p->reference_code ?: $p->title),
                     'at' => $p->status_id === $soldId ? $p->updated_at : $p->created_at,
                     'unread' => false,
+                    'overdue' => false,
                     'icon' => $p->status_id === $soldId ? 'check' : 'building',
                     'tone' => $p->status_id === $soldId ? 'success' : 'info',
                     'url' => route('dashboard.properties.index'),
@@ -73,6 +76,7 @@ class NotificationFeed
                     'title' => 'عميل جديد: '.$c->name.($c->source ? ' عبر '.$c->source->name : ''),
                     'at' => $c->created_at,
                     'unread' => false,
+                    'overdue' => false,
                     'icon' => 'users',
                     'tone' => 'info',
                     'url' => route('dashboard.clients.index'),
@@ -94,15 +98,20 @@ class NotificationFeed
     public static function databaseItem(DatabaseNotification $notification): array
     {
         $data = (array) $notification->data;
+        $isViewing = ($data['kind'] ?? null) === ViewingReminder::KIND;
+
+        // تذكير المعاينة: النص يُعاد حسابه الآن من موعد المعاينة بدل النص المحفوظ وقت الإرسال
+        $overdue = $isViewing && ViewingReminder::isOverdue($data);
 
         return [
             'id' => $notification->id,
             'kind' => $data['kind'] ?? 'general',
-            'title' => $data['title'] ?? 'إشعار جديد',
+            'title' => $isViewing ? ViewingReminder::describe($data) : ($data['title'] ?? 'إشعار جديد'),
             'at' => $notification->created_at,
             'unread' => $notification->read_at === null,
-            'icon' => ($data['kind'] ?? null) === 'viewing' ? 'calendar' : 'bell',
-            'tone' => ($data['kind'] ?? null) === 'viewing' ? 'accent' : 'primary',
+            'overdue' => $overdue,
+            'icon' => $isViewing ? 'calendar' : 'bell',
+            'tone' => $overdue ? 'danger' : ($isViewing ? 'accent' : 'primary'),
             'url' => route('dashboard.notifications.open', $notification->id),
         ];
     }
@@ -147,6 +156,7 @@ class NotificationFeed
             'title' => 'لديك '.$count.' متابعة عميل معلقة',
             'at' => $latest?->updated_at,
             'unread' => false,
+            'overdue' => false,
             'icon' => 'users',
             'tone' => 'primary',
             'url' => route('dashboard.clients.index'),
