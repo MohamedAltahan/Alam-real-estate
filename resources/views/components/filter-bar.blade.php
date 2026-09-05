@@ -2,7 +2,6 @@
     'id',                       // معرّف النموذج — تنضمّ إليه الحقول البعيدة بالخاصية form="..."
     'cols' => 'xl:grid-cols-5', // عدد الأعمدة على الشاشات الكبيرة
     'reset' => null,            // رابط مسح كل الفلاتر (يُطبَّق فوراً عبر live-filters)
-    'hint' => 'الفلاتر تُطبَّق تلقائيًا فور الاختيار.',
 ])
 
 {{-- شريط فلاتر موحّد: بطاقة بيضاء + شبكة حقول مسمّاة، وتُطبَّق تلقائياً بلا زر --}}
@@ -12,12 +11,9 @@
         {{ $slot }}
     </div>
 
-    @if ($hint || $reset)
-        <div class="flex items-center justify-between gap-3 mt-3">
-            <p class="text-[11px] text-gray-400">{{ $hint }}</p>
-            @if ($reset)
-                <a href="{{ $reset }}" data-filters-reset="{{ $id }}" class="text-sm text-gray-500 hover:text-danger">مسح كل الفلاتر</a>
-            @endif
+    @if ($reset)
+        <div class="flex justify-end mt-3">
+            <a href="{{ $reset }}" data-filters-reset="{{ $id }}" class="text-sm text-gray-500 hover:text-danger">مسح كل الفلاتر</a>
         </div>
     @endif
 </form>

@@ -272,8 +272,7 @@
                         class="{{ $filterInput }}">
                 </div>
             </div>
-            <div class="flex items-center justify-between gap-3 mt-3">
-                <p class="text-[11px] text-gray-400">الفلاتر تُطبَّق تلقائيًا فور الاختيار.</p>
+            <div class="flex justify-end mt-3">
                 <a href="{{ route('dashboard.clients.index') }}" data-filters-reset="clients-filters"
                     class="text-sm text-gray-500 hover:text-danger">مسح كل الفلاتر</a>
             </div>
