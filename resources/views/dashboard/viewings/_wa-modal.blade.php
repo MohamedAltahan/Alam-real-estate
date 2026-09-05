@@ -1,6 +1,7 @@
 {{-- نافذة إرسال رسالة معاينة عبر واتساب: اختيار الرقم (بصفته) + نص الرسالة معبّأً — مشتركة بين صفحة العميل وصفحة المعاينات --}}
 @can('clients.edit')
-<div x-data="waSend()" x-on:wa-send.window="start($event.detail)">
+{{-- z أعلى من نوافذ الصفحة (z-50) حتى تظهر فوق النافذة التي فُتحت منها --}}
+<div x-data="waSend()" x-on:wa-send.window="start($event.detail)" class="relative z-[60]">
     <x-modal name="wa-send" maxWidth="lg">
         <form :action="payload.action" method="POST">
             @csrf

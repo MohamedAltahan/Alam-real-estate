@@ -187,6 +187,37 @@ class WhatsAppViewingsTest extends TestCase
             ->assertOk()->assertSee('الوكيل · سالم')->assertSee('أُرسلت');
     }
 
+    public function test_targeted_properties_panel_carries_the_outcome_select_and_whatsapp_buttons(): void
+    {
+        $this->connectedInstance();
+        $editor = $this->userWith(['clients.view', 'clients.edit']);
+
+        // القائمة لم تعد تحمل الحمولات — النافذة تُجلب عند الفتح
+        $this->actingAs($editor)->get(route('dashboard.clients.index'))
+            ->assertOk()
+            ->assertSee('openTargets(', false)
+            ->assertDontSee('data-wa-send=', false);
+
+        $this->actingAs($editor)->get(route('dashboard.clients.viewings', $this->client))
+            ->assertOk()
+            ->assertSee('12')
+            ->assertSee('شقة السالمية')
+            ->assertSee('إبلاغ المالك')
+            ->assertSee('متابعة العميل')
+            ->assertSee('data-wa-send=', false)
+            ->assertSee(route('dashboard.viewings.outcome', $this->viewing), false)
+            ->assertSee('saveOutcome($event)', false);
+
+        // بلا صلاحية التعديل: لا أزرار إرسال ولا تغيير للنتيجة
+        $this->actingAs($this->userWith(['clients.view']))->get(route('dashboard.clients.viewings', $this->client))
+            ->assertOk()
+            ->assertSee('قيد الانتظار')
+            ->assertDontSee('data-wa-send=', false)
+            ->assertDontSee('saveOutcome($event)', false);
+
+        $this->actingAs(User::factory()->create())->get(route('dashboard.clients.viewings', $this->client))->assertForbidden();
+    }
+
     public function test_gateway_failure_logs_the_attempt_without_marking_the_viewing(): void
     {
         $this->connectedInstance();

@@ -54,8 +54,46 @@
         notesOpen: false,
         notesClient: null,
         targetOpen: false,
-        targetClient: null,
+        targetName: '',
+        targetUrl: '',
+        targetHtml: '',
+        targetLoading: false,
         copyDone: false,
+        /** محتوى النافذة يُجلب عند الفتح فقط (بدل حمولة لكل عميل في الصفحة) */
+        async openTargets(name, url) {
+            this.targetName = name;
+            this.targetUrl = url;
+            this.targetOpen = true;
+            await this.loadTargets();
+        },
+        async loadTargets() {
+            this.targetLoading = true;
+            this.targetHtml = '';
+            try {
+                const response = await fetch(this.targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                if (! response.ok) throw new Error('HTTP ' + response.status);
+                this.targetHtml = await response.text();
+            } catch (e) {
+                this.targetHtml = '<p class=\'py-8 text-center text-sm text-danger\'>تعذّر تحميل العقارات المستهدفة.</p>';
+            }
+            this.targetLoading = false;
+        },
+        /** تغيير نتيجة المعاينة من داخل النافذة دون إغلاقها */
+        async saveOutcome(event) {
+            const form = event.target.closest('form');
+            if (! form) return;
+            this.targetLoading = true;
+            try {
+                await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    redirect: 'manual',
+                });
+            } catch (e) { /* نعيد التحميل على أي حال فيظهر الوضع الحقيقي */ }
+            await this.loadTargets();
+        },
         async copyClient(text) {
             try { await navigator.clipboard.writeText(text) } catch (e) {
                 const area = document.createElement('textarea');
@@ -290,25 +328,6 @@
                             @forelse ($clients as $c)
                                 @php
                                     $firstViewing = $c->viewings->first();
-                                    $targetPayload = [
-                                        'name' => $c->name,
-                                        'needs' => $c->needs->map(fn($need) => $need->describe())->values(),
-                                        'viewings' => $c->viewings
-                                            ->map(
-                                                fn($v) => [
-                                                    'ref' => $v->property?->reference_code,
-                                                    'title' => $v->property?->title,
-                                                    'area' => $v->property?->area?->name,
-                                                    'cover' => $v->property?->cover_url,
-                                                    'at' => $v->scheduled_at?->format('Y-m-d H:i'),
-                                                    'in_person' => (bool) $v->in_person,
-                                                    'outcome' => ClientFields::outcomeLabel($v->outcome),
-                                                    'tone' => ClientFields::outcomeTone($v->outcome),
-                                                    'notes' => $v->notes,
-                                                ],
-                                            )
-                                            ->values(),
-                                    ];
                                 @endphp
                                 {{-- النقر على الصف كله يفتح العميل --}}
                                 <tr class="hover:bg-gray-50/50 transition cursor-pointer"
@@ -331,7 +350,7 @@
                                             dir="ltr">{{ $c->full_phone ?: '—' }}</span></td>
                                     <td class="px-4 py-3 max-w-[230px]">
                                         <button type="button"
-                                            @click.stop="targetClient = @js($targetPayload); targetOpen = true"
+                                            @click.stop="openTargets(@js($c->name), @js(route('dashboard.clients.viewings', $c)))"
                                             class="w-full text-start rounded-xl px-2.5 py-2 hover:bg-primary-50 transition">
                                             @if ($firstViewing)
                                                 <span class="flex items-center gap-2">
@@ -464,6 +483,8 @@
             </div>
         </div>
 
+        @include('dashboard.viewings._wa-modal')
+
         {{-- ===== العقارات المستهدفة (المعاينات) ===== --}}
         <div x-show="targetOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
             @keydown.escape.window="targetOpen = false">
@@ -473,7 +494,7 @@
                     class="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div>
                         <h3 class="font-bold text-ink">العقارات المستهدفة</h3>
-                        <p class="text-xs text-gray-400" x-text="targetClient?.name"></p>
+                        <p class="text-xs text-gray-400" x-text="targetName"></p>
                     </div>
                     <button type="button" @click="targetOpen = false"
                         class="grid place-items-center w-9 h-9 rounded-full hover:bg-gray-100 text-gray-500"><svg
@@ -483,39 +504,10 @@
                         </svg></button>
                 </div>
                 <div class="p-6">
-                    <div class="rounded-2xl bg-gray-50 px-4 py-3 mb-5" x-show="(targetClient?.needs || []).length">
-                        <p class="text-xs text-gray-400 mb-1.5">احتياج العقار</p>
-                        <ul class="text-sm text-ink space-y-1"><template x-for="(need, i) in (targetClient?.needs || [])"
-                                :key="i">
-                                <li x-text="need"></li>
-                            </template></ul>
+                    <div x-show="targetLoading" class="py-10 flex items-center justify-center">
+                        <span class="w-7 h-7 rounded-full border-2 border-primary-200 border-t-primary-800 animate-spin"></span>
                     </div>
-                    <div class="space-y-3">
-                        <template x-for="(item, index) in (targetClient?.viewings || [])" :key="index">
-                            <article class="flex gap-3 rounded-2xl border border-gray-100 p-3">
-                                <span class="w-16 h-14 rounded-xl bg-gray-100 overflow-hidden shrink-0"><img
-                                        x-show="item.cover" :src="item.cover" class="w-full h-full object-cover"
-                                        alt=""></span>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                                        <span class="font-semibold text-sm text-ink" dir="ltr"
-                                            x-text="item.ref || '—'"></span>
-                                        <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                                            :class="item.tone" x-text="item.outcome"></span>
-                                    </div>
-                                    <p class="text-xs text-gray-500 truncate"
-                                        x-text="[item.title, item.area].filter(Boolean).join(' · ')"></p>
-                                    <p class="text-xs text-gray-600 mt-1"><span class="text-gray-400">الموعد:</span> <span
-                                            dir="ltr" x-text="item.at || '—'"></span> · <span
-                                            x-text="item.in_person ? 'حضوري' : 'غير حضوري'"></span></p>
-                                    <p class="text-xs text-gray-600 mt-1 whitespace-pre-line" x-show="item.notes"
-                                        x-text="item.notes"></p>
-                                </div>
-                            </article>
-                        </template>
-                        <p x-show="!(targetClient?.viewings || []).length" class="py-8 text-center text-sm text-gray-400">
-                            لا توجد معاينات مسجلة لهذا العميل حتى الآن.</p>
-                    </div>
+                    <div x-show="! targetLoading" x-html="targetHtml"></div>
                 </div>
             </div>
         </div>

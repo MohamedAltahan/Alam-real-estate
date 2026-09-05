@@ -73,6 +73,8 @@ Route::middleware(['auth'])->group(function () {
             // قبل clients/{client} حتى لا يُفسَّر «property-lookup» كمعرّف عميل
             Route::get('clients/property-lookup', [ClientController::class, 'propertyLookup'])->name('clients.property-lookup');
             Route::get('clients/{client}', [ClientController::class, 'show'])->whereNumber('client')->name('clients.show');
+            // محتوى نافذة «العقارات المستهدفة» في القائمة (XHR)
+            Route::get('clients/{client}/viewings', [ClientController::class, 'viewingsPanel'])->whereNumber('client')->name('clients.viewings');
             Route::put('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');

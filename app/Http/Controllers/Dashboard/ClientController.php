@@ -66,6 +66,21 @@ class ClientController extends Controller
         ]);
     }
 
+    /** نافذة «العقارات المستهدفة» في القائمة: معاينات العميل مع تغيير النتيجة وعلامات واتساب */
+    public function viewingsPanel(Client $client): View
+    {
+        $client->load([
+            'needs.city', 'needs.area', 'needs.unitType', 'agent',
+            'viewings.property.area', 'viewings.property.media',
+            'viewings.property.owner.contacts', 'viewings.property.agent',
+        ]);
+
+        // العميل نفسه هو صاحب كل معاينة — نضبط العلاقة بدل استعلام لكل سطر
+        $client->viewings->each(fn ($viewing) => $viewing->setRelation('client', $client));
+
+        return view('dashboard.clients._targets', ['client' => $client]);
+    }
+
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
         $this->clients->update($client, $request->validated(), $request);
