@@ -60,6 +60,16 @@ class WhatsAppViewingsTest extends TestCase
         $this->actingAs($viewer)->post(route('dashboard.whatsapp.connect'), ['name' => 'x'])->assertForbidden();
         $this->actingAs($viewer)->put(route('dashboard.whatsapp.templates.update', WhatsAppTemplates::KIND_OWNER), ['body' => 'x'])->assertForbidden();
 
+        // أيقونة الحالة بجوار الجرس: رابط سليم لمن يملك الصلاحية، وبلا رابط لغيره
+        $this->actingAs($viewer)->get(route('dashboard.profile.edit'))
+            ->assertOk()
+            ->assertSee('href="'.route('dashboard.whatsapp.index').'"', false);
+
+        $this->actingAs($this->userWith(['notifications.view']))->get(route('dashboard.profile.edit'))
+            ->assertOk()
+            ->assertSee('data-whatsapp-status', false)
+            ->assertDontSee(route('dashboard.whatsapp.index'));
+
         // الاستطلاع يحمل حالة واتساب للأيقونة
         $this->actingAs($viewer)->get(route('dashboard.notifications.poll'))
             ->assertOk()

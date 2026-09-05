@@ -16,14 +16,15 @@
      x-data="notificationBell({ pollUrl: @js(route('dashboard.notifications.poll')), unread: {{ (int) $feedUnread }}, repeat: @js($me->viewingRepeatBeep()), wa: @js($wa) })"
      @keydown.escape.window="open = false">
     {{-- حالة واتساب المكتب: أخضر متصل · أحمر غير متصل · برتقالي بانتظار الربط · رمادي غير مُعدّ — تُحدَّث مع الاستطلاع كل دقيقة --}}
-    <{{ $me->can('whatsapp.view') ? 'a href="'.route('dashboard.whatsapp.index').'"' : 'span' }}
+    {{-- بلا صلاحية: وسم <a> بلا href — يظهر ولا يُفتح --}}
+    <a @can('whatsapp.view') href="{{ route('dashboard.whatsapp.index') }}" @endcan
         :title="wa.label + (wa.phone ? ' · ' + wa.phone : '')" data-whatsapp-status
         class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition" aria-label="حالة واتساب">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
              stroke-linecap="round" stroke-linejoin="round">{!! $bellIcons['whatsapp'] !!}</svg>
         <span class="absolute top-2 end-2.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
               :class="{ 'bg-success': wa.tone === 'success', 'bg-danger': wa.tone === 'danger', 'bg-warning': wa.tone === 'warning', 'bg-gray-300': wa.tone === 'muted' }"></span>
-    </{{ $me->can('whatsapp.view') ? 'a' : 'span' }}>
+    </a>
 
     <button type="button" @click="open = ! open"
             class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition"
