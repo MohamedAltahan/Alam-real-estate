@@ -107,7 +107,7 @@
     <div x-cloak x-show="sidebarOpen" x-transition.opacity @click="sidebarOpen = false"
          class="fixed inset-0 z-30 bg-primary-950/50 lg:hidden"></div>
 
-    <aside class="fixed lg:sticky inset-y-0 start-0 top-0 z-40 w-64 shrink-0 h-screen flex flex-col
+    <aside class="fixed lg:sticky inset-y-0 start-0 top-0 z-40 w-[14.4rem] shrink-0 h-screen flex flex-col
                   bg-sidebar text-white transition-transform duration-300 lg:translate-x-0"
            :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full'">
 
@@ -154,12 +154,12 @@
                 </a>
             </div>
 
-            <button type="button" @click="logoutOpen = true"
+            {{-- <button type="button" @click="logoutOpen = true"
                     class="mt-4 w-full flex items-center justify-center gap-2 text-sm font-bold text-danger hover:text-danger/80 transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">{!! $icons['logout'] !!}</svg>
                 تسجيل الخروج
-            </button>
+            </button> --}}
         </div>
     </aside>
 
