@@ -8,9 +8,6 @@
     use App\Support\ClientFields;
 
     $kpis = $report['kpis'];
-    $filterInput = 'rounded-full bg-white border border-gray-200 px-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
-    $filterSelect = 'appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
-    $chevron = '<svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>';
     $cards = [
         ['label' => 'إجمالي المعاينات', 'value' => $kpis['total'], 'tone' => 'bg-info-soft text-info'],
         ['label' => 'مكتملة (العلامتان)', 'value' => $kpis['complete'], 'tone' => 'bg-success-soft text-success'],
@@ -25,32 +22,23 @@
 
 @section('content')
 <div>
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-        <div>
-            <h2 class="text-xl font-bold text-ink">واتساب المعاينات</h2>
-            <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل للمالك، وإرسال المتابعة للعميل — من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
-        </div>
-        <form method="GET" id="wa-report-filters" data-live-filters class="flex flex-wrap items-center gap-3">
-            <input name="from" data-datepicker value="{{ $filters['from'] ?? '' }}" placeholder="من تاريخ" class="{{ $filterInput }} w-40">
-            <input name="to" data-datepicker value="{{ $filters['to'] ?? '' }}" placeholder="إلى تاريخ" class="{{ $filterInput }} w-40">
-            <div class="relative">
-                <select name="agent_id" class="{{ $filterSelect }}">
-                    <option value="">كل المسؤولين</option>
-                    @foreach ($agents as $agent)<option value="{{ $agent->id }}" @selected(($filters['agent_id'] ?? '') == $agent->id)>{{ $agent->name }}</option>@endforeach
-                </select>
-                {!! $chevron !!}
-            </div>
-            <div class="relative">
-                <select name="state" class="{{ $filterSelect }}">
-                    <option value="">كل المعاينات</option>
-                    @foreach ($states as $value => $label)<option value="{{ $value }}" @selected(($filters['state'] ?? '') === $value)>{{ $label }}</option>@endforeach
-                </select>
-                {!! $chevron !!}
-            </div>
-        </form>
+    <div class="mb-5">
+        <h2 class="text-xl font-bold text-ink">واتساب المعاينات</h2>
+        <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل للمالك، وإرسال المتابعة للعميل</p>
     </div>
 
+    <x-filter-bar id="wa-report-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.reports.viewings') : null">
+        <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
+        <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
+        <x-filter-select label="المسؤول" name="agent_id" placeholder="كل المسؤولين"
+                         :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
+        <x-filter-select label="حالة الإرسال" name="state" placeholder="كل المعاينات"
+                         :options="$states" :selected="$filters['state'] ?? null" />
+    </x-filter-bar>
+
     <div data-results>
+        <p class="text-xs text-gray-400 mb-3">الفترة من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
+
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-5">
             @foreach ($cards as $card)
                 <div class="rounded-2xl bg-white border border-gray-100 p-4">

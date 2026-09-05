@@ -5,9 +5,6 @@
 
 @php
     use App\Models\Task;
-
-    $filterSelect = 'w-full appearance-none rounded-field bg-white border border-gray-200 ps-3.5 pe-9 h-10 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
-    $filterLabel = 'block text-[11px] font-semibold text-gray-500 mb-1';
     $total = collect($columns)->sum(fn ($c) => $c->count());
     $mine = ! empty($filters['mine']);
 @endphp
@@ -57,48 +54,19 @@
     </div>
 
     {{-- ===== الفلاتر (تُطبَّق فور التغيير) ===== --}}
-    <div class="rounded-card bg-white border border-gray-100 shadow-sm p-4 mb-4">
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-            <div>
-                <label class="{{ $filterLabel }}">المسند إليه</label>
-                <select name="assignee_id" form="tasks-filters" class="{{ $filterSelect }}">
-                    <option value="">كل الموظفين</option>
-                    @foreach ($users as $u)<option value="{{ $u->id }}" @selected(($filters['assignee_id'] ?? '') == $u->id)>{{ $u->name }}</option>@endforeach
-                </select>
-            </div>
-            <div>
-                <label class="{{ $filterLabel }}">أنشأها</label>
-                <select name="created_by" form="tasks-filters" class="{{ $filterSelect }}">
-                    <option value="">الكل</option>
-                    @foreach ($users as $u)<option value="{{ $u->id }}" @selected(($filters['created_by'] ?? '') == $u->id)>{{ $u->name }}</option>@endforeach
-                </select>
-            </div>
-            <div>
-                <label class="{{ $filterLabel }}">الأولوية</label>
-                <select name="priority" form="tasks-filters" class="{{ $filterSelect }}">
-                    <option value="">كل الأولويات</option>
-                    @foreach (Task::PRIORITIES as $key => $label)<option value="{{ $key }}" @selected(($filters['priority'] ?? '') === $key)>{{ $label }}</option>@endforeach
-                </select>
-            </div>
-            <div>
-                <label class="{{ $filterLabel }}">الاستحقاق</label>
-                <select name="due" form="tasks-filters" class="{{ $filterSelect }}">
-                    <option value="">الكل</option>
-                    <option value="overdue" @selected(($filters['due'] ?? '') === 'overdue')>متأخرة</option>
-                    <option value="today" @selected(($filters['due'] ?? '') === 'today')>اليوم</option>
-                    <option value="week" @selected(($filters['due'] ?? '') === 'week')>خلال أسبوع</option>
-                    <option value="none" @selected(($filters['due'] ?? '') === 'none')>بدون موعد</option>
-                </select>
-            </div>
-            <div>
-                <label class="{{ $filterLabel }}">المهام المكتملة</label>
-                <select name="all_done" form="tasks-filters" class="{{ $filterSelect }}">
-                    <option value="">آخر {{ Task::DONE_VISIBLE_DAYS }} يوماً</option>
-                    <option value="1" @selected(! empty($filters['all_done']))>عرض كل المكتملة</option>
-                </select>
-            </div>
-        </div>
-    </div>
+    <x-filter-bar id="tasks-filters" cols="xl:grid-cols-5" :hint="false">
+        <x-filter-select label="المسند إليه" name="assignee_id" placeholder="كل الموظفين"
+                         :options="$users->pluck('name', 'id')" :selected="$filters['assignee_id'] ?? null" />
+        <x-filter-select label="أنشأها" name="created_by" placeholder="الكل"
+                         :options="$users->pluck('name', 'id')" :selected="$filters['created_by'] ?? null" />
+        <x-filter-select label="الأولوية" name="priority" placeholder="كل الأولويات"
+                         :options="Task::PRIORITIES" :selected="$filters['priority'] ?? null" />
+        <x-filter-select label="الاستحقاق" name="due" placeholder="الكل"
+                         :options="['overdue' => 'متأخرة', 'today' => 'اليوم', 'week' => 'خلال أسبوع', 'none' => 'بدون موعد']"
+                         :selected="$filters['due'] ?? null" />
+        <x-filter-select label="المهام المكتملة" name="all_done" :placeholder="'آخر '.Task::DONE_VISIBLE_DAYS.' يوماً'"
+                         :options="['1' => 'عرض كل المكتملة']" :selected="$filters['all_done'] ?? null" />
+    </x-filter-bar>
 
     {{-- ===== اللوحة ===== --}}
     <div data-results>

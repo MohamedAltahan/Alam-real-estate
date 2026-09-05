@@ -6,9 +6,6 @@
 @php
     use App\Models\PublishingChannel;
 
-    $filterSelect = 'appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
-    $chevron = '<svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>';
-
     // قنوات النشر لمودال «المواقع» و«السوشال ميديا»
     $channelPayload = collect($channels)->map(fn ($list) => $list->map(fn ($c) => [
         'id' => $c->id, 'name' => $c->name, 'url' => $c->url, 'icon' => $c->icon_url,
@@ -38,70 +35,36 @@
     </div>
 
     {{-- الفلاتر تُطبَّق فور الاختيار (البحث بالضغط على Enter) --}}
-    <form method="GET" id="properties-filters" data-live-filters class="flex flex-wrap items-center gap-3 mb-4"
-          x-data="{
-            city: @js((string) ($filters['city_id'] ?? '')),
-            area: @js((string) ($filters['area_id'] ?? '')),
-            areas: @js($areas->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values()),
-            areasFor() { return this.city ? this.areas.filter(a => String(a.city_id) === String(this.city)) : this.areas; }
-          }">
-        <div class="relative flex-1 min-w-[220px]">
-            <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم أو رقم العقار..." autocomplete="off" class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-        </div>
-        <div class="relative">
-            <select name="purpose" class="{{ $filterSelect }}">
-                <option value="">بيع وإيجار</option>
-                <option value="sale" @selected(($filters['purpose'] ?? '') === 'sale')>بيع</option>
-                <option value="rent" @selected(($filters['purpose'] ?? '') === 'rent')>إيجار</option>
-            </select>
-            {!! $chevron !!}
-        </div>
-        <div class="relative">
-            <select name="status_id" class="{{ $filterSelect }}">
-                <option value="">كل الحالات</option>
-                @foreach ($statuses as $s)<option value="{{ $s->id }}" @selected(($filters['status_id'] ?? '') == $s->id)>{{ $s->name }}</option>@endforeach
-            </select>
-            {!! $chevron !!}
-        </div>
-        <div class="relative">
-            <select name="city_id" x-model="city" @change="area = ''; $refs.areaSelect.value = ''" class="{{ $filterSelect }}">
-                <option value="">كل المحافظات</option>
-                @foreach ($cities as $city)<option value="{{ $city->id }}">{{ $city->name }}</option>@endforeach
-            </select>
-            {!! $chevron !!}
-        </div>
-        <div class="relative">
-            <select name="area_id" x-ref="areaSelect" x-model="area" class="{{ $filterSelect }}">
-                <option value="">كل المناطق</option>
+    <x-filter-bar id="properties-filters" cols="xl:grid-cols-4"
+                  :reset="array_filter($filters) ? route('dashboard.properties.index') : null">
+        <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
+                        placeholder="باسم أو رقم العقار..." span="col-span-2 md:col-span-1" />
+        <x-filter-select label="الغرض" name="purpose" placeholder="بيع وإيجار"
+                         :options="['sale' => 'بيع', 'rent' => 'إيجار']" :selected="$filters['purpose'] ?? null" />
+        <x-filter-select label="الحالة" name="status_id" placeholder="كل الحالات"
+                         :options="$statuses->pluck('name', 'id')" :selected="$filters['status_id'] ?? null" />
+        <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
+                         :options="$unitTypes->pluck('name', 'id')" :selected="$filters['unit_type_id'] ?? null" />
+        {{-- المنطقة تتبع المحافظة — نطاق Alpine واحد بلا كسر الشبكة (display:contents) --}}
+        <div class="contents" x-data="{
+                city: @js((string) ($filters['city_id'] ?? '')),
+                area: @js((string) ($filters['area_id'] ?? '')),
+                areas: @js($areas->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values()),
+                areasFor() { return this.city ? this.areas.filter(a => String(a.city_id) === String(this.city)) : this.areas; }
+             }">
+            <x-filter-select label="المحافظة" name="city_id" placeholder="كل المحافظات"
+                             :options="$cities->pluck('name', 'id')" x-model="city" @change="area = ''; $refs.areaSelect.value = ''" />
+            <x-filter-select label="المنطقة" name="area_id" placeholder="كل المناطق" x-ref="areaSelect" x-model="area">
                 <template x-for="a in areasFor()" :key="a.id">
                     <option :value="a.id" x-text="a.name" :selected="String(a.id) === String(area)"></option>
                 </template>
-            </select>
-            {!! $chevron !!}
+            </x-filter-select>
         </div>
-        <div class="relative">
-            <select name="unit_type_id" class="{{ $filterSelect }}">
-                <option value="">كل الأنواع</option>
-                @foreach ($unitTypes as $unitType)<option value="{{ $unitType->id }}" @selected(($filters['unit_type_id'] ?? '') == $unitType->id)>{{ $unitType->name }}</option>@endforeach
-            </select>
-            {!! $chevron !!}
-        </div>
-        <div class="relative">
-            <select name="website_id" class="{{ $filterSelect }}">
-                <option value="">كل المواقع الإلكترونية</option>
-                @foreach ($channels[PublishingChannel::KIND_WEBSITE] as $c)<option value="{{ $c->id }}" @selected(($filters['website_id'] ?? '') == $c->id)>{{ $c->name }}</option>@endforeach
-            </select>
-            {!! $chevron !!}
-        </div>
-        <div class="relative">
-            <select name="social_id" class="{{ $filterSelect }}">
-                <option value="">كل قنوات السوشال</option>
-                @foreach ($channels[PublishingChannel::KIND_SOCIAL] as $c)<option value="{{ $c->id }}" @selected(($filters['social_id'] ?? '') == $c->id)>{{ $c->name }}</option>@endforeach
-            </select>
-            {!! $chevron !!}
-        </div>
-    </form>
+        <x-filter-select label="المواقع الإلكترونية" name="website_id" placeholder="كل المواقع"
+                         :options="$channels[\App\Models\PublishingChannel::KIND_WEBSITE]->pluck('name', 'id')" :selected="$filters['website_id'] ?? null" />
+        <x-filter-select label="السوشال ميديا" name="social_id" placeholder="كل القنوات"
+                         :options="$channels[\App\Models\PublishingChannel::KIND_SOCIAL]->pluck('name', 'id')" :selected="$filters['social_id'] ?? null" />
+    </x-filter-bar>
 
     <div data-results>
     <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">

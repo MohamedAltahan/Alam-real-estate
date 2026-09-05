@@ -5,7 +5,6 @@
 
 @php
     $kpis = $report['kpis'];
-    $filterInput = 'rounded-full bg-white border border-gray-200 px-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
     $cards = [
         ['label' => 'إجمالي المعاينات', 'value' => $kpis['total'], 'tone' => 'bg-info-soft text-info', 'icon' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
         ['label' => 'اختار العقار', 'value' => $kpis['chosen'], 'tone' => 'bg-success-soft text-success', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>'],
@@ -16,24 +15,20 @@
 
 @section('content')
 <div>
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-        <div>
-            <h2 class="text-xl font-bold text-ink">معدل التحول</h2>
-            <p class="text-sm text-gray-500">نسبة المعاينات التي انتهت باختيار العقار — من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
-        </div>
-        <form method="GET" class="flex flex-wrap items-center gap-3">
-            <input name="from" data-datepicker value="{{ $filters['from'] ?? $report['from']->format('Y-m-d') }}" placeholder="من تاريخ" class="{{ $filterInput }} w-40">
-            <input name="to" data-datepicker value="{{ $filters['to'] ?? $report['to']->format('Y-m-d') }}" placeholder="إلى تاريخ" class="{{ $filterInput }} w-40">
-            <div class="relative">
-                <select name="agent_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                    <option value="">كل المسؤولين</option>
-                    @foreach ($agents as $agent)<option value="{{ $agent->id }}" @selected(($filters['agent_id'] ?? '') == $agent->id)>{{ $agent->name }}</option>@endforeach
-                </select>
-                <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-            <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 h-11 text-sm transition">عرض</button>
-        </form>
+    <div class="mb-5">
+        <h2 class="text-xl font-bold text-ink">معدل التحول</h2>
+        <p class="text-sm text-gray-500">نسبة المعاينات التي انتهت باختيار العقار</p>
     </div>
+
+    <x-filter-bar id="conversion-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.reports.conversion') : null">
+        <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
+        <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
+        <x-filter-select label="المسؤول" name="agent_id" placeholder="كل المسؤولين"
+                         :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
+    </x-filter-bar>
+
+    <div data-results>
+    <p class="text-xs text-gray-400 mb-3">الفترة من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
 
     {{-- المؤشرات --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
@@ -103,5 +98,6 @@
             </div>
         </section>
     </div>
+    </div>{{-- /منطقة النتائج --}}
 </div>
 @endsection

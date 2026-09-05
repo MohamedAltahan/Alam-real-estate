@@ -7,32 +7,19 @@
 <div x-data="requestsScreen()">
     <x-flash />
 
-    {{-- العنوان يميناً والفلترين في أقصى الشمال على نفس السطر --}}
     <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
             <h2 class="text-xl font-bold text-ink">صندوق الوارد</h2>
             <p class="text-sm text-gray-500">{{ number_format($requests->total()) }} طلب · <span class="text-danger">{{ $unreadCount }} غير مقروء</span></p>
         </div>
-
-        {{-- الفلاتر تُطبَّق فور الاختيار --}}
-        <form method="GET" id="requests-filters" data-live-filters class="flex flex-wrap items-center gap-3">
-            <div class="relative">
-                <select name="type_id" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                    <option value="">كل الأنواع</option>
-                    @foreach ($types as $t)<option value="{{ $t->id }}" @selected(($filters['type_id'] ?? '') == $t->id)>{{ $t->name }}</option>@endforeach
-                </select>
-                <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-            <div class="relative">
-                <select name="status" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                    <option value="">كل الحالات</option>
-                    <option value="pending" @selected(($filters['status'] ?? '') === 'pending')>لم يتم التواصل</option>
-                    <option value="contacted" @selected(($filters['status'] ?? '') === 'contacted')>تم التواصل</option>
-                </select>
-                <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-        </form>
     </div>
+
+    <x-filter-bar id="requests-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.requests.index') : null">
+        <x-filter-select label="النوع" name="type_id" placeholder="كل الأنواع"
+                         :options="$types->pluck('name', 'id')" :selected="$filters['type_id'] ?? null" />
+        <x-filter-select label="الحالة" name="status" placeholder="كل الحالات"
+                         :options="['pending' => 'لم يتم التواصل', 'contacted' => 'تم التواصل']" :selected="$filters['status'] ?? null" />
+    </x-filter-bar>
 
     <div data-results>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

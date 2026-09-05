@@ -20,20 +20,12 @@
         @endcan
     </div>
 
-    <form method="GET" id="unit-types-filters" data-live-filters class="flex flex-wrap items-center gap-3 mb-4">
-        <div class="relative flex-1 min-w-[220px] max-w-md">
-            <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="بحث باسم النوع..." autocomplete="off"
-                   class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-        </div>
-        <div class="relative">
-            <select name="category" class="appearance-none rounded-full bg-white border border-gray-200 ps-4 pe-10 h-11 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
-                <option value="">كل التصنيفات</option>
-                @foreach (\App\Models\UnitType::CATEGORIES as $key => $text)<option value="{{ $key }}" @selected(($filters['category'] ?? '') === $key)>{{ $text }}</option>@endforeach
-            </select>
-            <svg class="absolute end-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
-        </div>
-    </form>
+    <x-filter-bar id="unit-types-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.unit-types.index') : null">
+        <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
+                        placeholder="باسم النوع..." span="col-span-2 md:col-span-1" />
+        <x-filter-select label="التصنيف" name="category" placeholder="كل التصنيفات"
+                         :options="\App\Models\UnitType::CATEGORIES" :selected="$filters['category'] ?? null" />
+    </x-filter-bar>
 
     <div data-results>
         <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
