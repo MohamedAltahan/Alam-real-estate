@@ -43,6 +43,8 @@ withAlpine((Alpine) => {
         viewingUnread: 0,
         repeat: Boolean(opts.repeat),
         pollUrl: opts.pollUrl ?? '',
+        // حالة واتساب المكتب (الأيقونة بجوار الجرس) — تأتي مع كل استطلاع
+        wa: opts.wa ?? { tone: 'muted', label: '', phone: null, connected: false },
         timer: null,
         toasts: [],
 
@@ -81,6 +83,10 @@ withAlpine((Alpine) => {
                 this.unread = Number(data.unread_total ?? 0);
                 this.viewingUnread = Number(data.viewing_unread ?? 0);
                 this.repeat = Boolean(data.repeat_beep);
+
+                if (data.whatsapp) {
+                    this.wa = data.whatsapp;
+                }
 
                 this.merge(items);
                 this.syncToasts(items);

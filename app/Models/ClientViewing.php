@@ -26,6 +26,8 @@ class ClientViewing extends Model
         'scheduled_at' => 'datetime',
         'outcome_at' => 'datetime',
         'reminded_at' => 'datetime',
+        'owner_notified_at' => 'datetime',
+        'client_followed_up_at' => 'datetime',
         'in_person' => 'boolean',
     ];
 

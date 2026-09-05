@@ -160,6 +160,7 @@ class ClientService
             'stage', 'type', 'agent', 'source', 'recordedBy',
             'needs.city', 'needs.area', 'needs.unitType',
             'viewings.property.status', 'viewings.property.media', 'viewings.createdBy',
+            'viewings.property.owner.contacts', 'viewings.property.agent', 'viewings.property.area',
             'interactions.user', 'interactions.stage',
             'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
             'auditLogs' => fn ($q) => $q->with('user')->limit(50),

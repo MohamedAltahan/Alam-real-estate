@@ -3,15 +3,28 @@
     ليحدّث العدّاد ويضيف تذكيرات المعاينات الجديدة مع صوت تنبيه وتنبيه منبثق أسفل الشاشة.
 --}}
 @php
+    // حالة واتساب المكتب من الكاش/السجل المحلي (بلا اتصال بالبوابة أثناء عرض الصفحة)
+    $wa = app(\App\Services\WhatsApp\WhatsAppService::class)->status();
     $bellIcons = $icons + [
         'calendar' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
         'bell' => '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+        'whatsapp' => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
     ];
 @endphp
 
-<div class="relative"
-     x-data="notificationBell({ pollUrl: @js(route('dashboard.notifications.poll')), unread: {{ (int) $feedUnread }}, repeat: @js($me->viewingRepeatBeep()) })"
+<div class="relative flex items-center gap-2"
+     x-data="notificationBell({ pollUrl: @js(route('dashboard.notifications.poll')), unread: {{ (int) $feedUnread }}, repeat: @js($me->viewingRepeatBeep()), wa: @js($wa) })"
      @keydown.escape.window="open = false">
+    {{-- حالة واتساب المكتب: أخضر متصل · أحمر غير متصل · برتقالي بانتظار الربط · رمادي غير مُعدّ — تُحدَّث مع الاستطلاع كل دقيقة --}}
+    <{{ $me->can('whatsapp.view') ? 'a href="'.route('dashboard.whatsapp.index').'"' : 'span' }}
+        :title="wa.label + (wa.phone ? ' · ' + wa.phone : '')" data-whatsapp-status
+        class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition" aria-label="حالة واتساب">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">{!! $bellIcons['whatsapp'] !!}</svg>
+        <span class="absolute top-2 end-2.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
+              :class="{ 'bg-success': wa.tone === 'success', 'bg-danger': wa.tone === 'danger', 'bg-warning': wa.tone === 'warning', 'bg-gray-300': wa.tone === 'muted' }"></span>
+    </{{ $me->can('whatsapp.view') ? 'a' : 'span' }}>
+
     <button type="button" @click="open = ! open"
             class="relative grid place-items-center w-[42px] h-[42px] rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition"
             aria-label="الإشعارات">

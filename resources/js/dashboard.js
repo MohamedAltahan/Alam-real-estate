@@ -14,3 +14,4 @@ import './dashboard/file-list';
 import './dashboard/property-form';
 import './dashboard/owner-form';
 import './dashboard/task-board';
+import './dashboard/whatsapp';

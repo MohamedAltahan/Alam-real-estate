@@ -19,6 +19,7 @@ use App\Http\Controllers\Dashboard\TaskController;
 use App\Http\Controllers\Dashboard\UnitTypeController;
 use App\Http\Controllers\Dashboard\ViewingController;
 use App\Http\Controllers\Dashboard\WebsiteController;
+use App\Http\Controllers\Dashboard\WhatsAppController;
 use App\Http\Controllers\Site\SiteController;
 use Illuminate\Support\Facades\Route;
 
@@ -81,6 +82,8 @@ Route::middleware(['auth'])->group(function () {
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
             Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');
             Route::patch('viewings/{viewing}/outcome', [ViewingController::class, 'updateOutcome'])->name('viewings.outcome');
+            // إرسال تفاصيل المعاينة للمالك / المتابعة للعميل عبر واتساب
+            Route::post('viewings/{viewing}/whatsapp', [ViewingController::class, 'sendWhatsApp'])->name('viewings.whatsapp');
         });
 
         // ===== لوحة المهام =====
@@ -100,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
         // ===== التقارير =====
         Route::middleware('can:reports.view')->group(function () {
             Route::get('reports/conversion', [ReportController::class, 'conversion'])->name('reports.conversion');
+            Route::get('reports/viewings', [ReportController::class, 'viewings'])->name('reports.viewings');
         });
 
         // ===== ملّاك العقارات =====
@@ -160,6 +164,15 @@ Route::middleware(['auth'])->group(function () {
             Route::post('social-channels', [PublishingChannelController::class, 'store'])->name('social-channels.store');
             Route::put('social-channels/{channel}', [PublishingChannelController::class, 'update'])->name('social-channels.update');
             Route::delete('social-channels/{channel}', [PublishingChannelController::class, 'destroy'])->name('social-channels.destroy');
+        });
+
+        // ===== واتساب: ربط رقم المكتب، قوالب الرسائل، سجل الرسائل =====
+        Route::middleware('can:whatsapp.view')->prefix('whatsapp')->name('whatsapp.')->group(function () {
+            Route::get('/', [WhatsAppController::class, 'index'])->name('index');
+            Route::post('connect', [WhatsAppController::class, 'connect'])->name('connect');
+            Route::get('qr', [WhatsAppController::class, 'qr'])->name('qr');
+            Route::post('disconnect', [WhatsAppController::class, 'disconnect'])->name('disconnect');
+            Route::put('templates/{kind}', [WhatsAppController::class, 'updateTemplate'])->name('templates.update');
         });
 
         // ===== إدارة المناطق والمدن (صلاحيات المناطق نفسها) =====

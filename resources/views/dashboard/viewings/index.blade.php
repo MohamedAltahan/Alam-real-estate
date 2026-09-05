@@ -25,6 +25,10 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/></svg>
                 تقرير معدل التحول
             </a>
+            <a href="{{ route('dashboard.reports.viewings') }}" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 px-4 h-11 transition">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                تقرير واتساب المعاينات
+            </a>
         @endcan
     </div>
 
@@ -68,6 +72,7 @@
                             <th class="text-start font-medium px-4 py-3">حضوري</th>
                             <th class="text-start font-medium px-4 py-3">المسؤول</th>
                             <th class="text-start font-medium px-4 py-3">النتيجة</th>
+                            <th class="text-start font-medium px-4 py-3">واتساب</th>
                             <th class="text-start font-medium px-4 py-3">ملاحظة</th>
                         </tr>
                     </thead>
@@ -117,10 +122,11 @@
                                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span>
                                     @endcan
                                 </td>
+                                <td class="px-4 py-3">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
                                 <td class="px-4 py-3 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400">لا توجد معاينات مطابقة.</td></tr>
+                            <tr><td colspan="9" class="px-4 py-16 text-center text-gray-400">لا توجد معاينات مطابقة.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -129,5 +135,7 @@
 
         <div class="mt-4">{{ $viewings->links() }}</div>
     </div>
+
+    @include('dashboard.viewings._wa-modal')
 </div>
 @endsection

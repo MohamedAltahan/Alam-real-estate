@@ -3,6 +3,16 @@
 return [
 
     /*
+    | بوابة واتساب (KhabeerSoft): تُستخدم لإرسال تفاصيل المعاينات للمالك ومتابعة العميل.
+    | instance_id = رقم الواتساب المتصل في حساب البوابة (عدد صحيح).
+    */
+    'khabeersoft' => [
+        'base_url' => env('KHABEERSOFT_BASE_URL', 'https://api.khabeersoft.cloud/api/v1'),
+        'api_key' => env('KHABEERSOFT_API_KEY'),
+        'instance_id' => env('KHABEERSOFT_INSTANCE_ID'),
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Third Party Services
     |--------------------------------------------------------------------------

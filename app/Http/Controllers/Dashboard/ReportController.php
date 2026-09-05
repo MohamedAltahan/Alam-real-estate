@@ -23,4 +23,17 @@ class ReportController extends Controller
             'filters' => $filters,
         ]);
     }
+
+    /** تقرير واتساب المعاينات: هل أُبلغ المالك ببيانات العميل وأُرسلت المتابعة للعميل؟ */
+    public function viewings(Request $request): View
+    {
+        $filters = $request->only('from', 'to', 'agent_id', 'state');
+
+        return view('dashboard.reports.viewings', [
+            'report' => $this->viewings->whatsappReport($filters),
+            'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
+            'states' => ViewingService::WA_STATES,
+            'filters' => $filters,
+        ]);
+    }
 }

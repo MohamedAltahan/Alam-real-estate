@@ -114,6 +114,7 @@
                                     <th class="text-start font-medium px-3 py-2">الموعد</th>
                                     <th class="text-start font-medium px-3 py-2">حضوري</th>
                                     <th class="text-start font-medium px-3 py-2">النتيجة</th>
+                                    <th class="text-start font-medium px-3 py-2">واتساب</th>
                                     <th class="text-start font-medium px-3 py-2">ملاحظة</th>
                                 </tr>
                             </thead>
@@ -148,6 +149,7 @@
                                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span>
                                             @endcan
                                         </td>
+                                        <td class="px-3 py-2.5">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
                                         <td class="px-3 py-2.5 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
                                     </tr>
                                 @endforeach
@@ -271,6 +273,8 @@
             @endforelse
         </div>
     </x-modal>
+
+    @include('dashboard.viewings._wa-modal')
 
     @can('clients.edit')
         <div x-show="editOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" @keydown.escape.window="editOpen = false">

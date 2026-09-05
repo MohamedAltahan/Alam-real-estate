@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContactRequest;
 use App\Notifications\ViewingReminder;
 use App\Services\ViewingReminderService;
+use App\Services\WhatsApp\WhatsAppService;
 use App\Support\NotificationFeed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,7 @@ class NotificationController extends Controller
      * نقطة الاستطلاع (كل دقيقة من المتصفح): تُرسل تذكيرات المعاينات المستحقة
      * ثم تعيد العدّادات وآخر الإشعارات — بدون الحاجة إلى cron أو اتصال لحظي.
      */
-    public function poll(Request $request, ViewingReminderService $reminders): JsonResponse
+    public function poll(Request $request, ViewingReminderService $reminders, WhatsAppService $whatsapp): JsonResponse
     {
         $user = $request->user();
 
@@ -50,6 +51,8 @@ class NotificationController extends Controller
             'viewing_unread' => $user->unreadNotifications()->where('type', ViewingReminder::class)->count(),
             'repeat_beep' => $user->viewingRepeatBeep(),
             'items' => $items,
+            // حالة واتساب المكتب للأيقونة (تُسأل البوابة مرة كل 50 ثانية على الأكثر)
+            'whatsapp' => $whatsapp->pollStatus(),
         ]);
     }
 

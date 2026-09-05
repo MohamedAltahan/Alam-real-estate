@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ClientViewing;
 use App\Models\User;
 use App\Services\ViewingService;
+use App\Services\WhatsApp\WhatsAppService;
 use App\Support\ClientFields;
+use App\Support\WhatsAppTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,5 +43,25 @@ class ViewingController extends Controller
         $this->viewings->updateOutcome($viewing, $data['outcome'], $data['notes'] ?? null);
 
         return back()->with('success', 'تم تحديث نتيجة المعاينة.');
+    }
+
+    /** إرسال رسالة معاينة عبر واتساب: تفاصيل العميل لأحد أرقام المالك، أو المتابعة للعميل */
+    public function sendWhatsApp(Request $request, ClientViewing $viewing, WhatsAppService $whatsapp): RedirectResponse
+    {
+        abort_unless($request->user()->can('clients.edit'), 403);
+
+        $data = $request->validate([
+            'kind' => ['required', Rule::in(array_keys(WhatsAppTemplates::KINDS))],
+            'to' => ['required', 'string', 'max:40'],
+            'body' => ['required', 'string', 'max:4000'],
+        ], [], ['kind' => 'نوع الرسالة', 'to' => 'المستلم', 'body' => 'نص الرسالة']);
+
+        $viewing->load(['client.agent', 'property.owner.contacts', 'property.agent', 'property.area']);
+
+        $message = $whatsapp->send($viewing, $data['kind'], $data['to'], str_replace("\r\n", "\n", $data['body']), $request->user());
+
+        return $message->succeeded()
+            ? back()->with('success', 'أُرسلت الرسالة عبر واتساب إلى '.$message->to_label.'.')
+            : back()->with('error', 'لم تُرسل الرسالة: '.$message->error);
     }
 }

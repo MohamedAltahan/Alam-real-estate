@@ -87,6 +87,8 @@ final class ClientFields
         'occurred_at' => 'التاريخ',
         'user_id' => 'الموظف',
         'file' => 'الملف',
+        'whatsapp_kind' => 'الرسالة',
+        'whatsapp_to' => 'المستلم',
     ];
 
     /** الأعمدة المرجعية → الموديل الذي يُقرأ منه الاسم عند العرض */
@@ -131,6 +133,7 @@ final class ClientFields
         'interaction_logged' => 'تسجيل تواصل',
         'file_added' => 'إضافة ملف',
         'file_removed' => 'حذف ملف',
+        'whatsapp_sent' => 'إرسال واتساب',
     ];
 
     public static function label(string $field): string

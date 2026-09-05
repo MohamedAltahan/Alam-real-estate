@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             KuwaitAreasSeeder::class,
             RolePermissionSeeder::class,
             PublishingChannelSeeder::class,
+            WhatsAppTemplateSeeder::class,
         ]);
 
         $admin = User::firstOrCreate(
