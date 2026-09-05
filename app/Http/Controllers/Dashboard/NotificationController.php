@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactRequest;
+use App\Notifications\TaskEvent;
 use App\Notifications\ViewingReminder;
 use App\Services\ViewingReminderService;
 use App\Services\WhatsApp\WhatsAppService;
@@ -63,13 +64,35 @@ class NotificationController extends Controller
         $notification->markAsRead();
 
         $data = (array) $notification->data;
+        $kind = $data['kind'] ?? null;
 
-        // تذكيرات المعاينات القديمة كانت تحمل رابط صفحة العميل
-        $url = ($data['kind'] ?? null) === ViewingReminder::KIND
-            ? route('dashboard.viewings.index')
-            : ($data['url'] ?? route('dashboard.clients.index'));
+        // الوجهة تُبنى الآن لا تُقرأ: إشعارات قديمة خُزّنت برابط مطلق لمضيف آخر
+        // (منفذ تطوير مثلاً) فكانت تفتح صفحة غير موجودة.
+        $url = match (true) {
+            $kind === ViewingReminder::KIND => route('dashboard.viewings.index'),
+            $kind === TaskEvent::KIND && filled($data['task_id'] ?? null) => route('dashboard.tasks.index', ['task' => $data['task_id']]),
+            default => $this->onThisHost($data['url'] ?? null) ?? route('dashboard.clients.index'),
+        };
 
-        return redirect((string) $url);
+        return redirect($url);
+    }
+
+    /** يُبقي المسار والاستعلام فقط من أي رابط مخزّن، فيفتح دائمًا على المضيف الحالي */
+    private function onThisHost(?string $stored): ?string
+    {
+        if (! filled($stored)) {
+            return null;
+        }
+
+        $path = parse_url($stored, PHP_URL_PATH);
+
+        if (! $path) {
+            return $stored;
+        }
+
+        $query = parse_url($stored, PHP_URL_QUERY);
+
+        return url($path).($query ? '?'.$query : '');
     }
 
     /** تعليم إشعارات المستخدم نفسه كمقروءة (لا يحتاج صلاحية طلبات التواصل) */

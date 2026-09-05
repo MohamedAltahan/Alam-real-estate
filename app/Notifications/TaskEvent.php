@@ -31,8 +31,8 @@ class TaskEvent extends Notification
             'event' => $this->event,
             'task_id' => $this->task->id,
             'title' => $this->title(),
-            // الضغط على الإشعار يفتح اللوحة على المهمة نفسها
-            'url' => route('dashboard.tasks.index', ['task' => $this->task->id]),
+            // مسار نسبي: الرابط المطلق يبقى على مضيف اللحظة التي أُنشئ فيها
+            'url' => route('dashboard.tasks.index', ['task' => $this->task->id], absolute: false),
         ];
     }
 

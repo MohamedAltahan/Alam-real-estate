@@ -107,7 +107,8 @@ class ViewingReminderTest extends TestCase
         $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))->assertOk();
         $notification = $this->agent->notifications()->firstOrFail();
 
-        $this->assertSame(route('dashboard.viewings.index'), $notification->data['url']);
+        // مسار نسبي حتى لا يتجمّد الرابط على المضيف الذي أُنشئ منه الإشعار
+        $this->assertSame(route('dashboard.viewings.index', absolute: false), $notification->data['url']);
 
         $this->actingAs($this->agent)->get(route('dashboard.notifications.open', $notification->id))
             ->assertRedirect(route('dashboard.viewings.index'));

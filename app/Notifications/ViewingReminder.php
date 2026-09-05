@@ -31,8 +31,8 @@ class ViewingReminder extends Notification
             'client_name' => $client?->name,
             'property_ref' => $property?->reference_code,
             'scheduled_at' => $this->viewing->scheduled_at?->toIso8601String(),
-            // الضغط على الإشعار (من الجرس أو التنبيه المنبثق) يفتح صفحة المعاينات
-            'url' => route('dashboard.viewings.index'),
+            // الضغط على الإشعار (من الجرس أو التنبيه المنبثق) يفتح صفحة المعاينات — مسار نسبي
+            'url' => route('dashboard.viewings.index', absolute: false),
         ];
 
         // نص احتياطي وقت الإرسال — العرض يعيد حسابه من scheduled_at في كل مرة

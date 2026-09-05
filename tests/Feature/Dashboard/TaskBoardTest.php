@@ -245,6 +245,12 @@ class TaskBoardTest extends TestCase
             ->assertRedirect(route('dashboard.tasks.index', ['task' => $task->id]));
         $this->assertNotNull($notification->fresh()->read_at);
 
+        // إشعار قديم خُزّن برابط مطلق لمضيف آخر (منفذ تطوير) يُفتح على المضيف الحالي
+        $notification->forceFill(['data' => ['kind' => 'task', 'title' => 'قديم', 'url' => 'http://localhost:8123/dashboard/tasks?task='.$task->id]])->save();
+
+        $this->actingAs($assignee)->get(route('dashboard.notifications.open', $notification->id))
+            ->assertRedirect(route('dashboard.tasks.index', ['task' => $task->id]));
+
         $this->actingAs($assignee)->get(route('dashboard.notifications.poll'))
             ->assertOk()->assertJsonPath('items.0.kind', 'task');
     }
