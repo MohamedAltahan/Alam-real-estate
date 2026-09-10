@@ -37,7 +37,13 @@
     </x-filter-bar>
 
     <div data-results>
-        <p class="text-xs text-gray-400 mb-3">الفترة من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
+        <p class="text-xs text-gray-400 mb-3">الفترة من <bdi dir="ltr">{{ $report['from']->format('Y-m-d') }}</bdi> إلى <bdi dir="ltr">{{ $report['to']->format('Y-m-d') }}</bdi></p>
+        @if ($report['shortened'])
+            <p class="mb-3 rounded-field bg-warning-soft text-warning text-xs px-4 py-2.5">
+                الفترة المطلوبة أطول من {{ \App\Services\ViewingService::MAX_RANGE_MONTHS }} شهراً، فعُرضت أول {{ \App\Services\ViewingService::MAX_RANGE_MONTHS }} شهراً منها.
+                اختر فترة أقصر لعرض باقي المدة.
+            </p>
+        @endif
 
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-5">
             @foreach ($cards as $card)
@@ -75,7 +81,7 @@
                                 <td class="px-4 py-3">
                                     @if ($viewing->client)
                                         <a href="{{ route('dashboard.clients.show', $viewing->client) }}" class="font-semibold text-ink hover:text-primary-700">{{ $viewing->client->name }}</a>
-                                        <span class="block text-xs text-gray-400" dir="ltr">{{ $viewing->client->full_phone }}</span>
+                                        <span class="block text-xs text-gray-400"><bdi dir="ltr">{{ $viewing->client->full_phone }}</bdi></span>
                                     @else
                                         <span class="text-gray-400">—</span>
                                     @endif
@@ -84,7 +90,7 @@
                                     <span class="font-semibold text-ink" dir="ltr">{{ $viewing->property?->reference_code ?? '—' }}</span>
                                     <span class="block text-xs text-gray-400 truncate max-w-[200px]">{{ $viewing->property?->title }}</span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap" dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d h:i A') }}</td>
+                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap"><bdi dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d h:i A') }}</bdi></td>
                                 <td class="px-4 py-3 text-gray-600">{{ $agent?->name ?: '—' }}</td>
                                 <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span></td>
                                 <td class="px-4 py-3">

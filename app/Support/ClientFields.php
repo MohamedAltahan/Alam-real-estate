@@ -45,8 +45,9 @@ final class ClientFields
 
     public const OUTCOMES = [
         'pending' => 'قيد الانتظار',
-        'chosen' => 'اختار العقار',
+        'chosen' => 'تم اختيار العقار',
         'rejected' => 'لم يختر',
+        'vacated' => 'إخلاء العقار',
     ];
 
     /** ألوان شارة النتيجة (Tailwind) */
@@ -54,6 +55,7 @@ final class ClientFields
         'pending' => 'bg-warning-soft text-warning',
         'chosen' => 'bg-success-soft text-success',
         'rejected' => 'bg-danger/10 text-danger',
+        'vacated' => 'bg-gray-100 text-gray-500',
     ];
 
     /** تسمية كل عمود (عميل / احتياج / معاينة / تواصل) لسجل التعديلات والفورم */
@@ -74,6 +76,7 @@ final class ClientFields
         'rating' => 'التقييم',
         'notes' => 'الملاحظات',
         'recorded_by' => 'سجّل البيانات',
+        'is_featured' => 'طلب مميز',
         'unit_type_id' => 'نوع الوحدة',
         'city_id' => 'المحافظة',
         'area_id' => 'المنطقة',
@@ -82,6 +85,7 @@ final class ClientFields
         'in_person' => 'حضوري',
         'outcome' => 'النتيجة',
         'outcome_at' => 'تاريخ النتيجة',
+        'contract_ends_at' => 'تاريخ انتهاء العقد',
         'relation' => 'نوع الارتباط',
         'type' => 'نوع التواصل',
         'occurred_at' => 'التاريخ',
@@ -89,6 +93,8 @@ final class ClientFields
         'file' => 'الملف',
         'whatsapp_kind' => 'الرسالة',
         'whatsapp_to' => 'المستلم',
+        'whatsapp_error' => 'سبب الفشل',
+        'status' => 'حالة العقار',
     ];
 
     /** الأعمدة المرجعية → الموديل الذي يُقرأ منه الاسم عند العرض */
@@ -113,7 +119,7 @@ final class ClientFields
         'type' => self::INTERACTION_TYPES,
     ];
 
-    public const BOOLEANS = ['in_person'];
+    public const BOOLEANS = ['in_person', 'is_featured'];
 
     public const AUDIT_ACTIONS = [
         'created' => 'إنشاء العميل',
@@ -134,6 +140,8 @@ final class ClientFields
         'file_added' => 'إضافة ملف',
         'file_removed' => 'حذف ملف',
         'whatsapp_sent' => 'إرسال واتساب',
+        'whatsapp_failed' => 'فشل إرسال واتساب',
+        'property_status_synced' => 'مزامنة حالة العقار',
     ];
 
     public static function label(string $field): string

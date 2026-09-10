@@ -12,6 +12,17 @@
             "port": 8123
         },
         {
+            "name": "alam-auto",
+            "runtimeExecutable": "powershell",
+            "runtimeArgs": [
+                "-NoProfile",
+                "-Command",
+                "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')+';'+[Environment]::GetEnvironmentVariable('Path','User'); php artisan serve --port=$env:PORT"
+            ],
+            "port": 8123,
+            "autoPort": true
+        },
+        {
             "name": "alam-lan",
             "runtimeExecutable": "powershell",
             "runtimeArgs": [

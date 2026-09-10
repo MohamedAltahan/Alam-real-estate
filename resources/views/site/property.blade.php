@@ -35,6 +35,8 @@
         'مرحباً، أود الاستفسار عن العقار رقم '.$p->reference_code,
         'Hello, I would like to ask about property '.$p->reference_code,
     );
+    // شارة «مشغول / مباع» الحمراء — تظهر فقط عند تفعيل الإعداد العام من «التفضيلات»
+    $badge = $p->publicBadge();
 @endphp
 
 @section('title', $p->title)
@@ -46,7 +48,12 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-8">
     {{-- العنوان + مشاركة --}}
     <div class="flex items-center justify-between gap-4 mb-5">
-        <h1 class="text-2xl sm:text-3xl font-bold text-ink">{{ $p->title }}</h1>
+        <div class="flex items-center gap-3 min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-bold text-ink">{{ $p->title }}</h1>
+            @if ($badge)
+                <span data-badge="{{ $badge['key'] }}" class="shrink-0 rounded-full bg-danger text-white text-xs sm:text-sm font-extrabold px-4 py-1.5">{{ $t($badge['ar'], $badge['en']) }}</span>
+            @endif
+        </div>
         <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-800 shrink-0 transition">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
             {{ $t('مشاركة', 'Share') }}
@@ -85,7 +92,7 @@
         {{-- المحتوى --}}
         <div class="lg:col-span-2 space-y-8">
             <div>
-                <p class="text-sm font-bold text-accent-600 mb-2" dir="ltr">{{ $p->reference_code }}</p>
+                <p class="text-sm font-bold text-accent-600 mb-2"><bdi dir="ltr">{{ $p->reference_code }}</bdi></p>
                 <div class="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <div class="flex items-center gap-2 mb-2">

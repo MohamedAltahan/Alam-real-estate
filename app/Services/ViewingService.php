@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * صفحة المعاينات وتقرير معدل التحول.
@@ -17,6 +18,9 @@ class ViewingService
 {
     public const FILTER_KEYS = ['from', 'to', 'agent_id', 'outcome', 'search'];
 
+    /** أقصى طول للفترة — الرسم الشهري يبني عموداً لكل شهر */
+    public const MAX_RANGE_MONTHS = 24;
+
     /** فلاتر تقرير واتساب المعاينات */
     public const WA_STATES = [
         'complete' => 'مكتملة (أُبلغ المالك وأُرسلت المتابعة)',
@@ -24,7 +28,7 @@ class ViewingService
         'missing_client' => 'لم تُرسل المتابعة',
     ];
 
-    public function __construct(private ClientAuditLogger $audit) {}
+    public function __construct(private ClientAuditLogger $audit, private ViewingOutcomeSync $sync) {}
 
     public function paginate(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
@@ -32,7 +36,7 @@ class ViewingService
             ->with([
                 'client:id,name,agent_id,phone_code,phone',
                 'client.agent:id,name,phone',
-                'property:id,reference_code,title,agent_id,area_id,owner_id,building_name',
+                'property:id,reference_code,title,agent_id,area_id,owner_id,building_name,purpose',
                 'property.agent:id,name,phone',
                 'property.area:id,name',
                 'property.owner.contacts',
@@ -55,41 +59,82 @@ class ViewingService
             ->withQueryString();
     }
 
-    /** تحديث نتيجة المعاينة من صفحة المعاينات (اختار / لم يختر / قيد الانتظار) */
-    public function updateOutcome(ClientViewing $viewing, string $outcome, ?string $notes = null): ClientViewing
+    /**
+     * تحديث نتيجة المعاينة من الجداول (تم اختيار العقار / لم يختر / إخلاء / قيد الانتظار).
+     * يتبعه أثر النتيجة على العميل والعقار (ViewingOutcomeSync) في المعاملة نفسها.
+     */
+    public function updateOutcome(ClientViewing $viewing, string $outcome, ?string $notes = null, ?string $contractEndsAt = null): ClientViewing
     {
-        $viewing->fill(['outcome' => $outcome]);
+        return DB::transaction(function () use ($viewing, $outcome, $notes, $contractEndsAt) {
+            $previous = $viewing->outcome;
+            $viewing->fill(['outcome' => $outcome]);
 
-        if ($notes !== null) {
-            $viewing->notes = $notes;
-        }
+            if ($outcome === ClientViewing::OUTCOME_CHOSEN && $contractEndsAt !== null) {
+                $viewing->contract_ends_at = $contractEndsAt;
+            } elseif (in_array($outcome, [ClientViewing::OUTCOME_PENDING, ClientViewing::OUTCOME_REJECTED], true)) {
+                $viewing->contract_ends_at = null; // «إخلاء العقار» يحتفظ بالتاريخ كسجل
+            }
 
-        if ($viewing->isDirty('outcome')) {
-            $viewing->outcome_at = $outcome === ClientViewing::OUTCOME_PENDING ? null : now();
-        }
+            if ($notes !== null) {
+                $viewing->notes = $notes;
+            }
 
-        $changes = $this->audit->changes($viewing, $viewing->getDirty(), ['outcome_at', 'created_at', 'updated_at']);
+            if ($viewing->isDirty('outcome')) {
+                $viewing->outcome_at = $outcome === ClientViewing::OUTCOME_PENDING ? null : now();
+            }
 
-        if ($viewing->isDirty()) {
+            $changes = $this->audit->changes($viewing, $viewing->getDirty(), ['outcome_at', 'created_at', 'updated_at']);
+
+            if ($viewing->isDirty()) {
+                $viewing->save();
+            }
+
+            if ($changes) {
+                $this->audit->record($viewing->client, 'outcome_updated', $viewing, $changes);
+            }
+
+            $this->sync->apply($viewing, $previous);
+
+            return $viewing;
+        });
+    }
+
+    /**
+     * الفحص اليومي: «تم اختيار العقار» الذي انتهى عقده يصبح «إخلاء العقار» فيتحرر العقار لعملاء آخرين.
+     * يُستدعى من الأمر viewings:vacate-expired ومن نقطة الاستطلاع مرة كل يوم.
+     */
+    public function vacateExpired(): int
+    {
+        $expired = ClientViewing::query()
+            ->with(['client', 'property.status'])
+            ->where('outcome', ClientViewing::OUTCOME_CHOSEN)
+            ->whereNotNull('contract_ends_at')
+            ->where('contract_ends_at', '<', today())
+            ->get();
+
+        foreach ($expired as $viewing) {
+            $viewing->fill(['outcome' => ClientViewing::OUTCOME_VACATED]);
+            $viewing->outcome_at = now();
+
+            $changes = $this->audit->changes($viewing, $viewing->getDirty(), ['outcome_at', 'created_at', 'updated_at']);
             $viewing->save();
-        }
-
-        if ($changes) {
             $this->audit->record($viewing->client, 'outcome_updated', $viewing, $changes);
+
+            $this->sync->apply($viewing, ClientViewing::OUTCOME_CHOSEN);
         }
 
-        return $viewing;
+        return $expired->count();
     }
 
     /**
      * تقرير معدل التحول: نسبة المعاينات التي انتهت باختيار العقار.
      * المعدل = اختار ÷ (اختار + لم يختر)، والمعاينات قيد الانتظار خارج المقام.
      *
-     * @return array{from:CarbonImmutable, to:CarbonImmutable, kpis:array, byAgent:Collection, monthly:array}
+     * @return array{from:CarbonImmutable, to:CarbonImmutable, shortened:bool, kpis:array, byAgent:Collection, monthly:array}
      */
     public function conversionReport(array $filters = []): array
     {
-        [$from, $to] = $this->range($filters);
+        [$from, $to, $shortened] = $this->range($filters);
 
         $agentFilter = filled($filters['agent_id'] ?? null) ? (int) $filters['agent_id'] : null;
 
@@ -115,6 +160,7 @@ class ViewingService
         return [
             'from' => $from,
             'to' => $to,
+            'shortened' => $shortened,
             'kpis' => $this->kpis($viewings),
             'byAgent' => $viewings
                 ->groupBy(fn (array $row) => (string) ($row['agent_id'] ?? 0))
@@ -133,11 +179,11 @@ class ViewingService
      * تقرير واتساب المعاينات: لكل معاينة علامتان — إبلاغ المالك ببيانات العميل، وإرسال المتابعة للعميل.
      * «مكتملة» = العلامتان معاً.
      *
-     * @return array{from:CarbonImmutable, to:CarbonImmutable, kpis:array<string,int>, rows:Collection<int, ClientViewing>}
+     * @return array{from:CarbonImmutable, to:CarbonImmutable, shortened:bool, kpis:array<string,int>, rows:Collection<int, ClientViewing>}
      */
     public function whatsappReport(array $filters = []): array
     {
-        [$from, $to] = $this->range($filters);
+        [$from, $to, $shortened] = $this->range($filters);
         $agentFilter = filled($filters['agent_id'] ?? null) ? (int) $filters['agent_id'] : null;
 
         $all = ClientViewing::query()
@@ -166,6 +212,7 @@ class ViewingService
         return [
             'from' => $from,
             'to' => $to,
+            'shortened' => $shortened,
             'kpis' => [
                 'total' => $all->count(),
                 'complete' => $all->filter($complete)->count(),
@@ -181,7 +228,11 @@ class ViewingService
     /**
      * نطاق التقرير: الافتراضي آخر 6 أشهر، والحد الأقصى سنتان حتى لا نحمّل كل الجدول.
      *
-     * @return array{0:CarbonImmutable, 1:CarbonImmutable}
+     * الفترة الأطول من الحد تُقصَّر من تاريخ البداية الذي اختاره المستخدم (لا من النهاية)،
+     * فتبقى النافذة عند بداية ما طلبه بدل أن تقفز إلى نهايةٍ قد تكون في المستقبل بلا بيانات.
+     * العنصر الثالث يخبر الواجهة أن التقصير حدث لتعرض تنبيهاً بدل تغيير الفترة بصمت.
+     *
+     * @return array{0:CarbonImmutable, 1:CarbonImmutable, 2:bool}
      */
     private function range(array $filters): array
     {
@@ -193,17 +244,23 @@ class ViewingService
             [$from, $to] = [$to->startOfDay(), $from->endOfDay()];
         }
 
-        if ($from->diffInMonths($to) > 24) {
-            $from = $to->subMonths(24)->startOfMonth();
+        $shortened = $from->diffInMonths($to) > self::MAX_RANGE_MONTHS;
+
+        if ($shortened) {
+            $to = $from->addMonths(self::MAX_RANGE_MONTHS)->endOfMonth();
         }
 
-        return [$from, $to];
+        return [$from, $to, $shortened];
     }
 
-    /** @return array{total:int, chosen:int, rejected:int, pending:int, decided:int, rate:int} */
+    /**
+     * «تم اختيار العقار» يشمل من أخلى العقار لاحقاً — الاختيار حصل فعلاً.
+     *
+     * @return array{total:int, chosen:int, rejected:int, pending:int, decided:int, rate:int}
+     */
     private function kpis(Collection $rows): array
     {
-        $chosen = $rows->where('outcome', ClientViewing::OUTCOME_CHOSEN)->count();
+        $chosen = $rows->whereIn('outcome', [ClientViewing::OUTCOME_CHOSEN, ClientViewing::OUTCOME_VACATED])->count();
         $rejected = $rows->where('outcome', ClientViewing::OUTCOME_REJECTED)->count();
         $decided = $chosen + $rejected;
 

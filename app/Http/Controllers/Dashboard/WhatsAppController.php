@@ -33,7 +33,25 @@ class WhatsAppController extends Controller
             'placeholders' => WhatsAppTemplates::PLACEHOLDERS,
             'messages' => WhatsappMessage::with(['client', 'viewing.property', 'sender'])
                 ->latest('id')->paginate(20, ['*'], 'page')->withQueryString(),
+            // رصيد الباقة كما يظهر في لوحة تحكم البوابة (المُرسل والمتبقي)
+            'usage' => $this->whatsapp->usage(),
+            // رابط الويب هوك الذي يُسجَّل في لوحة البوابة لتحديث حالات الرسائل لحظياً
+            'webhook' => [
+                'url' => route('webhooks.khabeersoft'),
+                'configured' => filled(config('services.khabeersoft.webhook_secret')),
+            ],
         ]);
+    }
+
+    /** زر «تحديث الحالات» في سجل الرسائل: يسأل البوابة عن الرسائل المعلّقة والرصيد الآن */
+    public function refreshStatuses(): RedirectResponse
+    {
+        $updated = $this->whatsapp->refreshMessageStatuses(force: true);
+        $this->whatsapp->usage(fresh: true);
+
+        return redirect()
+            ->route('dashboard.whatsapp.index', ['tab' => 'messages'])
+            ->with('success', $updated ? "تم تحديث حالة {$updated} رسالة." : 'لا توجد تحديثات جديدة من البوابة.');
     }
 
     /** إنشاء جلسة في البوابة (أو تبنّي الموجودة) ثم عرض الـ QR */

@@ -35,7 +35,7 @@ class RolePermissionSeeder extends Seeder
             'property-manager' => [
                 'description' => 'مدير العقارات',
                 'perms' => array_merge(
-                    $this->forModules(['properties', 'property_owners', 'areas', 'unit_types', 'publishing_channels', 'tasks', 'whatsapp']),
+                    $this->forModules(['properties', 'property_owners', 'field_owners', 'areas', 'unit_types', 'publishing_channels', 'tasks', 'whatsapp']),
                     $this->view(['clients', 'contact_requests', 'dashboard', 'notifications', 'reports'])
                 ),
             ],
@@ -44,7 +44,7 @@ class RolePermissionSeeder extends Seeder
                 'perms' => array_merge(
                     $this->forModules(['clients']),
                     $this->view(['properties', 'contact_requests', 'dashboard', 'notifications', 'reports']),
-                    $this->work(['tasks'])
+                    $this->work(['tasks', 'field_owners'])
                 ),
             ],
             'marketing-staff' => [

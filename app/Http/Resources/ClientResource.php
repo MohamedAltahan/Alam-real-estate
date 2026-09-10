@@ -18,6 +18,7 @@ class ClientResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->email,
             'rating' => $this->rating,
+            'is_featured' => (bool) $this->is_featured,
             'area' => $this->whenLoaded('area', fn () => $this->area?->name),
             'type' => $this->whenLoaded('type', fn () => $this->type?->name),
             'stage' => $this->whenLoaded('stage', fn () => [

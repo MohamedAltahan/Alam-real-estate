@@ -38,9 +38,17 @@ class ViewingController extends Controller
         $data = $request->validate([
             'outcome' => ['required', Rule::in(array_keys(ClientFields::OUTCOMES))],
             'notes' => ['nullable', 'string', 'max:2000'],
+            // «تم اختيار العقار» لعقار إيجار يحتاج تاريخ انتهاء العقد (الفحص اليومي يعتمد عليه)
+            'contract_ends_at' => [
+                'nullable', 'date_format:Y-m-d',
+                Rule::requiredIf(fn () => $request->input('outcome') === ClientViewing::OUTCOME_CHOSEN && $viewing->property?->purpose === 'rent'),
+            ],
+        ], [
+            'contract_ends_at.required' => 'حدّد تاريخ انتهاء العقد للعقار المختار.',
+            'contract_ends_at.date_format' => 'صيغة تاريخ انتهاء العقد غير صحيحة.',
         ]);
 
-        $this->viewings->updateOutcome($viewing, $data['outcome'], $data['notes'] ?? null);
+        $this->viewings->updateOutcome($viewing, $data['outcome'], $data['notes'] ?? null, $data['contract_ends_at'] ?? null);
 
         return back()->with('success', 'تم تحديث نتيجة المعاينة.');
     }

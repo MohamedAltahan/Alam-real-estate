@@ -124,6 +124,65 @@ class ViewingsPageAndReportTest extends TestCase
         return $user;
     }
 
+    public function test_report_range_longer_than_the_cap_is_shortened_from_the_start_date(): void
+    {
+        $manager = $this->userWith(['reports.view']);
+        $this->viewing('ع1', null, now()->subDays(2), ClientViewing::OUTCOME_CHOSEN);
+
+        $from = now()->subMonths(6)->format('Y-m-d');
+        $to = now()->addYears(4)->format('Y-m-d');
+
+        $report = $this->actingAs($manager)
+            ->get(route('dashboard.reports.conversion', ['from' => $from, 'to' => $to]))
+            ->assertOk()
+            ->viewData('report');
+
+        // البداية تبقى كما اختارها المستخدم، والنهاية تُقصَّر — لا نافذة في المستقبل بلا بيانات
+        $this->assertTrue($report['shortened']);
+        $this->assertSame($from, $report['from']->format('Y-m-d'));
+        $this->assertTrue($report['to']->lt(now()->addYears(4)));
+        $this->assertSame(1, $report['kpis']['chosen']);
+
+        // التنبيه يظهر للمستخدم بدل تغيير الفترة بصمت
+        $this->actingAs($manager)
+            ->get(route('dashboard.reports.conversion', ['from' => $from, 'to' => $to]))
+            ->assertSee('الفترة المطلوبة أطول من', false);
+    }
+
+    public function test_report_range_within_the_cap_is_left_alone(): void
+    {
+        $manager = $this->userWith(['reports.view']);
+        $this->viewing('ع1', null, now()->subDays(2), ClientViewing::OUTCOME_CHOSEN);
+
+        $from = now()->subMonths(3)->format('Y-m-d');
+        $to = now()->format('Y-m-d');
+
+        $report = $this->actingAs($manager)
+            ->get(route('dashboard.reports.conversion', ['from' => $from, 'to' => $to]))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertFalse($report['shortened']);
+        $this->assertSame($from, $report['from']->format('Y-m-d'));
+        $this->assertSame($to, $report['to']->format('Y-m-d'));
+
+        $this->actingAs($manager)
+            ->get(route('dashboard.reports.conversion', ['from' => $from, 'to' => $to]))
+            ->assertDontSee('الفترة المطلوبة أطول من', false);
+    }
+
+    public function test_whatsapp_report_reports_the_same_shortening_flag(): void
+    {
+        $manager = $this->userWith(['reports.view']);
+
+        $report = $this->actingAs($manager)
+            ->get(route('dashboard.reports.viewings', ['from' => now()->subMonth()->format('Y-m-d'), 'to' => now()->addYears(4)->format('Y-m-d')]))
+            ->assertOk()
+            ->viewData('report');
+
+        $this->assertTrue($report['shortened']);
+    }
+
     private function viewing(string $clientName, ?User $agent, $at, string $outcome = ClientViewing::OUTCOME_PENDING): ClientViewing
     {
         $client = Client::create(['name' => $clientName, 'phone_code' => '+965', 'phone' => (string) random_int(50000000, 59999999), 'agent_id' => $agent?->id]);

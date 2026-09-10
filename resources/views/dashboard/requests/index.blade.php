@@ -12,6 +12,7 @@
             <h2 class="text-xl font-bold text-ink">صندوق الوارد</h2>
             <p class="text-sm text-gray-500">{{ number_format($requests->total()) }} طلب · <span class="text-danger">{{ $unreadCount }} غير مقروء</span></p>
         </div>
+        @include('dashboard.requests._tabs', ['tab' => 'inbox', 'counts' => $tabCounts])
     </div>
 
     <x-filter-bar id="requests-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.requests.index') : null">
@@ -22,13 +23,15 @@
     </x-filter-bar>
 
     <div data-results>
+    @php $me = auth()->user(); @endphp
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         @forelse ($requests as $req)
-            <div class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $req->is_read ? '' : 'ring-1 ring-primary-200' }}">
+            @php $isRead = $req->isReadBy($me); @endphp
+            <div class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $isRead ? '' : 'ring-1 ring-primary-200' }}">
                 <div class="flex-1">
                 <div class="flex items-start justify-between gap-2 mb-3">
                     <div class="flex items-center gap-2">
-                        @unless ($req->is_read)<span class="w-2 h-2 rounded-full bg-primary-600"></span>@endunless
+                        @unless ($isRead)<span class="w-2 h-2 rounded-full bg-primary-600"></span>@endunless
                         <span class="rounded-full bg-info-soft text-info px-2.5 py-0.5 text-xs font-medium">{{ $req->requestType?->name ?? 'طلب' }}</span>
                     </div>
                     @if ($req->status === 'contacted')

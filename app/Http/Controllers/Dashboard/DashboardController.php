@@ -38,19 +38,23 @@ class DashboardController extends Controller
         $wonId = $canClients ? ClientStage::where('key', 'closed_won')->value('id') : null;
 
         // ===== الصفقات المغلقة + الإيرادات (عقارات مباعة) =====
+        // تاريخ الصفقة = sold_at (يضبطه PropertyObserver عند البيع) لا updated_at الذي يتحرك مع أي تعديل
         $sold = $soldId
-            ? Property::where('status_id', $soldId)->get(['price', 'updated_at'])
+            ? Property::where('status_id', $soldId)->get(['price', 'sold_at', 'created_at'])
+                ->map(fn (Property $p) => ['price' => (float) $p->price, 'sold_at' => $p->sold_at ?? $p->created_at])
             : collect();
 
-        $soldThisMonth = $sold->where('updated_at', '>=', $monthStart);
-        $soldPrevMonth = $sold->whereBetween('updated_at', [$prevStart, $monthStart]);
+        $soldThisMonth = $sold->where('sold_at', '>=', $monthStart);
+        $soldPrevMonth = $sold->whereBetween('sold_at', [$prevStart, $monthStart]);
 
         // ===== بطاقات المؤشرات =====
         $properties = $canProperties ? Property::get(['id', 'created_at']) : collect();
-        $clients = $canClients ? Client::get(['id', 'created_at', 'updated_at', 'stage_id']) : collect();
-        $wonClients = $wonId ? $clients->where('stage_id', $wonId) : collect();
-        $wonThisMonth = $wonClients->where('updated_at', '>=', $monthStart);
-        $wonPrevMonth = $wonClients->whereBetween('updated_at', [$prevStart, $monthStart]);
+        $clients = $canClients ? Client::get(['id', 'created_at', 'won_at', 'stage_id']) : collect();
+        $wonClients = $wonId
+            ? $clients->where('stage_id', $wonId)->map(fn (Client $c) => ['won_at' => $c->won_at ?? $c->created_at])
+            : collect();
+        $wonThisMonth = $wonClients->where('won_at', '>=', $monthStart);
+        $wonPrevMonth = $wonClients->whereBetween('won_at', [$prevStart, $monthStart]);
 
         $stats = [
             [
@@ -112,7 +116,7 @@ class DashboardController extends Controller
                 'labels' => $revenueMonths->pluck('label'),
                 'currency' => $currency,
                 'data' => $revenueMonths->map(fn ($m) => round(
-                    (float) $sold->whereBetween('updated_at', [$m['from'], $m['to']])->sum('price') / 1000, 1
+                    (float) $sold->whereBetween('sold_at', [$m['from'], $m['to']])->sum('price') / 1000, 1
                 )),
             ],
             // العملاء (الطلبات) حسب الشهر
@@ -137,7 +141,7 @@ class DashboardController extends Controller
 
         // ===== قوائم أسفل الصفحة =====
         $latestRequests = $canRequests
-            ? ContactRequest::with('requestType')->latest()->take(5)->get()
+            ? ContactRequest::with('requestType')->withReadBy($user)->latest()->take(5)->get()
             : collect();
         $latestProperties = $canProperties
             ? Property::with(['area', 'status'])->latest()->take(5)->get()

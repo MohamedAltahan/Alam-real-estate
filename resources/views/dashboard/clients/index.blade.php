@@ -338,8 +338,12 @@
                                             <span
                                                 class="grid place-items-center w-9 h-9 rounded-full bg-primary-100 text-primary-700 font-bold">{{ mb_substr($c->name, 0, 1) }}</span>
                                             <span class="min-w-0">
-                                                <span
-                                                    class="block font-semibold text-ink truncate">{{ $c->name }}</span>
+                                                <span class="flex items-center gap-1.5 min-w-0">
+                                                    <span class="font-semibold text-ink truncate">{{ $c->name }}</span>
+                                                    @if ($c->is_featured)
+                                                        <span class="shrink-0 text-accent-500" title="طلب مميز"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+                                                    @endif
+                                                </span>
                                                 <span class="block text-xs text-gray-400 truncate"><span
                                                         dir="ltr">{{ $c->email ?: '—' }}</span></span>
                                             </span>

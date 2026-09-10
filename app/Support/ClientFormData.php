@@ -30,7 +30,7 @@ final class ClientFormData
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get()
                 ->map(fn (UnitType $type) => ['id' => $type->id, 'name' => $type->name])->values()->all(),
             'countries' => PhoneCountries::all(),
-            'lookupUrl' => route('dashboard.clients.property-lookup'),
+            'lookupUrl' => route('dashboard.clients.property-lookup', $client ? ['client' => $client->id] : []),
         ];
     }
 
@@ -63,29 +63,36 @@ final class ClientFormData
 
         if (is_array($old)) {
             $ids = collect($old)->pluck('property_id')->filter()->unique()->values();
-            $labels = $ids->isEmpty()
+            $properties = $ids->isEmpty()
                 ? collect()
-                : Property::whereIn('id', $ids)->get(['id', 'reference_code', 'title'])
-                    ->mapWithKeys(fn (Property $p) => [$p->id => self::propertyLabel($p)]);
+                : Property::whereIn('id', $ids)->get(['id', 'reference_code', 'title', 'purpose'])->keyBy('id');
 
-            return array_values(array_map(fn ($row) => [
-                'id' => (string) ($row['id'] ?? ''),
-                'property_id' => (string) ($row['property_id'] ?? ''),
-                'property_label' => $labels[(int) ($row['property_id'] ?? 0)] ?? '',
-                'scheduled_at' => (string) ($row['scheduled_at'] ?? ''),
-                'in_person' => (string) ($row['in_person'] ?? '1'),
-                'outcome' => (string) ($row['outcome'] ?? 'pending'),
-                'notes' => (string) ($row['notes'] ?? ''),
-            ], $old));
+            return array_values(array_map(function ($row) use ($properties) {
+                $property = $properties[(int) ($row['property_id'] ?? 0)] ?? null;
+
+                return [
+                    'id' => (string) ($row['id'] ?? ''),
+                    'property_id' => (string) ($row['property_id'] ?? ''),
+                    'property_label' => $property ? self::propertyLabel($property) : '',
+                    'property_purpose' => (string) ($property?->purpose ?? ''),
+                    'scheduled_at' => (string) ($row['scheduled_at'] ?? ''),
+                    'in_person' => (string) ($row['in_person'] ?? '1'),
+                    'outcome' => (string) ($row['outcome'] ?? 'pending'),
+                    'contract_ends_at' => (string) ($row['contract_ends_at'] ?? ''),
+                    'notes' => (string) ($row['notes'] ?? ''),
+                ];
+            }, $old));
         }
 
         return $client?->viewings->map(fn (ClientViewing $viewing) => [
             'id' => (string) $viewing->id,
             'property_id' => (string) $viewing->property_id,
             'property_label' => $viewing->property ? self::propertyLabel($viewing->property) : '',
+            'property_purpose' => (string) ($viewing->property?->purpose ?? ''),
             'scheduled_at' => $viewing->scheduled_at?->format('Y-m-d H:i') ?? '',
             'in_person' => $viewing->in_person ? '1' : '0',
             'outcome' => $viewing->outcome,
+            'contract_ends_at' => $viewing->contract_ends_at?->format('Y-m-d') ?? '',
             'notes' => (string) ($viewing->notes ?? ''),
         ])->values()->all() ?? [];
     }

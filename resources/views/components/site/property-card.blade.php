@@ -17,6 +17,8 @@
         : $t(' للبيع', ' for sale');
     // معرض صور الكارت: الغلاف + صور العقار (بدون تكرار)
     $gallery = collect($p->gallery_urls);
+    // شارة «مشغول / مباع» الحمراء — تظهر فقط عند تفعيل الإعداد العام من «التفضيلات»
+    $badge = $p->publicBadge();
 @endphp
 
 <div data-property-url="{{ route('site.property', $p) }}"
@@ -50,8 +52,15 @@
                 @endforeach
             </div>
         @endif
-        @if ($p->is_featured)
-            <span class="absolute top-3 start-3 z-10 rounded-full bg-white/35 backdrop-blur-md border border-white/60 text-primary-900 text-xs font-extrabold px-4 py-1.5 shadow-lg shadow-primary-950/10">{{ $t('سعر مميز', 'Featured') }}</span>
+        @if ($badge || $p->is_featured)
+            <div class="absolute top-3 start-3 z-10 flex items-center gap-2">
+                @if ($badge)
+                    <span data-badge="{{ $badge['key'] }}" class="rounded-full bg-danger text-white text-xs font-extrabold px-4 py-1.5 shadow-lg">{{ $t($badge['ar'], $badge['en']) }}</span>
+                @endif
+                @if ($p->is_featured)
+                    <span class="rounded-full bg-white/35 backdrop-blur-md border border-white/60 text-primary-900 text-xs font-extrabold px-4 py-1.5 shadow-lg shadow-primary-950/10">{{ $t('سعر مميز', 'Featured') }}</span>
+                @endif
+            </div>
         @endif
         <button type="button" class="absolute top-3 end-3 z-10 grid place-items-center w-9 h-9 rounded-full bg-white/35 backdrop-blur-md border border-white/60 text-primary-900 hover:bg-white/55 shadow-lg shadow-primary-950/10 transition" aria-label="{{ $t('مشاركة', 'Share') }}">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg>

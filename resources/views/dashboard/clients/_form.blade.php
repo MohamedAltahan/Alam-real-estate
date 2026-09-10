@@ -103,6 +103,15 @@
                     @foreach ($agents as $user)<option value="{{ $user->id }}" @selected(old('agent_id', $client?->agent_id) == $user->id)>{{ $user->name }}</option>@endforeach
                 </select>
             </div>
+            {{-- طلب مميز: يظهر في تبويب «الطلبات المميزة» بشاشة طلبات التواصل --}}
+            <div class="sm:pt-7">
+                <input type="hidden" name="is_featured" value="0">
+                <label class="flex items-center gap-2.5 rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-700 cursor-pointer select-none">
+                    <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $client?->is_featured)) class="w-4 h-4 rounded border-gray-300 text-primary-700 focus:ring-primary-500/30">
+                    <span class="font-medium">طلب مميز</span>
+                </label>
+                @error('is_featured')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+            </div>
         </div>
 
         <div class="flex items-center justify-between gap-3 mb-3">

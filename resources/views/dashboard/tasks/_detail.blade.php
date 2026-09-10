@@ -10,7 +10,7 @@
 
 <div class="sticky top-0 z-10 bg-white flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-100">
     <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-400 tabular-nums" dir="ltr">#{{ $task->id }}</p>
+        <p class="text-xs font-bold text-gray-400 tabular-nums"><bdi dir="ltr">#{{ $task->id }}</bdi></p>
         <h3 class="font-bold text-ink text-lg leading-snug {{ $done ? 'line-through text-gray-400' : '' }}" dir="auto">{{ $task->title }}</h3>
         <div class="flex flex-wrap items-center gap-2 mt-2">
             <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-bold text-gray-700">
@@ -70,7 +70,7 @@
         </div>
         <div>
             <dt class="text-[11px] font-semibold text-gray-400 mb-1">تاريخ الاستحقاق</dt>
-            <dd class="font-semibold {{ $overdue ? 'text-danger' : 'text-ink' }}" dir="ltr">{{ $task->due_date?->format('Y-m-d') ?? '—' }}</dd>
+            <dd class="font-semibold {{ $overdue ? 'text-danger' : 'text-ink' }}"><bdi dir="ltr">{{ $task->due_date?->format('Y-m-d') ?? '—' }}</bdi></dd>
         </div>
         <div>
             <dt class="text-[11px] font-semibold text-gray-400 mb-1">العقار المرتبط</dt>
@@ -84,11 +84,11 @@
         </div>
         <div>
             <dt class="text-[11px] font-semibold text-gray-400 mb-1">تاريخ الإنشاء</dt>
-            <dd class="font-semibold text-ink" dir="ltr">{{ $task->created_at?->format('Y-m-d H:i') }}</dd>
+            <dd class="font-semibold text-ink"><bdi dir="ltr">{{ $task->created_at?->format('Y-m-d H:i') }}</bdi></dd>
         </div>
         <div>
             <dt class="text-[11px] font-semibold text-gray-400 mb-1">تاريخ الإنجاز</dt>
-            <dd class="font-semibold text-ink" dir="ltr">{{ $task->completed_at?->format('Y-m-d H:i') ?? '—' }}</dd>
+            <dd class="font-semibold text-ink"><bdi dir="ltr">{{ $task->completed_at?->format('Y-m-d H:i') ?? '—' }}</bdi></dd>
         </div>
     </dl>
 

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\ClientStage;
 use App\Models\ClientType;
 use App\Models\ContactRequest;
 use App\Models\MarketingSource;
 use App\Models\RequestType;
 use App\Models\User;
+use App\Services\ClientService;
 use App\Services\ContactRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,12 +18,13 @@ use Illuminate\View\View;
 
 class ContactRequestController extends Controller
 {
-    public function __construct(private ContactRequestService $service) {}
+    public function __construct(private ContactRequestService $service, private ClientService $clients) {}
 
     public function index(Request $request): View
     {
         $requests = ContactRequest::query()
             ->with(['requestType', 'property', 'handledBy', 'convertedClient'])
+            ->withReadBy($request->user())
             ->when($request->type_id, fn ($q, $v) => $q->where('request_type_id', $v))
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->latest()
@@ -32,7 +35,8 @@ class ContactRequestController extends Controller
             'requests' => $requests,
             'types' => RequestType::where('is_active', true)->get(),
             'filters' => $request->only('type_id', 'status'),
-            'unreadCount' => ContactRequest::where('is_read', false)->count(),
+            'unreadCount' => ContactRequest::unreadFor($request->user())->count(),
+            'tabCounts' => $this->tabCounts(),
             // بيانات مودال التحويل لعميل
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'sources' => MarketingSource::orderBy('name')->get(['id', 'name']),
@@ -46,6 +50,29 @@ class ContactRequestController extends Controller
         ]);
     }
 
+    /** تبويب «الطلبات المميزة»: العملاء المعلَّمون «طلب مميز» من فورم العميل */
+    public function featured(Request $request): View
+    {
+        $filters = $request->only(ClientService::FEATURED_FILTER_KEYS);
+
+        return view('dashboard.requests.featured', [
+            'clients' => $this->clients->paginateFeatured($filters),
+            'stages' => $this->clients->stages(),
+            'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
+            'filters' => $filters,
+            'tabCounts' => $this->tabCounts(),
+        ]);
+    }
+
+    /** أعداد التبويبين (صندوق الوارد · الطلبات المميزة) بلا فلاتر */
+    private function tabCounts(): array
+    {
+        return [
+            'inbox' => ContactRequest::count(),
+            'featured' => Client::featured()->count(),
+        ];
+    }
+
     public function markContacted(Request $request, ContactRequest $contactRequest): RedirectResponse
     {
         abort_unless($request->user()->can('contact_requests.edit'), 403);
@@ -53,16 +80,6 @@ class ContactRequestController extends Controller
         $contactRequest->markContacted($request->user()->id);
 
         return back()->with('success', 'تم تعليم الطلب كمتواصل معه.');
-    }
-
-    public function markRead(Request $request, ContactRequest $contactRequest): RedirectResponse
-    {
-        abort_unless($request->user()->can('contact_requests.view'), 403);
-
-        $contactRequest->is_read = true;
-        $contactRequest->save();
-
-        return back();
     }
 
     /** تحويل الطلب إلى عميل في الـ CRM */

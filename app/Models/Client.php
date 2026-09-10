@@ -25,12 +25,15 @@ class Client extends Model implements HasMedia
         'name', 'phone_code', 'phone', 'email', 'type_id',
         'stage_id', 'agent_id', 'source_id', 'rating', 'notes',
         'social_status', 'nationality', 'household_size',
-        'workplace', 'preferred_contact', 'recorded_by',
+        'workplace', 'preferred_contact', 'recorded_by', 'is_featured',
     ];
 
     protected $casts = [
         'rating' => 'integer',
         'household_size' => 'integer',
+        'is_featured' => 'boolean',
+        // تاريخ الربح الفعلي — يضبطه ClientObserver عند الانتقال إلى «ربح» (ليس fillable)
+        'won_at' => 'datetime',
     ];
 
     public function type(): BelongsTo
@@ -90,6 +93,12 @@ class Client extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    /** الطلبات المميزة — تبويب في شاشة طلبات التواصل */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
     // ===== Accessors =====
 
     /** "+965 55112233" */
@@ -107,8 +116,6 @@ class Client extends Model implements HasMedia
     /** نص منسق لنسخ بيانات العميل ومشاركتها في رسالة عادية. */
     public function shareText(): string
     {
-        $propertyRefs = $this->properties->pluck('reference_code')->filter()->implode('، ');
-
         $needs = $this->needs->map(fn (ClientPropertyNeed $need) => '• '.$need->describe())->implode("\n");
 
         $viewings = $this->viewings->map(function (ClientViewing $viewing) {
@@ -147,7 +154,6 @@ class Client extends Model implements HasMedia
             $this->agent ? 'مندوب المبيعات: '.$this->agent->name : null,
             $this->recordedBy ? 'سجّل البيانات: '.$this->recordedBy->name : null,
             $viewings ? "المعاينات:\n".$viewings : null,
-            $propertyRefs ? 'العقارات المرتبطة: '.$propertyRefs : null,
             $this->notes ? 'الملاحظات: '.$this->notes : null,
             $interactionLog ? "سجل التواصل:\n".$interactionLog : null,
         ])->filter()->implode("\n");

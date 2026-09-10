@@ -214,6 +214,22 @@
                                 <option value="USD" @selected(old('currency', $displayPreferences['currency']) === 'USD')>دولار أمريكي (USD)</option>
                             </select>
                         </div>
+
+                        {{-- إعداد عام للموقع (ليس شخصياً) — يظهر فقط لمن يملك صلاحية تعديل الموقع --}}
+                        @if ($canEditSite)
+                            <div x-data="{ enabled: @js((bool) $siteBusyBadge) }" class="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3.5">
+                                <div class="flex-1">
+                                    <p class="text-sm font-bold text-ink">شارة «مشغول / مباع» على الموقع</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">إعداد عام لكل الزوّار: شارة حمراء أعلى كارت العقار وفي صفحته على الموقع للعقار المباع أو الذي اختاره عميل.</p>
+                                </div>
+                                <input type="hidden" name="site_busy_badge" value="{{ $siteBusyBadge ? 1 : 0 }}" :value="enabled ? 1 : 0">
+                                <button type="button" role="switch" :aria-checked="enabled" @click="enabled = ! enabled"
+                                        class="relative w-11 h-6 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                                        :class="enabled ? 'bg-primary-800' : 'bg-gray-300'">
+                                    <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all" :class="enabled ? 'start-6' : 'start-1'"></span>
+                                </button>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="flex justify-end mt-5">
@@ -242,7 +258,7 @@
                         <div class="min-w-0">
                             <p class="font-bold text-ink truncate">{{ $user->name }}</p>
                             <p class="text-xs text-gray-400 truncate">{{ $user->job_title ?: $roleLabel }}</p>
-                            <p class="text-xs text-gray-400 truncate" dir="ltr">{{ $user->email }}</p>
+                            <p class="text-xs text-gray-400 truncate"><bdi dir="ltr">{{ $user->email }}</bdi></p>
                         </div>
                     </div>
                 </div>
@@ -262,7 +278,7 @@
                 <div class="grid grid-cols-3 gap-3 border-t border-gray-100 mt-5 pt-4 text-center">
                     <div>
                         <p class="text-[10px] text-gray-400">تاريخ الانضمام</p>
-                        <p class="text-xs font-bold text-ink mt-1" dir="ltr">{{ $user->created_at?->format($dateFormat) }}</p>
+                        <p class="text-xs font-bold text-ink mt-1"><bdi dir="ltr">{{ $user->created_at?->format($dateFormat) }}</bdi></p>
                     </div>
                     <div>
                         <p class="text-[10px] text-gray-400">آخر تحديث</p>

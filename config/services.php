@@ -10,6 +10,8 @@ return [
         'base_url' => env('KHABEERSOFT_BASE_URL', 'https://api.khabeersoft.cloud/api/v1'),
         'api_key' => env('KHABEERSOFT_API_KEY'),
         'instance_id' => env('KHABEERSOFT_INSTANCE_ID'),
+        // سرّ الويب هوك (لوحة البوابة ← الإشعارات) للتحقق من توقيع تحديثات حالة الرسائل
+        'webhook_secret' => env('KHABEERSOFT_WEBHOOK_SECRET'),
     ],
 
     /*

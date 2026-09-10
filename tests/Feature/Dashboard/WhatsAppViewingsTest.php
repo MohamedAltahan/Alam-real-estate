@@ -274,7 +274,7 @@ class WhatsAppViewingsTest extends TestCase
 
         $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property'), WhatsAppTemplates::KIND_CLIENT);
         $this->assertSame([['phone' => '96566000001', 'name' => 'عميل المعاينة', 'label' => 'العميل · عميل المعاينة', 'display' => '+965 66000001']], $payload['recipients']);
-        $this->assertStringContainsString('اختار العقار', $payload['bodies']['96566000001']);
+        $this->assertStringContainsString('تم اختيار العقار', $payload['bodies']['96566000001']);
 
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
             'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96566000001', 'body' => 'متابعة',

@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactRequest;
+use App\Models\User;
 use App\Notifications\TaskEvent;
 use App\Notifications\ViewingReminder;
 use App\Services\ViewingReminderService;
+use App\Services\ViewingService;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Support\NotificationFeed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class NotificationController extends Controller
 {
@@ -20,7 +23,7 @@ class NotificationController extends Controller
      * نقطة الاستطلاع (كل دقيقة من المتصفح): تُرسل تذكيرات المعاينات المستحقة
      * ثم تعيد العدّادات وآخر الإشعارات — بدون الحاجة إلى cron أو اتصال لحظي.
      */
-    public function poll(Request $request, ViewingReminderService $reminders, WhatsAppService $whatsapp): JsonResponse
+    public function poll(Request $request, ViewingReminderService $reminders, ViewingService $viewings, WhatsAppService $whatsapp): JsonResponse
     {
         $user = $request->user();
 
@@ -28,6 +31,22 @@ class NotificationController extends Controller
             $reminders->dispatchDue();
         } catch (\Throwable $e) {
             Log::warning('viewing reminders: '.$e->getMessage());
+        }
+
+        // عقود الإيجار المنتهية → «إخلاء العقار» — مرة واحدة كل يوم (بديل cron للأمر viewings:vacate-expired)
+        try {
+            if (Cache::add('viewings:vacate-expired:'.today()->toDateString(), true, now()->addDay())) {
+                $viewings->vacateExpired();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('vacate expired viewings: '.$e->getMessage());
+        }
+
+        // حالات تسليم رسائل واتساب المعلّقة (بديل الويب هوك) — دورة واحدة كل ~45 ثانية على الأكثر
+        try {
+            $whatsapp->refreshMessageStatuses();
+        } catch (\Throwable $e) {
+            Log::warning('whatsapp statuses: '.$e->getMessage());
         }
 
         $items = $user->notifications()->latest()->take(10)->get()
@@ -95,20 +114,32 @@ class NotificationController extends Controller
         return url($path).($query ? '?'.$query : '');
     }
 
-    /** تعليم إشعارات المستخدم نفسه كمقروءة (لا يحتاج صلاحية طلبات التواصل) */
+    /** تعليم إشعارات المستخدم نفسه كمقروءة (لا يحتاج صلاحية تعديل الإشعارات) */
     public function readMine(Request $request): RedirectResponse
     {
-        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+        $this->markRead($request->user());
 
         return back();
     }
 
-    /** قراءة الكل: طلبات التواصل غير المقروءة + إشعارات المستخدم */
+    /** قراءة الكل — نفس أثر readMine؛ المسار محفوظ بصلاحياته للتوافق */
     public function readAll(Request $request): RedirectResponse
     {
-        ContactRequest::unread()->update(['is_read' => true]);
-        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+        $this->markRead($request->user());
 
         return back();
+    }
+
+    /**
+     * إشعارات المستخدم + طلبات التواصل تُعلَّم مقروءة له وحده —
+     * القراءة حالة شخصية، فلا تُخفي التنبيه عن بقية المستخدمين.
+     */
+    private function markRead(User $user): void
+    {
+        $user->unreadNotifications()->update(['read_at' => now()]);
+
+        if ($user->can('contact_requests.view')) {
+            ContactRequest::markAllReadFor($user);
+        }
     }
 }

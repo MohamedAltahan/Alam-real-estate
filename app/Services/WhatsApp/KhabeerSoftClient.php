@@ -75,6 +75,27 @@ class KhabeerSoftClient
         ])));
     }
 
+    /**
+     * حالة رسالة مرسلة: {id, status: queued|sending|sent|delivered|read|failed, error, wa_message_id,
+     * queued_at, sent_at, delivered_at, read_at}
+     *
+     * @return array<string, mixed>
+     */
+    public function messageStatus(string $messageId): array
+    {
+        return $this->unwrap($this->json($this->http()->get('/messages/'.$messageId)));
+    }
+
+    /**
+     * استهلاك الباقة للحساب كله: {monthly: {used, limit, remaining, percentage}, daily: {…}}
+     *
+     * @return array<string, mixed>
+     */
+    public function usage(): array
+    {
+        return $this->unwrap($this->json($this->http()->get('/usage')));
+    }
+
     /** نص الخطأ من رد البوابة (error / message) أو من الاستثناء نفسه */
     public static function errorMessage(\Throwable $e): string
     {

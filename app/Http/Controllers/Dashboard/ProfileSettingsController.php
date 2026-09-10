@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\User;
+use App\Support\SiteFlags;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -52,6 +54,9 @@ class ProfileSettingsController extends Controller
                 'date_format' => 'd/m/Y',
                 'currency' => 'KWD',
             ], (array) data_get($user->preferences, 'display', [])),
+            // إعداد عام للموقع (شارة «مشغول / مباع») — يظهر فقط لمن يملك تعديل الموقع
+            'canEditSite' => $user->can('website.edit'),
+            'siteBusyBadge' => SiteFlags::busyBadgeEnabled(),
         ]);
     }
 
@@ -140,12 +145,21 @@ class ProfileSettingsController extends Controller
             'language' => ['required', Rule::in(['ar', 'en'])],
             'date_format' => ['required', Rule::in(['d/m/Y', 'Y-m-d', 'd M Y'])],
             'currency' => ['required', Rule::in(['KWD', 'SAR', 'USD'])],
+            'site_busy_badge' => ['nullable', 'boolean'],
         ], self::MESSAGES);
 
+        // شارة «مشغول / مباع» إعداد عام للموقع لا تفضيل شخصي — لا يُقبل إلا ممن يملك تعديل الموقع (قبل أي حفظ)
+        $touchesSite = $request->has('site_busy_badge');
+        abort_if($touchesSite && ! $request->user()->can('website.edit'), 403);
+
         $preferences = $request->user()->preferences ?? [];
-        data_set($preferences, 'display', $data);
+        data_set($preferences, 'display', collect($data)->only(['language', 'date_format', 'currency'])->all());
         $request->user()->update(['preferences' => $preferences]);
         $request->session()->put('locale', $data['language']);
+
+        if ($touchesSite) {
+            Setting::set(SiteFlags::GROUP, SiteFlags::BUSY_BADGE, $request->boolean('site_busy_badge'));
+        }
 
         return $this->redirectTo('preferences', 'تم حفظ تفضيلات العرض.');
     }

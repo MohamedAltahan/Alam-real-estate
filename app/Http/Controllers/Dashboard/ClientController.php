@@ -9,7 +9,6 @@ use App\Http\Requests\UpdateClientRequest;
 use App\Models\Area;
 use App\Models\City;
 use App\Models\Client;
-use App\Models\Property;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ClientService;
@@ -61,8 +60,6 @@ class ClientController extends Controller
             'agents' => $this->agents(),
             'auditLogs' => ClientAuditPresenter::present($client->auditLogs),
             'form' => ClientFormData::for($client),
-            'linkable' => Property::with(['status', 'area', 'unitType', 'clients', 'media'])
-                ->latest()->take(100)->get(),
         ]);
     }
 
@@ -106,34 +103,14 @@ class ClientController extends Controller
         return back()->with('success', 'تم تسجيل التواصل وتحديث الحالة.');
     }
 
-    public function attachProperty(Request $request, Client $client): RedirectResponse
-    {
-        abort_unless(auth()->user()->can('clients.edit'), 403);
-
-        $data = $request->validate([
-            'property_id' => ['required', 'exists:properties,id'],
-            'relation' => ['nullable', 'in:interested,viewed'],
-            'notes' => ['nullable', 'string'],
-        ]);
-
-        $this->clients->attachProperty($client, (int) $data['property_id'], $data['relation'] ?? null, $data['notes'] ?? null);
-
-        return back()->with('success', 'تم ربط العقار بالعميل.');
-    }
-
-    public function detachProperty(Client $client, Property $property): RedirectResponse
-    {
-        abort_unless(auth()->user()->can('clients.edit'), 403);
-
-        $this->clients->detachProperty($client, $property->id);
-
-        return back()->with('success', 'تم إلغاء ربط العقار.');
-    }
-
-    /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة */
+    /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة، مع تعليم العقار المشغول الذي اختاره عميل آخر */
     public function propertyLookup(Request $request): JsonResponse
     {
-        return response()->json(PropertyLookup::search((string) $request->query('q', '')));
+        return response()->json(PropertyLookup::search(
+            (string) $request->query('q', ''),
+            flagBusy: true,
+            exceptClientId: $request->integer('client') ?: null,
+        ));
     }
 
     private function agents()

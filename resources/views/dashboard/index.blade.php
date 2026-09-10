@@ -40,7 +40,7 @@
             return ['تم الرد', 'bg-success-soft text-success'];
         }
 
-        return $r->is_read
+        return $r->isReadBy(auth()->user())
             ? ['قيد المعالجة', 'bg-warning-soft text-warning']
             : ['جديد', 'bg-info-soft text-info'];
     };

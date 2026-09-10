@@ -29,7 +29,7 @@
                                 <input type="radio" name="recipient" :value="r.phone" :checked="to === r.phone" @change="pick(r.phone)" class="accent-success">
                                 <span class="min-w-0 flex-1">
                                     <span class="block text-sm font-semibold text-ink truncate" x-text="r.label"></span>
-                                    <span class="block text-xs text-gray-500 tabular-nums" dir="ltr" x-text="r.display"></span>
+                                    <span class="block text-xs text-gray-500 tabular-nums"><bdi dir="ltr" x-text="r.display"></bdi></span>
                                 </span>
                             </label>
                         </template>

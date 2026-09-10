@@ -9,6 +9,7 @@ use App\Models\ClientStage;
 use App\Models\ClientType;
 use App\Models\ClientViewing;
 use App\Models\Property;
+use App\Support\PropertyLookup;
 use App\Support\FullTextQuery;
 use App\Support\PhoneCountries;
 use App\Support\PhoneNumber;
@@ -30,7 +31,10 @@ class ClientService
         'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q',
     ];
 
-    public function __construct(private ClientAuditLogger $audit) {}
+    /** فلاتر تبويب «الطلبات المميزة» في شاشة طلبات التواصل — الأساسية فقط */
+    public const FEATURED_FILTER_KEYS = ['search', 'stage_id', 'agent_id'];
+
+    public function __construct(private ClientAuditLogger $audit, private ViewingOutcomeSync $sync) {}
 
     /** استعلام العملاء بعد تطبيق الفلاتر — يخدم القائمة وعدّادات المراحل معاً */
     private function filtered(array $filters = []): Builder
@@ -126,8 +130,18 @@ class ClientService
                 'needs.city', 'needs.area', 'needs.unitType',
                 'viewings.property.media', 'viewings.property.area',
                 'interactions.user', 'interactions.stage',
-                'properties',
             ])
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /** الطلبات المميزة: العملاء المعلَّمون «طلب مميز» — بنفس البحث والفلاتر الأساسية */
+    public function paginateFeatured(array $filters = [], int $perPage = 12): LengthAwarePaginator
+    {
+        return $this->filtered(array_intersect_key($filters, array_flip(self::FEATURED_FILTER_KEYS)))
+            ->featured()
+            ->with(['stage', 'agent', 'needs.city', 'needs.area', 'needs.unitType'])
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -260,47 +274,6 @@ class ClientService
         });
     }
 
-    /** ربط عقار بالعميل (سجل عقاراته) */
-    public function attachProperty(Client $client, int $propertyId, ?string $relation = null, ?string $notes = null): void
-    {
-        DB::transaction(function () use ($client, $propertyId, $relation, $notes) {
-            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
-
-            if ($client->properties()->whereKey($propertyId)->exists()) {
-                throw ValidationException::withMessages([
-                    'property_id' => 'هذا العقار مضاف بالفعل لهذا العميل.',
-                ]);
-            }
-
-            $this->ensurePropertyCanBeLinked($property);
-
-            $relation = in_array($relation, ['interested', 'viewed'], true) ? $relation : 'interested';
-
-            $client->properties()->attach($propertyId, [
-                'relation' => $relation,
-                'notes' => $notes,
-            ]);
-
-            $this->audit->record($client, 'property_attached', $property, [
-                'property_id' => ['old' => null, 'new' => (string) $property->id],
-                'relation' => ['old' => null, 'new' => $relation],
-            ]);
-        });
-    }
-
-    public function detachProperty(Client $client, int $propertyId): void
-    {
-        DB::transaction(function () use ($client, $propertyId) {
-            $property = Property::query()->lockForUpdate()->findOrFail($propertyId);
-
-            $client->properties()->detach($propertyId);
-
-            $this->audit->record($client, 'property_detached', $property, [
-                'property_id' => ['old' => (string) $property->id, 'new' => null],
-            ]);
-        });
-    }
-
     /** معرّف نوع «مستأجر» — كل العملاء الجدد يُسجَّلون به */
     public function tenantTypeId(): ?int
     {
@@ -389,7 +362,7 @@ class ClientService
 
         $existing = $client->viewings()->get()->keyBy('id');
         $kept = [];
-        $fields = ['property_id', 'scheduled_at', 'in_person', 'outcome', 'notes'];
+        $fields = ['property_id', 'scheduled_at', 'in_person', 'outcome', 'contract_ends_at', 'notes'];
 
         foreach (array_values($rows) as $index => $row) {
             $propertyId = (int) $row['property_id'];
@@ -400,18 +373,25 @@ class ClientService
                 'scheduled_at' => $row['scheduled_at'],
                 'in_person' => array_key_exists('in_person', $row) && $row['in_person'] !== null ? (bool) $row['in_person'] : true,
                 'outcome' => $outcome,
+                // تاريخ انتهاء العقد يخص «تم اختيار العقار» ويبقى مع «إخلاء العقار» كسجل
+                'contract_ends_at' => in_array($outcome, [ClientViewing::OUTCOME_CHOSEN, ClientViewing::OUTCOME_VACATED], true)
+                    ? (($row['contract_ends_at'] ?? null) ?: null)
+                    : null,
                 'notes' => $row['notes'] ?? null,
             ];
 
             $viewing = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
             $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
 
-            // التحقق من العقار عند إضافة معاينة أو تغيير عقار معاينة موجودة
+            // التحقق من العقار عند إضافة معاينة أو تغيير عقار معاينة موجودة فقط —
+            // فإعادة حفظ معاينة مختارة على عقار بيع صار «مباعاً» بسببها لا تُحجب
             if (! $viewing || (int) $viewing->property_id !== $propertyId) {
-                $this->ensurePropertyCanBeViewed($property, $index);
+                $this->ensurePropertyCanBeViewed($property, $index, $client);
             }
 
             if ($viewing) {
+                $previous = $viewing->outcome;
+                $previousPropertyId = (int) $viewing->property_id;
                 $viewing->fill($attributes);
 
                 if ($viewing->isDirty('outcome')) {
@@ -432,7 +412,20 @@ class ClientService
                 if ($changes) {
                     $this->audit->record($client, 'viewing_updated', $viewing, $changes);
                 }
+
+                // انتقلت المعاينة لعقار آخر: يُحرَّر القديم كأنها حُذفت منه، ثم تُطبَّق على الجديد كأنها جديدة
+                if ($previousPropertyId !== $propertyId) {
+                    $old = Property::query()->with('status')->find($previousPropertyId);
+
+                    if ($old) {
+                        $viewing->setRelation('client', $client)->setRelation('property', $old);
+                        $this->sync->apply($viewing, $previous, deleted: true);
+                    }
+
+                    $previous = null;
+                }
             } else {
+                $previous = null;
                 $viewing = $client->viewings()->create($attributes + [
                     'created_by' => auth()->id(),
                     'outcome_at' => $outcome === ClientViewing::OUTCOME_PENDING ? null : now(),
@@ -441,7 +434,10 @@ class ClientService
                 $this->audit->record($client, 'viewing_added', $viewing, $this->audit->snapshot($viewing, $fields));
             }
 
-            $this->markViewed($client, $property);
+            // أثر النتيجة على العميل والعقار (ربح / مباع / متاح)
+            $viewing->setRelation('client', $client)->setRelation('property', $property);
+            $this->sync->apply($viewing, $previous);
+
             $kept[] = $viewing->id;
         }
 
@@ -449,38 +445,29 @@ class ClientService
             /** @var ClientViewing $viewing */
             $this->audit->record($client, 'viewing_removed', $viewing, $this->audit->snapshot($viewing, $fields, removed: true));
             $viewing->delete();
+
+            // حذف معاينة مختارة يحرّر عقار البيع
+            $viewing->setRelation('client', $client);
+            $this->sync->apply($viewing, $viewing->outcome, deleted: true);
         }
 
         $client->unsetRelation('viewings');
     }
 
-    /** المعاينة تربط العقار بسجل العميل تلقائياً بعلاقة «تمت المعاينة» */
-    private function markViewed(Client $client, Property $property): void
-    {
-        $linked = $client->properties()->whereKey($property->id)->first();
-
-        if (! $linked) {
-            $client->properties()->attach($property->id, ['relation' => 'viewed']);
-        } elseif ($linked->pivot->relation === 'interested') {
-            $client->properties()->updateExistingPivot($property->id, ['relation' => 'viewed']);
-        }
-    }
-
-    /** لا معاينة لعقار مباع */
-    private function ensurePropertyCanBeViewed(Property $property, int $index): void
+    /** لا معاينة لعقار مباع، ولا لعقار مشغول اختاره عميل آخر بالفعل */
+    private function ensurePropertyCanBeViewed(Property $property, int $index, Client $client): void
     {
         if ($property->status?->key === 'sold') {
             throw ValidationException::withMessages([
                 "viewings.{$index}.property_id" => 'لا يمكن جدولة معاينة لعقار مباع.',
             ]);
         }
-    }
 
-    private function ensurePropertyCanBeLinked(Property $property): void
-    {
-        if ($property->status?->key === 'sold') {
+        $busy = PropertyLookup::busyViewings($property->busyViewings(), $client->id)->first();
+
+        if ($busy) {
             throw ValidationException::withMessages([
-                'property_id' => 'لا يمكن إضافة هذا العقار لأنه مباع.',
+                "viewings.{$index}.property_id" => 'العقار مشغول: '.PropertyLookup::busyText($busy).'.',
             ]);
         }
     }

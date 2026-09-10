@@ -28,7 +28,7 @@
 @endphp
 
 @section('content')
-<div x-data="{ editOpen: {{ $editOpen ? 'true' : 'false' }}, propertySearch: '', selectedProperty: null }">
+<div x-data="{ editOpen: {{ $editOpen ? 'true' : 'false' }}, }">
     @if (session('success'))
         <div class="mb-4 rounded-field bg-success-soft text-success text-sm px-4 py-3">{{ session('success') }}</div>
     @endif
@@ -40,15 +40,19 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>العودة للعملاء
     </a>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <div class="xl:col-span-2 space-y-5">
+    <div class="space-y-5">
             {{-- ===== بطاقة العميل ===== --}}
             <section class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                 <div class="flex items-start justify-between gap-4 flex-wrap">
                     <div class="flex items-center gap-4 min-w-0">
                         <span class="grid place-items-center w-14 h-14 rounded-full bg-primary-100 text-primary-700 font-bold text-xl shrink-0">{{ mb_substr($client->name, 0, 1) }}</span>
                         <div class="min-w-0">
-                            <h2 class="text-lg font-bold text-ink truncate">{{ $client->name }}</h2>
+                            <h2 class="text-lg font-bold text-ink truncate flex items-center gap-2">
+                                {{ $client->name }}
+                                @if ($client->is_featured)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-accent-500/15 text-accent-600 px-2.5 py-0.5 text-xs font-bold shrink-0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>طلب مميز</span>
+                                @endif
+                            </h2>
                             <div class="flex flex-wrap items-center gap-2 mt-1.5">
                                 @if ($client->stage)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $client->stage->color }}; background-color: {{ $client->stage->color }}1a"><span class="w-1.5 h-1.5 rounded-full" style="background: {{ $client->stage->color }}"></span>{{ $client->stage->name }}</span>@endif
                                 @if ($client->type)<span class="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">{{ $client->type->name }}</span>@endif
@@ -76,7 +80,7 @@
                         ['المصدر', $client->source?->name, false], ['سجّل البيانات', $client->recordedBy?->name, false],
                         ['تاريخ التسجيل', $client->created_at?->format('Y-m-d'), true],
                     ] as [$label, $value, $ltr])
-                        <div><dt class="text-gray-400 text-xs mb-1">{{ $label }}</dt><dd class="text-ink font-medium break-words" @if ($ltr && filled($value)) dir="ltr" @endif>{{ filled($value) ? $value : '—' }}</dd></div>
+                        <div><dt class="text-gray-400 text-xs mb-1">{{ $label }}</dt><dd class="text-ink font-medium break-words">@if ($ltr && filled($value))<bdi dir="ltr">{{ $value }}</bdi>@else{{ filled($value) ? $value : '—' }}@endif</dd></div>
                     @endforeach
                 </dl>
 
@@ -127,28 +131,17 @@
                                                 <span class="w-11 h-9 rounded-lg bg-gray-100 overflow-hidden shrink-0">@if ($viewing->property?->cover_url)<img src="{{ $viewing->property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
                                                 <span class="min-w-0">
                                                     @can('properties.view')
-                                                        <a href="{{ $viewing->property ? route('dashboard.properties.show', $viewing->property) : '#' }}" class="block font-semibold text-ink hover:text-primary-700" dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</a>
+                                                        <a href="{{ $viewing->property ? route('dashboard.properties.show', $viewing->property) : '#' }}" class="block font-semibold text-ink hover:text-primary-700"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi></a>
                                                     @else
-                                                        <span class="block font-semibold text-ink" dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</span>
+                                                        <span class="block font-semibold text-ink"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi></span>
                                                     @endcan
                                                     <span class="block text-xs text-gray-400 truncate max-w-[220px]">{{ $viewing->property?->title }}</span>
                                                 </span>
                                             </div>
                                         </td>
-                                        <td class="px-3 py-2.5 text-gray-600 whitespace-nowrap" dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d h:i A') }}</td>
+                                        <td class="px-3 py-2.5 text-gray-600 whitespace-nowrap"><bdi dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d h:i A') }}</bdi></td>
                                         <td class="px-3 py-2.5 text-gray-600">{{ $viewing->in_person ? 'نعم' : 'لا' }}</td>
-                                        <td class="px-3 py-2.5">
-                                            @can('clients.edit')
-                                                <form method="POST" action="{{ route('dashboard.viewings.outcome', $viewing) }}">
-                                                    @csrf @method('PATCH')
-                                                    <select name="outcome" onchange="this.form.requestSubmit()" class="appearance-none rounded-full border-0 ps-3 pe-8 py-1 text-xs font-semibold cursor-pointer {{ ClientFields::outcomeTone($viewing->outcome) }}">
-                                                        @foreach (ClientFields::OUTCOMES as $value => $text)<option value="{{ $value }}" @selected($viewing->outcome === $value)>{{ $text }}</option>@endforeach
-                                                    </select>
-                                                </form>
-                                            @else
-                                                <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span>
-                                            @endcan
-                                        </td>
+                                        <td class="px-3 py-2.5">@include('dashboard.viewings._outcome', ['viewing' => $viewing])</td>
                                         <td class="px-3 py-2.5">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
                                         <td class="px-3 py-2.5 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
                                     </tr>
@@ -193,66 +186,6 @@
             {{-- ===== سجل التعديلات ===== --}}
             @include('dashboard.partials.audit', ['auditLogs' => $auditLogs])
         </div>
-
-        <aside>
-            <section class="rounded-card bg-white border border-gray-100 shadow-sm p-5 xl:sticky xl:top-24">
-                <h3 class="font-bold text-ink mb-4">عقارات العميل <span class="text-gray-400 font-normal text-sm">({{ $client->properties->count() }})</span></h3>
-                <div class="space-y-2 mb-5">
-                    @forelse ($client->properties as $property)
-                        <div class="flex items-center gap-3 rounded-2xl border border-gray-100 p-3">
-                            <span class="w-12 h-11 rounded-xl bg-gray-100 overflow-hidden shrink-0">@if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
-                            <div class="flex-1 min-w-0">
-                                @can('properties.view')
-                                    <a href="{{ route('dashboard.properties.show', $property) }}" class="text-sm font-semibold text-ink hover:text-primary-700" dir="ltr">{{ $property->reference_code }}</a>
-                                @else
-                                    <span class="text-sm font-semibold text-ink" dir="ltr">{{ $property->reference_code }}</span>
-                                @endcan
-                                <p class="text-xs text-gray-400 truncate">
-                                    {{ ClientFields::RELATIONS[$property->pivot->relation] ?? 'مرتبط' }} · {{ $property->status?->name ?: 'بدون حالة' }}
-                                </p>
-                            </div>
-                            @can('clients.edit')
-                                <div class="flex flex-col items-end gap-1.5 shrink-0">
-                                    <form method="POST" action="{{ route('dashboard.clients.properties.detach', [$client, $property]) }}" onsubmit="return confirm('هل تريد إزالة العقار من سجل العميل؟')">@csrf @method('DELETE')<button class="grid place-items-center w-8 h-8 rounded-full text-gray-300 hover:text-danger hover:bg-danger/10" title="إلغاء الربط"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></form>
-                                </div>
-                            @endcan
-                        </div>
-                    @empty
-                        <p class="text-center text-sm text-gray-400 py-4">لا توجد عقارات مرتبطة.</p>
-                    @endforelse
-                </div>
-
-                @can('clients.edit')
-                    <form method="POST" action="{{ route('dashboard.clients.properties.attach', $client) }}" class="border-t border-gray-100 pt-4 space-y-3">
-                        @csrf
-                        <label class="block text-xs font-semibold text-gray-600">ابحث واختر العقار</label>
-                        <div class="relative"><svg class="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" x-model="propertySearch" placeholder="الرقم، العنوان، المنطقة..." class="w-full rounded-field border border-gray-200 bg-gray-50 ps-9 pe-3 py-2.5 text-sm"></div>
-                        <input type="hidden" name="property_id" :value="selectedProperty?.id || ''" required>
-                        <div class="max-h-80 overflow-y-auto space-y-2 pe-1">
-                            @foreach ($linkable as $property)
-                                @php
-                                    $alreadyLinked = $client->properties->contains('id', $property->id);
-                                    $blockedReason = $alreadyLinked
-                                        ? 'مضاف بالفعل لهذا العميل'
-                                        : ($property->status?->key === 'sold' ? 'لا يمكن الإضافة — العقار مباع' : null);
-                                    $searchText = mb_strtolower(collect([$property->reference_code, $property->title, $property->area?->name, $property->unitType?->name])->filter()->implode(' '));
-                                @endphp
-                                <button type="button" x-show="!propertySearch || @js($searchText).includes(propertySearch.toLowerCase())" @if (! $blockedReason) @click="selectedProperty = @js(['id' => $property->id, 'reference' => $property->reference_code])" @endif @disabled($blockedReason)
-                                        :class="selectedProperty?.id === {{ $property->id }} ? 'border-primary-700 bg-primary-50 ring-1 ring-primary-700' : 'border-gray-100 bg-white'" class="w-full flex items-center gap-3 rounded-2xl border p-2.5 text-start transition disabled:opacity-60 disabled:cursor-not-allowed">
-                                    <span class="w-14 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0">@if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
-                                    <span class="min-w-0 flex-1"><span class="flex justify-between gap-2"><strong class="text-sm text-ink" dir="ltr">{{ $property->reference_code }}</strong><span class="text-xs font-semibold text-primary-800">{{ number_format((float) $property->price) }} د.ك</span></span><span class="block text-xs text-gray-500 truncate">{{ $property->title }} · {{ $property->unitType?->name ?: 'بدون نوع' }}</span><span class="block text-[11px] {{ $blockedReason ? 'text-danger font-semibold' : 'text-gray-400' }}">{{ $blockedReason ?: (($property->area?->name ?: 'بدون منطقة').' · '.($property->status?->name ?: 'بدون حالة')) }}</span></span>
-                                </button>
-                            @endforeach
-                        </div>
-                        <p x-show="selectedProperty" class="text-xs text-success font-semibold">تم اختيار <span dir="ltr" x-text="selectedProperty?.reference"></span></p>
-                        @error('property_id')<p class="text-xs text-danger font-semibold">{{ $message }}</p>@enderror
-                        <select name="relation" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"><option value="interested">مهتم</option><option value="viewed">تمت معاينة العقار</option></select>
-                        <button :disabled="!selectedProperty" class="w-full rounded-full bg-primary-900 hover:bg-primary-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-medium py-2.5 text-sm">إضافة العقار للعميل</button>
-                    </form>
-                @endcan
-            </section>
-        </aside>
-    </div>
 
     {{-- ===== مودال ملفات العميل ===== --}}
     <x-modal name="client-files" maxWidth="lg">

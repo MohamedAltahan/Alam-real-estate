@@ -75,7 +75,7 @@
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $channel->name }}</td>
                                 <td class="px-4 py-3 max-w-[260px]">
                                     @if ($channel->url)
-                                        <a href="{{ $channel->url }}" target="_blank" rel="noopener" class="block text-primary-700 hover:underline truncate" dir="ltr">{{ $channel->url }}</a>
+                                        <a href="{{ $channel->url }}" target="_blank" rel="noopener" class="block text-primary-700 hover:underline truncate"><bdi dir="ltr">{{ $channel->url }}</bdi></a>
                                     @else
                                         <span class="text-gray-300">—</span>
                                     @endif

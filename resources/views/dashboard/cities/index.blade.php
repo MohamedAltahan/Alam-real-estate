@@ -61,7 +61,7 @@
                             <tr class="hover:bg-gray-50/50">
                                 <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $cities->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $nameAr }}</td>
-                                <td class="px-4 py-3 text-gray-500" dir="ltr">{{ $nameEn ?: '—' }}</td>
+                                <td class="px-4 py-3 text-gray-500"><bdi dir="ltr">{{ $nameEn ?: '—' }}</bdi></td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('dashboard.areas.index', ['city_id' => $city->id]) }}" class="rounded-full bg-primary-50 text-primary-700 hover:bg-primary-100 px-2.5 py-1 text-xs">{{ $city->areas_count }} منطقة</a>
                                 </td>

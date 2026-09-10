@@ -107,6 +107,17 @@
                 <h3 class="font-bold text-ink">ماذا يُرسل من هذا الرقم؟</h3>
                 <p><strong class="text-ink">تفاصيل المعاينة للمالك:</strong> بعد تحديد معاينة في صفحة العميل، يختار الموظف أحد أرقام المالك (بصفته) وتُرسل بيانات العميل وموعد المعاينة.</p>
                 <p><strong class="text-ink">متابعة المعاينة للعميل:</strong> بعد تسجيل نتيجة المعاينة تُرسل رسالة المتابعة لرقم العميل.</p>
+
+                <div class="border-t border-gray-100 pt-3 space-y-2">
+                    <h3 class="font-bold text-ink">حالات التسليم (وصلت · قُرئت)</h3>
+                    <p class="text-xs text-gray-500">لتحديث حالة الرسائل لحظياً سجّل هذا الرابط كـ Webhook في لوحة KhabeerSoft (الإشعارات) وضع سرّه في <code dir="ltr">KHABEERSOFT_WEBHOOK_SECRET</code> داخل <code dir="ltr">.env</code>:</p>
+                    <code dir="ltr" class="block rounded-md bg-gray-100 px-2.5 py-1.5 text-[12px] text-primary-800 break-all select-all">{{ $webhook['url'] }}</code>
+                    @if ($webhook['configured'])
+                        <p class="text-xs text-success font-semibold">✓ سرّ الويب هوك مضبوط.</p>
+                    @else
+                        <p class="text-xs text-warning">السرّ غير مضبوط بعد — إلى أن يُضبط، يسأل النظام البوابة عن الرسائل المعلّقة كل دقيقة تلقائياً.</p>
+                    @endif
+                </div>
             </aside>
         </div>
 
@@ -149,6 +160,73 @@
         </div>
 
     @else
+        {{-- رصيد الرسائل في الباقة: المُرسل والمتبقي كما في لوحة تحكم البوابة --}}
+        @if ($usage['available'] || $usage['error'])
+            <div class="rounded-card bg-white border border-gray-100 shadow-sm p-5 mb-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-ink">رصيد الرسائل</h3>
+                        <p class="text-xs text-gray-400">المُرسل والمتبقي من باقة البوابة — لكل رسائل الحساب لا لهذه الشاشة وحدها</p>
+                    </div>
+                </div>
+
+                @if ($usage['error'])
+                    <p class="text-sm text-warning">تعذّر جلب الرصيد من البوابة الآن — {{ $usage['error'] }}</p>
+                @else
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @foreach ($usage['periods'] as $period)
+                            @php
+                                $pct = $period['percentage'];
+                                $bar = $pct >= 90 ? 'bg-danger' : ($pct >= 70 ? 'bg-warning' : 'bg-success');
+                                $pill = $pct >= 90 ? 'bg-danger/10 text-danger' : ($pct >= 70 ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success');
+                            @endphp
+                            <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <span class="text-sm font-semibold text-ink">{{ $period['label'] }}</span>
+                                    @if ($period['remaining'] !== null)
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $pill }}">متبقي {{ number_format($period['remaining']) }}</span>
+                                    @else
+                                        <span class="rounded-full bg-gray-100 text-gray-500 px-2.5 py-1 text-xs font-semibold">بلا حد</span>
+                                    @endif
+                                </div>
+
+                                <p class="flex items-baseline gap-1.5 mb-3">
+                                    <span class="text-2xl font-bold text-ink tabular-nums">{{ number_format($period['used']) }}</span>
+                                    <span class="text-sm text-gray-400">مُرسلة</span>
+                                    @if ($period['limit'] !== null)
+                                        <span class="text-sm text-gray-400 tabular-nums">من {{ number_format($period['limit']) }}</span>
+                                    @endif
+                                </p>
+
+                                @if ($period['limit'] !== null)
+                                    <div class="h-2 rounded-full bg-gray-200/70 overflow-hidden">
+                                        <div class="h-full rounded-full {{ $bar }}" style="width: {{ max($pct, $period['used'] > 0 ? 2 : 0) }}%"></div>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-1.5 tabular-nums">{{ $pct }}% من الباقة</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
+
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <p class="text-sm text-gray-500">
+                الحالة تتحدّث تلقائياً من البوابة كما في واتساب: <span class="text-ink font-semibold">أُرسلت ✓</span> · <span class="text-ink font-semibold">وصلت ✓✓</span> · <span class="text-ink font-semibold">قُرئت ✓✓</span>
+                @unless ($webhook['configured'])
+                    <span class="block text-[11px] text-warning mt-1">الويب هوك غير مُفعَّل — تُسأل البوابة عن الرسائل المعلّقة كل دقيقة (فعّله من تبويب «ربط الرقم» للتحديث اللحظي).</span>
+                @endunless
+            </p>
+            <form method="POST" action="{{ route('dashboard.whatsapp.messages.refresh') }}">
+                @csrf
+                <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 px-4 h-10 transition">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+                    تحديث الحالات والرصيد
+                </button>
+            </form>
+        </div>
+
         <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -168,7 +246,7 @@
                         @forelse ($messages as $message)
                             <tr class="hover:bg-gray-50/50">
                                 <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $messages->firstItem() + $loop->index }}</td>
-                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap" dir="ltr">{{ $message->created_at?->format('Y-m-d H:i') }}</td>
+                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap"><bdi dir="ltr">{{ $message->created_at?->format('Y-m-d H:i') }}</bdi></td>
                                 <td class="px-4 py-3 font-semibold text-ink">
                                     <span class="block">{{ WhatsAppTemplates::kindLabel($message->kind) }}</span>
                                     <span class="block text-[11px] text-gray-400 font-normal truncate max-w-[260px]" title="{{ $message->body }}">{{ \Illuminate\Support\Str::limit($message->body, 60) }}</span>
@@ -180,16 +258,9 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-600" dir="ltr">{{ $message->viewing?->property?->reference_code ?? '—' }}</td>
+                                <td class="px-4 py-3 text-gray-600"><bdi dir="ltr">{{ $message->viewing?->property?->reference_code ?? '—' }}</bdi></td>
                                 <td class="px-4 py-3 text-gray-600 text-xs">{{ $message->to_label ?: $message->to_phone }}</td>
-                                <td class="px-4 py-3">
-                                    @if ($message->succeeded())
-                                        <span class="rounded-full bg-success-soft text-success px-2.5 py-1 text-xs font-semibold">أُرسلت</span>
-                                    @else
-                                        <span class="rounded-full bg-danger/10 text-danger px-2.5 py-1 text-xs font-semibold" title="{{ $message->error }}">فشلت</span>
-                                        <span class="block text-[11px] text-danger/80 mt-1 max-w-[220px] truncate" title="{{ $message->error }}">{{ $message->error }}</span>
-                                    @endif
-                                </td>
+                                <td class="px-4 py-3"><x-whatsapp-status :message="$message" /></td>
                                 <td class="px-4 py-3 text-gray-600 text-xs">{{ $message->sender?->name ?? 'النظام' }}</td>
                             </tr>
                         @empty

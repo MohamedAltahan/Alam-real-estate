@@ -147,7 +147,7 @@
                     <h3 class="font-bold text-ink mb-3">حارس العقار</h3>
                     <div class="space-y-3 text-sm">
                         <div><p class="text-gray-400 text-xs">الاسم</p><p class="font-medium text-ink">{{ $property->guard_name ?: '—' }}</p></div>
-                        <div><p class="text-gray-400 text-xs">رقم الهاتف</p><p class="font-medium text-ink" dir="ltr">{{ $property->guard_phone ?: '—' }}</p></div>
+                        <div><p class="text-gray-400 text-xs">رقم الهاتف</p><p class="font-medium text-ink"><bdi dir="ltr">{{ $property->guard_phone ?: '—' }}</bdi></p></div>
                     </div>
                 </div>
             @endif
@@ -163,7 +163,7 @@
                                 </span>
                                 <span class="min-w-0 flex-1">
                                     <span class="block font-medium text-ink">{{ $channel->name }} <span class="text-[11px] text-gray-400">({{ $channel->kind === 'website' ? 'موقع' : 'سوشال' }})</span></span>
-                                    @if ($channel->pivot->url)<a href="{{ $channel->pivot->url }}" target="_blank" rel="noopener" class="block text-[11px] text-primary-700 hover:underline truncate" dir="ltr">{{ $channel->pivot->url }}</a>@endif
+                                    @if ($channel->pivot->url)<a href="{{ $channel->pivot->url }}" target="_blank" rel="noopener" class="block text-[11px] text-primary-700 hover:underline truncate"><bdi dir="ltr">{{ $channel->pivot->url }}</bdi></a>@endif
                                 </span>
                             </li>
                         @endforeach

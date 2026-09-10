@@ -7,7 +7,7 @@
     $kpis = $report['kpis'];
     $cards = [
         ['label' => 'إجمالي المعاينات', 'value' => $kpis['total'], 'tone' => 'bg-info-soft text-info', 'icon' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
-        ['label' => 'اختار العقار', 'value' => $kpis['chosen'], 'tone' => 'bg-success-soft text-success', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>'],
+        ['label' => 'تم اختيار العقار', 'value' => $kpis['chosen'], 'tone' => 'bg-success-soft text-success', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>'],
         ['label' => 'لم يختر', 'value' => $kpis['rejected'], 'tone' => 'bg-danger/10 text-danger', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>'],
         ['label' => 'قيد الانتظار', 'value' => $kpis['pending'], 'tone' => 'bg-warning-soft text-warning', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'],
     ];
@@ -28,7 +28,13 @@
     </x-filter-bar>
 
     <div data-results>
-    <p class="text-xs text-gray-400 mb-3">الفترة من <span dir="ltr">{{ $report['from']->format('Y-m-d') }}</span> إلى <span dir="ltr">{{ $report['to']->format('Y-m-d') }}</span></p>
+    <p class="text-xs text-gray-400 mb-3">الفترة من <bdi dir="ltr">{{ $report['from']->format('Y-m-d') }}</bdi> إلى <bdi dir="ltr">{{ $report['to']->format('Y-m-d') }}</bdi></p>
+        @if ($report['shortened'])
+            <p class="mb-3 rounded-field bg-warning-soft text-warning text-xs px-4 py-2.5">
+                الفترة المطلوبة أطول من {{ \App\Services\ViewingService::MAX_RANGE_MONTHS }} شهراً، فعُرضت أول {{ \App\Services\ViewingService::MAX_RANGE_MONTHS }} شهراً منها.
+                اختر فترة أقصر لعرض باقي المدة.
+            </p>
+        @endif
 
     {{-- المؤشرات --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">

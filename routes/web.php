@@ -5,6 +5,7 @@ use App\Http\Controllers\Dashboard\CityController;
 use App\Http\Controllers\Dashboard\ClientController;
 use App\Http\Controllers\Dashboard\ContactRequestController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\FieldOwnerController;
 use App\Http\Controllers\Dashboard\MarketingSourceController;
 use App\Http\Controllers\Dashboard\NotificationController;
 use App\Http\Controllers\Dashboard\PermissionMatrixController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Dashboard\ViewingController;
 use App\Http\Controllers\Dashboard\WebsiteController;
 use App\Http\Controllers\Dashboard\WhatsAppController;
 use App\Http\Controllers\Site\SiteController;
+use App\Http\Controllers\Webhooks\KhabeerSoftWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // ===== الموقع العام =====
@@ -37,6 +39,9 @@ Route::post('/list-property', [SiteController::class, 'storeListProperty'])->nam
 Route::get('/faq', [SiteController::class, 'faq'])->name('site.faq');
 Route::get('/terms', [SiteController::class, 'terms'])->name('site.terms');
 Route::get('/privacy', [SiteController::class, 'privacy'])->name('site.privacy');
+
+// ===== ويب هوك بوابة واتساب: حالة الرسائل (أُرسلت · وصلت · قُرئت) — بلا جلسة، موقَّع بـ HMAC =====
+Route::post('webhooks/khabeersoft', KhabeerSoftWebhookController::class)->name('webhooks.khabeersoft');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -78,8 +83,6 @@ Route::middleware(['auth'])->group(function () {
             Route::put('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');
-            Route::post('clients/{client}/properties', [ClientController::class, 'attachProperty'])->name('clients.properties.attach');
-            Route::delete('clients/{client}/properties/{property}', [ClientController::class, 'detachProperty'])->name('clients.properties.detach');
 
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
             Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');
@@ -117,6 +120,20 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('owners/{owner}', [PropertyOwnerController::class, 'destroy'])->name('owners.destroy');
         });
 
+        // ===== ميداني: زيارات ملاك عقارات جدد =====
+        Route::middleware('can:field_owners.view')->group(function () {
+            Route::get('field', [FieldOwnerController::class, 'index'])->name('field-owners.index');
+            // قبل field/{fieldOwner} حتى لا يُفسَّر «create» كمعرّف زيارة
+            Route::get('field/create', [FieldOwnerController::class, 'create'])->name('field-owners.create');
+            Route::post('field', [FieldOwnerController::class, 'store'])->name('field-owners.store');
+            Route::get('field/{fieldOwner}', [FieldOwnerController::class, 'show'])->whereNumber('fieldOwner')->name('field-owners.show');
+            Route::get('field/{fieldOwner}/edit', [FieldOwnerController::class, 'edit'])->whereNumber('fieldOwner')->name('field-owners.edit');
+            Route::put('field/{fieldOwner}', [FieldOwnerController::class, 'update'])->whereNumber('fieldOwner')->name('field-owners.update');
+            Route::delete('field/{fieldOwner}', [FieldOwnerController::class, 'destroy'])->whereNumber('fieldOwner')->name('field-owners.destroy');
+            // حفظ الزيارة كمالك حقيقي في شاشة الملاك
+            Route::post('field/{fieldOwner}/convert-owner', [FieldOwnerController::class, 'convertOwner'])->whereNumber('fieldOwner')->name('field-owners.convert-owner');
+        });
+
         // ===== مصادر التسويق =====
         Route::middleware('can:marketing_sources.view')->group(function () {
             Route::get('sources', [MarketingSourceController::class, 'index'])->name('sources.index');
@@ -136,6 +153,7 @@ Route::middleware(['auth'])->group(function () {
         // ===== طلبات التواصل =====
         Route::middleware('can:contact_requests.view')->group(function () {
             Route::get('requests', [ContactRequestController::class, 'index'])->name('requests.index');
+            Route::get('requests/featured', [ContactRequestController::class, 'featured'])->name('requests.featured');
             Route::put('requests/{contactRequest}/contacted', [ContactRequestController::class, 'markContacted'])->name('requests.contacted');
             Route::post('requests/{contactRequest}/convert', [ContactRequestController::class, 'convert'])->name('requests.convert');
             Route::delete('requests/{contactRequest}', [ContactRequestController::class, 'destroy'])->name('requests.destroy');
@@ -175,6 +193,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('qr', [WhatsAppController::class, 'qr'])->name('qr');
             Route::post('disconnect', [WhatsAppController::class, 'disconnect'])->name('disconnect');
             Route::put('templates/{kind}', [WhatsAppController::class, 'updateTemplate'])->name('templates.update');
+            // زر «تحديث الحالات» في سجل الرسائل
+            Route::post('messages/refresh', [WhatsAppController::class, 'refreshStatuses'])->name('messages.refresh');
         });
 
         // ===== إدارة المناطق والمدن (صلاحيات المناطق نفسها) =====

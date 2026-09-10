@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use App\Concerns\InteractsWithWebImages;
+use App\Observers\PropertyObserver;
+use App\Support\SiteFlags;
 use App\Support\Video;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
 
+#[ObservedBy([PropertyObserver::class])]
 class Property extends Model implements HasMedia
 {
     use HasTranslations;
@@ -44,6 +48,8 @@ class Property extends Model implements HasMedia
         'is_featured' => 'boolean',
         'is_furnished' => 'boolean',
         'owner_commission_rate' => 'decimal:2',
+        // تاريخ البيع الفعلي — يضبطه PropertyObserver عند الانتقال إلى «مباع» (ليس fillable)
+        'sold_at' => 'datetime',
     ];
 
     // ===== العلاقات =====
@@ -109,6 +115,12 @@ class Property extends Model implements HasMedia
         return $this->hasMany(ClientViewing::class);
     }
 
+    /** المعاينات التي تشغل العقار الآن: اختاره عميل ولم يُخلِه بعد */
+    public function busyViewings(): HasMany
+    {
+        return $this->viewings()->chosen();
+    }
+
     /** قنوات النشر التي نُشر عليها العقار (مع رابط الإعلان) */
     public function channels(): BelongsToMany
     {
@@ -155,6 +167,38 @@ class Property extends Model implements HasMedia
     public function getVideoThumbAttribute(): ?string
     {
         return $this->video_id ? "https://img.youtube.com/vi/{$this->video_id}/hqdefault.jpg" : null;
+    }
+
+    /** مشغول = اختاره عميل — يستخدم العلاقة المحمّلة إن وُجدت (بلا استعلام لكل كارت في الموقع) */
+    public function getIsBusyAttribute(): bool
+    {
+        return $this->relationLoaded('busyViewings')
+            ? $this->busyViewings->isNotEmpty()
+            : $this->busyViewings()->exists();
+    }
+
+    public function isSold(): bool
+    {
+        return $this->status?->key === 'sold';
+    }
+
+    /**
+     * شارة الموقع العام: «مباع» تسبق «مشغول»، ولا تظهر إلا عندما يكون الإعداد العام مفعّلاً.
+     * لا تحمل أي بيانات عن العميل — الموقع لا يُظهر من اختار العقار.
+     *
+     * @return array{key:string, ar:string, en:string}|null
+     */
+    public function publicBadge(): ?array
+    {
+        if (! SiteFlags::busyBadgeEnabled()) {
+            return null;
+        }
+
+        if ($this->isSold()) {
+            return ['key' => 'sold', 'ar' => 'مباع', 'en' => 'Sold'];
+        }
+
+        return $this->is_busy ? ['key' => 'busy', 'ar' => 'مشغول', 'en' => 'Busy'] : null;
     }
 
     /** العقارات التي لها فيديو يوتيوب صالح */

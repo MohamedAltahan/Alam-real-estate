@@ -64,12 +64,14 @@ withAlpine((Alpine) => {
         },
 
         pick(item) {
-            if (item.blocked) {
+            // مباع أو مشغول (اختاره عميل آخر) — لا يُختار
+            if (item.blocked || item.busy) {
                 return;
             }
 
             this.row.property_id = String(item.id);
             this.row.property_label = item.label;
+            this.row.property_purpose = item.purpose ?? ''; // حقل انتهاء العقد يظهر للإيجار فقط
             this.q = item.label;
             this.open = false;
         },
@@ -77,6 +79,7 @@ withAlpine((Alpine) => {
         clear() {
             this.row.property_id = '';
             this.row.property_label = '';
+            this.row.property_purpose = '';
             this.q = '';
             this.results = [];
             this.open = false;

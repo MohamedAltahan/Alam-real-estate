@@ -33,16 +33,7 @@
                     @endcan
 
                     {{-- تغيير حالة المعاينة بدون إغلاق النافذة --}}
-                    @can('clients.edit')
-                        <form method="POST" action="{{ route('dashboard.viewings.outcome', $viewing) }}" @change="saveOutcome($event)">
-                            @csrf @method('PATCH')
-                            <select name="outcome" class="appearance-none rounded-full border-0 ps-3 pe-8 py-1 text-xs font-semibold cursor-pointer {{ ClientFields::outcomeTone($viewing->outcome) }}">
-                                @foreach (ClientFields::OUTCOMES as $value => $text)<option value="{{ $value }}" @selected($viewing->outcome === $value)>{{ $text }}</option>@endforeach
-                            </select>
-                        </form>
-                    @else
-                        <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span>
-                    @endcan
+                    @include('dashboard.viewings._outcome', ['viewing' => $viewing, 'ajax' => true])
                 </div>
 
                 <p class="text-xs text-gray-500 truncate">{{ collect([$viewing->property?->title, $viewing->property?->area?->name])->filter()->implode(' · ') }}</p>

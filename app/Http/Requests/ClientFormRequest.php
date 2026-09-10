@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use App\Models\Area;
 use App\Models\Client;
+use App\Models\ClientViewing;
+use App\Models\Property;
 use App\Support\ClientFields;
 use App\Support\PhoneCountries;
 use Illuminate\Foundation\Http\FormRequest;
@@ -64,6 +66,7 @@ abstract class ClientFormRequest extends FormRequest
             'stage_id' => ['nullable', 'exists:client_stages,id'],
             'agent_id' => ['nullable', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'is_featured' => ['nullable', 'boolean'],
 
             'needs' => ['nullable', 'array', 'max:20'],
             'needs.*.id' => ['nullable', 'integer', Rule::exists('client_property_needs', 'id')->where('client_id', $clientId)],
@@ -77,6 +80,7 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.scheduled_at' => ['required', 'date_format:Y-m-d H:i'],
             'viewings.*.in_person' => ['nullable', 'boolean'],
             'viewings.*.outcome' => ['nullable', Rule::in(array_keys(ClientFields::OUTCOMES))],
+            'viewings.*.contract_ends_at' => ['nullable', 'date_format:Y-m-d'],
             'viewings.*.notes' => ['nullable', 'string', 'max:2000'],
 
             'files' => ['nullable', 'array', 'max:30'],
@@ -100,6 +104,17 @@ abstract class ClientFormRequest extends FormRequest
                     $validator->errors()->add("needs.{$index}.area_id", 'المنطقة المختارة لا تتبع هذه المحافظة.');
                 }
             }
+
+            // «تم اختيار العقار» لعقار إيجار يحتاج تاريخ انتهاء العقد (الفحص اليومي يعتمد عليه)
+            foreach ((array) $this->input('viewings', []) as $index => $row) {
+                if (($row['outcome'] ?? null) !== ClientViewing::OUTCOME_CHOSEN || filled($row['contract_ends_at'] ?? null)) {
+                    continue;
+                }
+
+                if (Property::whereKey($row['property_id'] ?? 0)->value('purpose') === 'rent') {
+                    $validator->errors()->add("viewings.{$index}.contract_ends_at", 'حدّد تاريخ انتهاء العقد للعقار المختار.');
+                }
+            }
         });
     }
 
@@ -110,6 +125,7 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.property_id.required' => 'اختر العقار لكل سطر معاينة.',
             'viewings.*.scheduled_at.required' => 'حدّد موعد المعاينة.',
             'viewings.*.scheduled_at.date_format' => 'صيغة موعد المعاينة غير صحيحة.',
+            'viewings.*.contract_ends_at.date_format' => 'صيغة تاريخ انتهاء العقد غير صحيحة.',
             'files.*.mimes' => 'الملفات المسموحة: صور، PDF، Word، Excel.',
             'files.*.max' => 'حجم الملف يجب ألا يتجاوز 15 ميجابايت.',
         ];
@@ -130,6 +146,7 @@ abstract class ClientFormRequest extends FormRequest
             'stage_id' => 'الحالة',
             'agent_id' => 'مندوب المبيعات',
             'notes' => 'الملاحظات',
+            'is_featured' => 'طلب مميز',
             'needs.*.unit_type_id' => 'نوع الوحدة',
             'needs.*.city_id' => 'المحافظة',
             'needs.*.area_id' => 'المنطقة',

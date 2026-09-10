@@ -23,15 +23,20 @@
                         <div x-show="open" x-cloak
                              class="absolute z-40 mt-1 w-full min-w-[280px] rounded-2xl bg-white border border-gray-100 shadow-2xl p-1.5 max-h-64 overflow-y-auto">
                             <template x-for="(item, j) in results" :key="item.id">
-                                <button type="button" @mousedown.prevent="pick(item)" @mouseenter="hi = j" :disabled="!! item.blocked"
+                                <button type="button" @mousedown.prevent="pick(item)" @mouseenter="hi = j" :disabled="!! item.blocked || !! item.busy"
                                         :class="hi === j ? 'bg-primary-50' : ''"
                                         class="w-full text-start rounded-xl px-3 py-2 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed">
                                     <span class="flex items-center justify-between gap-2">
-                                        <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
+                                            {{-- مشغول: اختاره عميل آخر بالفعل · مباع: حالة العقار --}}
+                                            <span x-show="item.busy" class="rounded-full bg-warning-soft text-warning px-2 py-0.5 text-[10px] font-bold">مشغول</span>
+                                            <span x-show="item.blocked" x-text="item.blocked" class="rounded-full bg-danger/10 text-danger px-2 py-0.5 text-[10px] font-bold"></span>
+                                        </span>
                                         <span class="text-[11px] text-gray-400" x-text="item.area || ''"></span>
                                     </span>
                                     <span class="block text-xs text-gray-500 truncate" x-text="item.title || ''"></span>
-                                    <span x-show="item.blocked" x-text="item.blocked" class="block text-[11px] text-danger font-semibold"></span>
+                                    <span x-show="item.busy" x-text="item.busy" class="block text-[11px] text-warning font-semibold"></span>
                                 </button>
                             </template>
                             <p x-show="! results.length" class="px-3 py-3 text-sm text-gray-400 text-center">لا توجد نتائج مطابقة</p>
@@ -74,9 +79,17 @@
                 </div>
             </div>
 
-            <div class="mt-3">
-                <input :name="name(i, 'notes')" x-model="row.notes" placeholder="ملاحظة على المعاينة (اختياري)" class="{{ $field }}">
-                <p x-show="errorFor(i, 'notes')" x-text="errorFor(i, 'notes')" class="mt-1 text-xs text-danger"></p>
+            <div class="mt-3 grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+                {{-- تاريخ انتهاء العقد: يظهر عند «تم اختيار العقار» لعقار إيجار — الفحص اليومي يحوّله بعده إلى «إخلاء العقار» --}}
+                <div class="lg:col-span-4" x-show="row.outcome === 'chosen' && row.property_purpose === 'rent'">
+                    <label class="{{ $label }}">تاريخ انتهاء العقد <span class="text-danger">*</span></label>
+                    <input x-datetime.date x-model="row.contract_ends_at" :name="name(i, 'contract_ends_at')" placeholder="اختر تاريخ انتهاء العقد" class="{{ $field }}" dir="ltr">
+                    <p x-show="errorFor(i, 'contract_ends_at')" x-text="errorFor(i, 'contract_ends_at')" class="mt-1 text-xs text-danger"></p>
+                </div>
+                <div :class="row.outcome === 'chosen' && row.property_purpose === 'rent' ? 'lg:col-span-8' : 'lg:col-span-12'">
+                    <input :name="name(i, 'notes')" x-model="row.notes" placeholder="ملاحظة على المعاينة (اختياري)" class="{{ $field }}">
+                    <p x-show="errorFor(i, 'notes')" x-text="errorFor(i, 'notes')" class="mt-1 text-xs text-danger"></p>
+                </div>
             </div>
         </div>
     </template>

@@ -37,13 +37,14 @@ class NotificationFeed
             : collect();
 
         $requests = self::canView($user, 'contact_requests.view') && self::enabled($user, 'contact_requests', true)
-            ? ContactRequest::latest()->take($limit)->get()
+            ? ContactRequest::latest()->when($user, fn ($q) => $q->withReadBy($user))->take($limit)->get()
                 ->map(fn (ContactRequest $r) => [
                     'id' => null,
                     'kind' => 'request',
                     'title' => 'طلب تواصل جديد من '.$r->name,
                     'at' => $r->created_at,
-                    'unread' => ! $r->is_read,
+                    // القراءة لكل مستخدم على حدة؛ «تم التواصل» مقروء للجميع
+                    'unread' => $user ? ! $r->isReadBy($user) : $r->status !== 'contacted',
                     'overdue' => false,
                     'icon' => 'phone',
                     'tone' => 'accent',
@@ -60,7 +61,7 @@ class NotificationFeed
                     'title' => $p->status_id === $soldId
                         ? 'تم إغلاق صفقة '.$p->title.' بنجاح'
                         : 'تم إضافة عقار جديد '.($p->reference_code ?: $p->title),
-                    'at' => $p->status_id === $soldId ? $p->updated_at : $p->created_at,
+                    'at' => $p->status_id === $soldId ? ($p->sold_at ?? $p->created_at) : $p->created_at,
                     'unread' => false,
                     'overdue' => false,
                     'icon' => $p->status_id === $soldId ? 'check' : 'building',
@@ -128,7 +129,9 @@ class NotificationFeed
         $count = $user ? $user->unreadNotifications()->count() : 0;
 
         if (self::canView($user, 'contact_requests.view') && self::enabled($user, 'contact_requests', true)) {
-            $count += ContactRequest::unread()->count();
+            $count += $user
+                ? ContactRequest::unreadFor($user)->count()
+                : ContactRequest::where('status', '!=', 'contacted')->count();
         }
 
         return $count;

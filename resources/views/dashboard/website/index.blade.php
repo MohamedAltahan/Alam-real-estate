@@ -218,7 +218,7 @@
                                 <img :src="card(id)?.thumb" class="w-20 h-12 object-cover rounded shrink-0 bg-gray-100" alt="">
                                 <span class="min-w-0 flex-1">
                                     <span class="block text-sm font-bold text-ink truncate" x-text="card(id)?.title"></span>
-                                    <span class="block text-[11px] text-gray-400" dir="ltr" x-text="card(id)?.ref"></span>
+                                    <span class="block text-[11px] text-gray-400"><bdi dir="ltr" x-text="card(id)?.ref"></bdi></span>
                                 </span>
                                 <button type="button" @click="move(i, -1)" :disabled="i === 0" class="grid place-items-center w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30" title="لأعلى">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
@@ -250,7 +250,7 @@
                                         </span>
                                         <span class="block p-2">
                                             <span class="block text-xs font-bold text-ink truncate" x-text="p.title"></span>
-                                            <span class="block text-[10px] text-gray-400" dir="ltr" x-text="p.ref"></span>
+                                            <span class="block text-[10px] text-gray-400"><bdi dir="ltr" x-text="p.ref"></bdi></span>
                                         </span>
                                     </button>
                                 </template>

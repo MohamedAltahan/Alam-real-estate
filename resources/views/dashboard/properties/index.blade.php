@@ -173,7 +173,7 @@
                             </span>
                             <span class="min-w-0 flex-1">
                                 <span class="block text-sm font-semibold text-ink" x-text="c.name"></span>
-                                <a x-show="c.url" :href="c.url" target="_blank" rel="noopener" @click.stop class="block text-[11px] text-gray-400 truncate hover:text-primary-700" dir="ltr" x-text="c.url"></a>
+                                <a x-show="c.url" :href="c.url" target="_blank" rel="noopener" @click.stop class="block text-[11px] text-gray-400 truncate hover:text-primary-700"><bdi dir="ltr" x-text="c.url"></bdi></a>
                             </span>
                         </label>
                         <div x-show="form[c.id]?.on" class="mt-2">

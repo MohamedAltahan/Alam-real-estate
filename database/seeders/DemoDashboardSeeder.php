@@ -79,6 +79,8 @@ class DemoDashboardSeeder extends Seeder
             ]);
             $client->created_at = $at;
             $client->updated_at = $at;
+            // تاريخ الربح يتبع تاريخ الإنشاء المؤرَّخ (الـ observer يحتفظ بالقيمة المضبوطة مسبقاً)
+            $client->won_at = $wonId && (int) $client->stage_id === (int) $wonId ? $at : null;
             $client->save();
 
             if ($areas) {
@@ -110,20 +112,25 @@ class DemoDashboardSeeder extends Seeder
                 'property_id' => $propertyIds && random_int(0, 1) ? $propertyIds[array_rand($propertyIds)] : null,
             ]);
             $request->status = $contacted ? 'contacted' : 'pending';
-            $request->is_read = true;
             $request->created_at = $at;
             $request->updated_at = $at;
             $request->save();
         }
 
-        // أحدث ٣ طلبات فقط تبقى "جديد/غير مقروء" — عدّاد الإشعارات
-        ContactRequest::query()->update(['is_read' => true]);
-
+        // أحدث ٣ طلبات فقط تبقى "جديد/غير مقروء" لكل المستخدمين — عدّاد الإشعارات
         ContactRequest::latest()->take(3)->get()->each(function (ContactRequest $r) {
             $r->status = 'pending';
-            $r->is_read = false;
             $r->saveQuietly();
         });
+
+        $userIds = User::pluck('id')->all();
+
+        ContactRequest::where('status', '!=', 'contacted')->latest()->skip(3)->take(PHP_INT_MAX)->get()
+            ->each(function (ContactRequest $r) use ($userIds) {
+                foreach ($userIds as $userId) {
+                    $r->reads()->firstOrCreate(['user_id' => $userId], ['read_at' => now()]);
+                }
+            });
 
         // ===== توزيع تواريخ إضافة العقارات + تعليم بعضها كمباع =====
         $this->command?->info('توزيع تواريخ العقارات...');
@@ -139,8 +146,10 @@ class DemoDashboardSeeder extends Seeder
             if ($soldId && $index % 3 === 1) {
                 $property->status_id = $soldId;
                 $property->updated_at = $now->subMonths($index % 8)->subDays(random_int(0, 20));
+                $property->sold_at = $property->updated_at; // saveQuietly لا يمرّ على PropertyObserver
             } else {
                 $property->updated_at = $created;
+                $property->sold_at = null;
             }
 
             $property->saveQuietly();
@@ -185,6 +194,7 @@ class DemoDashboardSeeder extends Seeder
         if ($wonId) {
             Client::inRandomOrder()->take(12)->get()->each(function (Client $c) use ($wonId) {
                 $c->stage_id = $wonId;
+                $c->won_at = $c->won_at ?? $c->updated_at ?? now(); // saveQuietly لا يمرّ على ClientObserver
                 $c->saveQuietly();
             });
         }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Amenity;
 use App\Models\Area;
 use App\Models\City;
+use App\Models\FieldOwner;
 use App\Models\Property;
 use App\Models\PropertyCategory;
 use App\Models\PropertyOwner;
@@ -13,16 +14,18 @@ use App\Models\PropertyStatus;
 use App\Models\PublishingChannel;
 use App\Models\UnitType;
 use App\Models\User;
+use App\Services\FieldOwnerService;
 use App\Services\PropertyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PropertyController extends Controller
 {
-    public function __construct(private PropertyService $properties) {}
+    public function __construct(private PropertyService $properties, private FieldOwnerService $fieldOwners) {}
 
     public function index(Request $request): View
     {
@@ -39,12 +42,28 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View|RedirectResponse
     {
         abort_unless(auth()->user()->can('properties.create'), 403);
 
-        return view('dashboard.properties.form', $this->formData(new Property) + [
+        // «حفظ كعقار» من شاشة ميداني: الفورم يُعبَّأ مسبقًا من بيانات الزيارة
+        $fieldOwner = $request->filled('field_owner') ? FieldOwner::findOrFail($request->integer('field_owner')) : null;
+
+        if ($fieldOwner) {
+            abort_unless(auth()->user()->can('field_owners.view'), 403);
+
+            if ($fieldOwner->isPropertyConverted()) {
+                return redirect()
+                    ->route('dashboard.field-owners.show', $fieldOwner)
+                    ->with('error', 'هذه الزيارة محوَّلة بالفعل إلى عقار.');
+            }
+        }
+
+        $property = new Property($fieldOwner ? $this->fieldOwners->propertyPrefill($fieldOwner) : []);
+
+        return view('dashboard.properties.form', $this->formData($property) + [
             'nextCode' => $this->properties->generateReferenceCode(),
+            'fieldOwner' => $fieldOwner,
         ]);
     }
 
@@ -53,12 +72,18 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.create'), 403);
 
         $data = $this->validated($request);
-        $property = $this->properties->create($data, $request->input('amenities', []));
+
+        // عقار قادم من زيارة ميدانية: يُربط بالزيارة وتُنسخ صورها ويُنشأ المالك إن لزم
+        $fieldOwner = $request->filled('field_owner_id') ? FieldOwner::findOrFail($request->integer('field_owner_id')) : null;
+
+        $property = $fieldOwner
+            ? $this->fieldOwners->createProperty($fieldOwner, $data, $request->input('amenities', []))
+            : $this->properties->create($data, $request->input('amenities', []));
         $this->syncImages($request, $property);
 
         return redirect()
             ->route('dashboard.properties.show', $property)
-            ->with('success', 'تم إضافة العقار رقم '.$property->reference_code.'.');
+            ->with('success', 'تم إضافة العقار رقم '.$property->reference_code.($fieldOwner ? ' وربطه بالزيارة الميدانية.' : '.'));
     }
 
     public function show(Property $property): View
@@ -131,7 +156,7 @@ class PropertyController extends Controller
 
     // ===== Helpers =====
 
-    /** @return array<string, \Illuminate\Support\Collection> */
+    /** @return array<string, Collection> */
     private function channelsByKind(): array
     {
         $all = PublishingChannel::query()->active()->with('media')->orderBy('sort_order')->orderBy('id')->get();
@@ -188,6 +213,8 @@ class PropertyController extends Controller
             'street' => ['nullable', 'string', 'max:120'],
             'building' => ['nullable', 'string', 'max:120'],
             'map_url' => ['nullable', 'url', 'max:500'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'guard_name' => ['nullable', 'string', 'max:150'],
             'guard_phone' => ['nullable', 'string', 'max:40'],
             'video_url' => ['nullable', 'url', 'max:255'],
@@ -196,6 +223,7 @@ class PropertyController extends Controller
             'gallery.*' => Property::imageRules(),
             'amenities' => ['array'],
             'amenities.*' => ['exists:amenities,id'],
+            'field_owner_id' => ['nullable', 'integer', 'exists:field_owners,id'],
         ], [
             'map_url.url' => 'رابط الموقع يجب أن يكون رابط خرائط جوجل صالحًا (يبدأ بـ https://).',
         ], [
@@ -239,6 +267,8 @@ class PropertyController extends Controller
             'street' => $v['street'] ?? null,
             'building' => $v['building'] ?? null,
             'map_url' => $v['map_url'] ?? null,
+            'latitude' => $v['latitude'] ?? null,
+            'longitude' => $v['longitude'] ?? null,
             'guard_name' => $v['guard_name'] ?? null,
             'guard_phone' => $v['guard_phone'] ?? null,
             'video_url' => $v['video_url'] ?? null,

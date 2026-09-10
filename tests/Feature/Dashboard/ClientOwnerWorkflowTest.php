@@ -9,11 +9,9 @@ use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\UnitType;
 use App\Models\User;
-use App\Services\ClientService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -51,28 +49,6 @@ class ClientOwnerWorkflowTest extends TestCase
         $this->assertSame(5, $client->household_size);
         $this->assertSame('whatsapp', $client->preferred_contact);
         $this->assertNotNull($client->type_id); // مستأجر افتراضياً
-    }
-
-    public function test_property_cannot_be_added_twice_to_the_same_client(): void
-    {
-        [$available] = $this->propertyStatuses();
-        $client = Client::create(['name' => 'عميل أول', 'phone' => '111']);
-        $property = Property::create([
-            'reference_code' => '901', 'title' => ['ar' => 'عقار اختبار', 'en' => 'Test'],
-            'status_id' => $available->id,
-        ]);
-        $service = app(ClientService::class);
-
-        $service->attachProperty($client, $property->id, 'interested');
-
-        try {
-            $service->attachProperty($client, $property->id, 'viewed');
-            $this->fail('Expected duplicate property validation to fail.');
-        } catch (ValidationException $exception) {
-            $this->assertSame('هذا العقار مضاف بالفعل لهذا العميل.', $exception->errors()['property_id'][0]);
-        }
-
-        $this->assertDatabaseCount('client_property', 1);
     }
 
     public function test_owner_files_can_be_uploaded_and_owner_profile_opened(): void

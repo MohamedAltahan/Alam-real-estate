@@ -68,7 +68,7 @@
                                 <td class="px-4 py-3">
                                     @if ($viewing->client)
                                         <a href="{{ route('dashboard.clients.show', $viewing->client) }}" class="font-semibold text-ink hover:text-primary-700">{{ $viewing->client->name }}</a>
-                                        <span class="block text-xs text-gray-400" dir="ltr">{{ $viewing->client->full_phone }}</span>
+                                        <span class="block text-xs text-gray-400"><bdi dir="ltr">{{ $viewing->client->full_phone }}</bdi></span>
                                     @else
                                         <span class="text-gray-400">—</span>
                                     @endif
@@ -86,23 +86,12 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="block text-ink font-medium" dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d') }}</span>
-                                    <span class="block text-xs {{ $isPast ? 'text-gray-400' : 'text-primary-600' }}" dir="ltr">{{ $viewing->scheduled_at?->format('h:i A') }}</span>
+                                    <span class="block text-ink font-medium"><bdi dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d') }}</bdi></span>
+                                    <span class="block text-xs {{ $isPast ? 'text-gray-400' : 'text-primary-600' }}"><bdi dir="ltr">{{ $viewing->scheduled_at?->format('h:i A') }}</bdi></span>
                                 </td>
                                 <td class="px-4 py-3 text-gray-600">{{ $viewing->in_person ? 'نعم' : 'لا' }}</td>
                                 <td class="px-4 py-3 text-gray-600">{{ $agent?->name ?: '—' }}</td>
-                                <td class="px-4 py-3">
-                                    @can('clients.edit')
-                                        <form method="POST" action="{{ route('dashboard.viewings.outcome', $viewing) }}">
-                                            @csrf @method('PATCH')
-                                            <select name="outcome" onchange="this.form.requestSubmit()" class="appearance-none rounded-full border-0 ps-3 pe-8 py-1 text-xs font-semibold cursor-pointer {{ ClientFields::outcomeTone($viewing->outcome) }}">
-                                                @foreach ($outcomes as $value => $text)<option value="{{ $value }}" @selected($viewing->outcome === $value)>{{ $text }}</option>@endforeach
-                                            </select>
-                                        </form>
-                                    @else
-                                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ClientFields::outcomeTone($viewing->outcome) }}">{{ ClientFields::outcomeLabel($viewing->outcome) }}</span>
-                                    @endcan
-                                </td>
+                                <td class="px-4 py-3">@include('dashboard.viewings._outcome', ['viewing' => $viewing])</td>
                                 <td class="px-4 py-3">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
                                 <td class="px-4 py-3 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
                             </tr>

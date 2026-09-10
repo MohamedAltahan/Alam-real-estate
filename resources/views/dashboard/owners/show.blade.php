@@ -64,11 +64,11 @@
                             @endif
                         </li>
                     @empty
-                        <li class="font-semibold text-ink" dir="ltr">{{ $owner->full_phone ?: '—' }}</li>
+                        <li class="font-semibold text-ink"><bdi dir="ltr">{{ $owner->full_phone ?: '—' }}</bdi></li>
                     @endforelse
                 </ul>
             </div>
-            <div><p class="text-xs text-gray-400 mb-1">البريد الإلكتروني</p><p class="font-semibold text-ink break-all" dir="ltr">{{ $owner->email ?: '—' }}</p></div>
+            <div><p class="text-xs text-gray-400 mb-1">البريد الإلكتروني</p><p class="font-semibold text-ink break-all"><bdi dir="ltr">{{ $owner->email ?: '—' }}</bdi></p></div>
             <div><p class="text-xs text-gray-400 mb-1">المنطقة</p><p class="font-semibold text-ink">{{ collect([$owner->area?->name, $owner->area?->city?->name])->filter()->implode(' — ') ?: '—' }}</p></div>
             <div class="md:col-span-2"><p class="text-xs text-gray-400 mb-1">العنوان المسجل</p><p class="font-semibold text-ink">{{ $owner->registered_address ?: '—' }}</p></div>
             <div class="md:col-span-2"><p class="text-xs text-gray-400 mb-1">الملاحظات</p><p class="text-ink whitespace-pre-line">{{ $owner->notes ?: '—' }}</p></div>

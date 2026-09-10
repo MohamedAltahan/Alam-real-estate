@@ -64,7 +64,7 @@
                             <tr class="hover:bg-gray-50/50">
                                 <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $areas->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $nameAr }}</td>
-                                <td class="px-4 py-3 text-gray-500" dir="ltr">{{ $nameEn ?: '—' }}</td>
+                                <td class="px-4 py-3 text-gray-500"><bdi dir="ltr">{{ $nameEn ?: '—' }}</bdi></td>
                                 <td class="px-4 py-3 text-gray-600">{{ $area->city?->name ?: '—' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-1.5">

@@ -76,9 +76,20 @@ withAlpine((Alpine) => {
     Alpine.data('clientViewings', (opts = {}) => ({
         ...rowRepeater({
             prefix: 'viewings',
-            blank: { id: '', property_id: '', property_label: '', scheduled_at: '', in_person: '1', outcome: 'pending', notes: '' },
+            blank: { id: '', property_id: '', property_label: '', property_purpose: '', scheduled_at: '', in_person: '1', outcome: 'pending', contract_ends_at: '', notes: '' },
             ...opts,
         }),
         lookupUrl: opts.lookupUrl ?? '',
+
+        /** حذف معاينة نتيجتها «تم اختيار العقار» يحرّر العقار لعملاء آخرين — يحتاج تأكيداً */
+        remove(index) {
+            const row = this.rows[index];
+
+            if (row?.outcome === 'chosen' && ! window.confirm('هذه المعاينة نتيجتها «تم اختيار العقار».\nحذفها يحذف سجل الاختيار ويجعل العقار متاحاً لعملاء آخرين.\n\nهل تريد حذفها؟')) {
+                return;
+            }
+
+            this.rows.splice(index, 1);
+        },
     }));
 });

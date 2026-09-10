@@ -9,7 +9,9 @@ use App\Models\WhatsappMessage;
 use App\Services\ClientAuditLogger;
 use App\Support\PhoneNumber;
 use App\Support\WhatsAppTemplates;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -326,5 +328,276 @@ class WhatsAppService
         }
 
         return $message;
+    }
+
+    // ===== حالة التسليم (أُرسلت · وصلت · قُرئت) =====
+
+    /** الرسائل المعلّقة تُسأل البوابة عنها لهذه المدة فقط */
+    public const STATUS_WINDOW_DAYS = 7;
+
+    /** أقصى عدد رسائل يُستعلم عنها في الدورة الواحدة */
+    public const STATUS_BATCH = 15;
+
+    /** لا نعيد سؤال البوابة عن الرسالة نفسها قبل هذه الثواني */
+    public const STATUS_RECHECK_SECONDS = 45;
+
+    /** حالات البوابة (وأسماء واتساب الشائعة) → حالاتنا */
+    public const MESSAGE_STATUS_MAP = [
+        'queued' => WhatsappMessage::QUEUED,
+        'pending' => WhatsappMessage::QUEUED,
+        'sending' => WhatsappMessage::SENDING,
+        'sent' => WhatsappMessage::SENT,
+        'server_ack' => WhatsappMessage::SENT,
+        'delivered' => WhatsappMessage::DELIVERED,
+        'device_ack' => WhatsappMessage::DELIVERED,
+        'read' => WhatsappMessage::READ,
+        'played' => WhatsappMessage::READ,
+        'failed' => WhatsappMessage::FAILED,
+        'error' => WhatsappMessage::FAILED,
+    ];
+
+    /**
+     * ويب هوك البوابة: {event: "message.status", data: {message_id, status, error, wa_message_id}, sent_at}.
+     * يُعاد true عندما تخص الرسالة سجلاً عندنا.
+     */
+    public function handleWebhook(array $payload): bool
+    {
+        if (($payload['event'] ?? null) !== 'message.status') {
+            return false;
+        }
+
+        $data = (array) ($payload['data'] ?? []);
+        $providerId = $data['message_id'] ?? $data['id'] ?? null;
+
+        if ($providerId === null || $providerId === '') {
+            return false;
+        }
+
+        $message = WhatsappMessage::query()->where('provider_id', (string) $providerId)->first();
+
+        if (! $message) {
+            return false;
+        }
+
+        $at = filled($payload['sent_at'] ?? null) ? $this->gatewayTime($payload['sent_at']) : now();
+        $this->applyMessageStatus($message, $data, $at);
+
+        return true;
+    }
+
+    /**
+     * استعلام البوابة عن الرسائل التي لم تبلغ حالتها النهائية (من الاستطلاع الدوري، الأمر المجدول،
+     * أو زر «تحديث الحالات»). يُعاد عدد الرسائل التي تغيّرت حالتها.
+     */
+    public function refreshMessageStatuses(bool $force = false): int
+    {
+        if (! $this->client->isConfigured()) {
+            return 0;
+        }
+
+        // الاستطلاع يأتي من كل متصفح مفتوح — دورة واحدة في الوقت نفسه تكفي
+        if (! $force) {
+            $lock = Cache::lock('whatsapp.status-refresh', self::STATUS_RECHECK_SECONDS);
+
+            if (! $lock->get()) {
+                return 0;
+            }
+        }
+
+        $pending = WhatsappMessage::query()
+            ->whereNotNull('provider_id')
+            ->whereNotIn('status', WhatsappMessage::FINAL)
+            ->where('created_at', '>=', now()->subDays(self::STATUS_WINDOW_DAYS))
+            ->when(! $force, fn ($q) => $q->where(fn ($q) => $q
+                ->whereNull('status_checked_at')
+                ->orWhere('status_checked_at', '<', now()->subSeconds(self::STATUS_RECHECK_SECONDS))))
+            ->orderByRaw('CASE WHEN '.WhatsappMessage::query()->getGrammar()->wrap('status_checked_at').' IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('status_checked_at')
+            ->orderBy('id')
+            ->limit(self::STATUS_BATCH)
+            ->get();
+
+        $updated = 0;
+
+        foreach ($pending as $message) {
+            try {
+                if ($this->applyMessageStatus($message, $this->client->messageStatus((string) $message->provider_id))) {
+                    $updated++;
+                }
+            } catch (ConnectionException $e) {
+                // البوابة نفسها غير متاحة: نتوقف ونحاول في الدورة التالية
+                Log::warning('whatsapp message status: '.$e->getMessage());
+                break;
+            } catch (\Throwable $e) {
+                Log::warning('whatsapp message status #'.$message->provider_id.': '.KhabeerSoftClient::errorMessage($e));
+                $message->forceFill(['status_checked_at' => now()])->save();
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * تطبيق حالة من البوابة على الرسالة: لا نرجع للخلف، ونضبط أزمنة المراحل (من البوابة أو وقت الحدث).
+     * يُعاد true عندما تتغيّر الحالة.
+     */
+    public function applyMessageStatus(WhatsappMessage $message, array $data, ?CarbonInterface $at = null): bool
+    {
+        $at ??= now();
+        $incoming = self::MESSAGE_STATUS_MAP[strtolower((string) ($data['status'] ?? ''))] ?? null;
+        $changes = ['status_checked_at' => now()];
+
+        if (filled($data['wa_message_id'] ?? null) && ! $message->wa_message_id) {
+            $changes['wa_message_id'] = mb_substr((string) $data['wa_message_id'], 0, 100);
+        }
+
+        // الأزمنة كما ترسلها البوابة
+        foreach (WhatsappMessage::STAMPS as $column) {
+            if (filled($data[$column] ?? null) && ! $message->{$column}) {
+                $changes[$column] = $this->gatewayTime($data[$column]);
+            }
+        }
+
+        $changed = false;
+        $becameFailed = false;
+
+        if ($incoming === WhatsappMessage::FAILED) {
+            $changed = $becameFailed = $message->status !== WhatsappMessage::FAILED;
+            $changes['status'] = WhatsappMessage::FAILED;
+            $changes['error'] = mb_substr((string) (($data['error'] ?? null) ?: 'فشل الإرسال من البوابة'), 0, 500);
+        } elseif ($incoming !== null && (WhatsappMessage::ORDER[$incoming] ?? -1) > (WhatsappMessage::ORDER[$message->status] ?? -1)) {
+            $changed = true;
+            $changes['status'] = $incoming;
+            $changes['error'] = null;
+
+            // بلوغ «قُرئت» يعني أنها أُرسلت ووصلت أيضاً — نملأ الأزمنة الناقصة بوقت الحدث
+            foreach (WhatsappMessage::STAMPS as $status => $column) {
+                if (WhatsappMessage::ORDER[$status] <= WhatsappMessage::ORDER[$incoming] && ! $message->{$column} && ! isset($changes[$column])) {
+                    $changes[$column] = $at;
+                }
+            }
+        }
+
+        $message->forceFill($changes)->save();
+
+        if ($becameFailed) {
+            $this->releaseViewingMark($message);
+        }
+
+        return $changed;
+    }
+
+    /**
+     * فشل رسالة معاينة بعد قبولها (ويب هوك/استطلاع): تُمسح علامة المعاينة التي ضُبطت عند الإرسال،
+     * ما لم توجد رسالة أخرى غير فاشلة من النوع نفسه فتأخذ العلامة وقتها. ويُكتب سطر في سجل العميل.
+     */
+    private function releaseViewingMark(WhatsappMessage $message): void
+    {
+        $mark = WhatsAppTemplates::MARKS[$message->kind] ?? null;
+        $viewing = $mark && $message->viewing_id ? $message->viewing : null;
+
+        if (! $viewing) {
+            return;
+        }
+
+        $other = WhatsappMessage::query()
+            ->where('viewing_id', $viewing->id)
+            ->where('kind', $message->kind)
+            ->whereKeyNot($message->id)
+            ->where('status', '!=', WhatsappMessage::FAILED)
+            ->latest('id')
+            ->first();
+
+        $viewing->forceFill([$mark => $other?->created_at])->save();
+
+        $this->audit->record($viewing->client, 'whatsapp_failed', $viewing, [
+            'whatsapp_kind' => ['old' => null, 'new' => WhatsAppTemplates::kindLabel($message->kind)],
+            'whatsapp_to' => ['old' => null, 'new' => $message->to_label],
+            'whatsapp_error' => ['old' => null, 'new' => $message->error],
+        ]);
+    }
+
+    /** أوقات البوابة (ISO بتوقيت UTC) → توقيت التطبيق */
+    private function gatewayTime(string $value): Carbon
+    {
+        return Carbon::parse($value)->setTimezone(config('app.timezone'));
+    }
+
+    // ===== رصيد الباقة (المُرسل والمتبقي) =====
+
+    public const USAGE_CACHE = 'whatsapp.usage';
+
+    /** الرصيد يُسأل مرة كل دقيقتين على الأكثر مهما تكرر فتح الصفحة */
+    public const USAGE_TTL = 120;
+
+    /** فترات الاستهلاك التي تعرضها البوابة */
+    public const USAGE_PERIODS = [
+        'monthly' => 'هذا الشهر',
+        'daily' => 'اليوم',
+    ];
+
+    /**
+     * رصيد رسائل الباقة من البوابة (للحساب كله لا للرقم الواحد).
+     *
+     * @return array{available:bool, error:?string, periods:array<int, array{key:string, label:string, used:int, limit:?int, remaining:?int, percentage:int}>}
+     */
+    public function usage(bool $fresh = false): array
+    {
+        if ($fresh) {
+            Cache::forget(self::USAGE_CACHE);
+        }
+
+        return Cache::remember(self::USAGE_CACHE, self::USAGE_TTL, function () {
+            if (! $this->client->isConfigured()) {
+                return ['available' => false, 'error' => null, 'periods' => []];
+            }
+
+            try {
+                $periods = $this->normalizeUsage($this->client->usage());
+            } catch (\Throwable $e) {
+                $error = $e instanceof ConnectionException ? $e->getMessage() : KhabeerSoftClient::errorMessage($e);
+                Log::warning('whatsapp usage: '.$error);
+
+                return ['available' => false, 'error' => $error, 'periods' => []];
+            }
+
+            return ['available' => (bool) $periods, 'error' => null, 'periods' => $periods];
+        });
+    }
+
+    /** رد البوابة → أسطر جاهزة للعرض (المتبقي والنسبة يُحسبان إن لم تُرسلهما) */
+    private function normalizeUsage(array $data): array
+    {
+        $periods = [];
+
+        foreach (self::USAGE_PERIODS as $key => $label) {
+            $row = (array) ($data[$key] ?? []);
+
+            if (! $row) {
+                continue;
+            }
+
+            $used = (int) ($row['used'] ?? 0);
+            $limit = isset($row['limit']) && $row['limit'] !== null ? (int) $row['limit'] : null;
+
+            $remaining = isset($row['remaining']) && $row['remaining'] !== null
+                ? (int) $row['remaining']
+                : ($limit !== null ? max(0, $limit - $used) : null);
+
+            $percentage = isset($row['percentage']) && $row['percentage'] !== null
+                ? (int) round((float) $row['percentage'])
+                : ($limit > 0 ? (int) round($used / $limit * 100) : 0);
+
+            $periods[] = [
+                'key' => $key,
+                'label' => $label,
+                'used' => $used,
+                'limit' => $limit,
+                'remaining' => $remaining,
+                'percentage' => max(0, min(100, $percentage)),
+            ];
+        }
+
+        return $periods;
     }
 }

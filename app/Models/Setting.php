@@ -16,4 +16,10 @@ class Setting extends Model
     {
         return static::where('group', $group)->where('key', $key)->value('value') ?? $default;
     }
+
+    /** حفظ/تحديث إعداد واحد (القيمة تُخزَّن JSON فيرجع الـ bool كما هو) */
+    public static function set(string $group, string $key, mixed $value): static
+    {
+        return static::updateOrCreate(['group' => $group, 'key' => $key], ['value' => $value]);
+    }
 }

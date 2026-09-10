@@ -59,7 +59,7 @@
                             <tr class="hover:bg-gray-50/50">
                             <td class="px-4 py-3 text-gray-400 tabular-nums">{{ $unitTypes->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-3 font-semibold text-ink">{{ $nameAr }}</td>
-                                <td class="px-4 py-3 text-gray-500" dir="ltr">{{ $nameEn ?: '—' }}</td>
+                                <td class="px-4 py-3 text-gray-500"><bdi dir="ltr">{{ $nameEn ?: '—' }}</bdi></td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $unitType->category === 'commercial' ? 'bg-accent-100 text-accent-800' : 'bg-primary-50 text-primary-700' }}">{{ $unitType->categoryLabel() }}</span>
                                 </td>
