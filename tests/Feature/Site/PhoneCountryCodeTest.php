@@ -3,12 +3,23 @@
 namespace Tests\Feature\Site;
 
 use App\Models\ContactRequest;
+use App\Support\Honeypot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 class PhoneCountryCodeTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** حقول مصيدة السبام التي يرسلها المتصفح مع كل نموذج عام */
+    private function trap(): array
+    {
+        return [
+            Honeypot::FIELD => '',
+            Honeypot::TIME_FIELD => Crypt::encryptString((string) now()->subMinute()->getTimestamp()),
+        ];
+    }
 
     public function test_public_contact_forms_show_ten_country_codes_and_no_phone_placeholder(): void
     {
@@ -33,7 +44,7 @@ class PhoneCountryCodeTest extends TestCase
             'phone_country_code' => '+966',
             'phone' => '050 123 4567',
             'message' => 'أرغب في مزيد من المعلومات.',
-        ])->assertSessionHasNoErrors();
+        ] + $this->trap())->assertSessionHasNoErrors();
 
         $this->assertSame('+966 501234567', ContactRequest::sole()->phone);
     }
@@ -45,7 +56,7 @@ class PhoneCountryCodeTest extends TestCase
             'phone_country_code' => '+20',
             'phone' => '010 1234 5678',
             'details' => 'شقة مكونة من ثلاث غرف.',
-        ])->assertSessionHasNoErrors();
+        ] + $this->trap())->assertSessionHasNoErrors();
 
         $this->assertSame('+20 1012345678', ContactRequest::sole()->phone);
     }

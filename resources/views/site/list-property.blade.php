@@ -48,6 +48,7 @@
 
             <form method="POST" action="{{ route('site.list-property.store') }}" class="space-y-5">
                 @csrf
+                <x-site.honeypot />
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label class="{{ $label }}">{{ $t('الاسم الكامل', 'Full name') }} {!! $req !!}</label>

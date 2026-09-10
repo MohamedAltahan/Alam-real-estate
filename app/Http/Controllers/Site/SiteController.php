@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Support\Honeypot;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\ContactRequest;
@@ -178,6 +179,8 @@ class SiteController extends Controller
     /** حفظ رسالة تواصل */
     public function storeContact(Request $request): RedirectResponse
     {
+        Honeypot::assertHuman($request, 'contact');
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'phone_country_code' => ['required', Rule::in(array_column(self::PHONE_COUNTRIES, 'code'))],
@@ -209,6 +212,8 @@ class SiteController extends Controller
     /** حفظ طلب عرض عقار (ضمن contact_requests بنوع list_property) */
     public function storeListProperty(Request $request): RedirectResponse
     {
+        Honeypot::assertHuman($request, 'list-property');
+
         $v = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'phone_country_code' => ['required', Rule::in(array_column(self::PHONE_COUNTRIES, 'code'))],
