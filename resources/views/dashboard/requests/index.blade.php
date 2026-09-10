@@ -30,9 +30,17 @@
             <div class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $isRead ? '' : 'ring-1 ring-primary-200' }}">
                 <div class="flex-1">
                 <div class="flex items-start justify-between gap-2 mb-3">
-                    <div class="flex items-center gap-2">
-                        @unless ($isRead)<span class="w-2 h-2 rounded-full bg-primary-600"></span>@endunless
+                    <div class="flex items-center gap-2 flex-wrap min-w-0">
+                        @unless ($isRead)<span class="w-2 h-2 rounded-full bg-primary-600 shrink-0"></span>@endunless
                         <span class="rounded-full bg-info-soft text-info px-2.5 py-0.5 text-xs font-medium">{{ $req->requestType?->name ?? 'طلب' }}</span>
+                        {{-- وقت وصول الطلب — bdi ليُقرأ بالاتجاه الصحيح ويُحاذى مع بقية السطر --}}
+                        @if ($req->created_at)
+                            <span class="text-[11px] text-gray-400 tabular-nums whitespace-nowrap" title="{{ $req->created_at->locale('ar')->diffForHumans() }}">
+                                <bdi dir="ltr">{{ $req->created_at->format('Y-m-d') }}</bdi>
+                                ·
+                                <bdi dir="ltr">{{ $req->created_at->format('h:i A') }}</bdi>
+                            </span>
+                        @endif
                     </div>
                     @if ($req->status === 'contacted')
                         <span class="rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">تم التواصل</span>
