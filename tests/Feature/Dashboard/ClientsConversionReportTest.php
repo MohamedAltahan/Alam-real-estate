@@ -74,7 +74,13 @@ class ClientsConversionReportTest extends TestCase
             ->assertSee('تقرير تحول العملاء')->assertSee('ربح ÷ كل العملاء')
             ->assertSee('كل مندوبي المبيعات')->assertDontSee('كل المسؤولين');
 
+        // الشريط الجانبي: «التقارير» يفتح على تحول العملاء، والتبويبات الثلاثة بترتيب ثابت
+        $this->actingAs($manager)->get(route('dashboard.reports.clients-conversion'))->assertOk()
+            ->assertSee('التقارير')->assertDontSee('تقارير التحول')
+            ->assertSeeInOrder(['تحول العملاء', 'تحول المعاينات', 'واتساب المعاينات']);
+
         $this->actingAs($manager)->get(route('dashboard.reports.viewings'))->assertOk()
+            ->assertSee('role="tab"', false)->assertSee(route('dashboard.reports.clients-conversion'), false)
             ->assertSee('كل مندوبي المبيعات')->assertDontSee('كل المسؤولين')->assertSee('أُبلغ المسؤول')->assertDontSee('أُبلغ المالك');
     }
 

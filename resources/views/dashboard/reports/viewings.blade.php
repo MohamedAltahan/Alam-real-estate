@@ -22,9 +22,12 @@
 
 @section('content')
 <div>
-    <div class="mb-5">
-        <h2 class="text-xl font-bold text-ink">واتساب المعاينات</h2>
-        <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل لمسؤول العقار، وإرسال نتيجة المعاينة له</p>
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div>
+            <h2 class="text-xl font-bold text-ink">واتساب المعاينات</h2>
+            <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل لمسؤول العقار، وإرسال نتيجة المعاينة له</p>
+        </div>
+        @include('dashboard.reports._tabs', ['tab' => 'whatsapp'])
     </div>
 
     <x-filter-bar id="wa-report-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.reports.viewings') : null">

@@ -57,7 +57,7 @@
         ['label' => 'المواقع الإلكترونية', 'route' => 'dashboard.websites.index', 'active' => 'dashboard.websites.*', 'icon' => 'link', 'permission' => 'publishing_channels.view'],
         ['label' => 'السوشال ميديا',  'route' => 'dashboard.social-channels.index', 'active' => 'dashboard.social-channels.*', 'icon' => 'share', 'permission' => 'publishing_channels.view'],
         ['label' => 'واتساب',         'route' => 'dashboard.whatsapp.index', 'active' => 'dashboard.whatsapp.*', 'icon' => 'whatsapp', 'permission' => 'whatsapp.view'],
-        ['label' => 'تقارير التحول',  'route' => 'dashboard.reports.conversion', 'active' => 'dashboard.reports.*', 'icon' => 'chart', 'permission' => 'reports.view'],
+        ['label' => 'التقارير',        'route' => 'dashboard.reports.clients-conversion', 'active' => 'dashboard.reports.*', 'icon' => 'chart', 'permission' => 'reports.view'],
         ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield', 'permission' => 'roles.view'],
         ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock', 'permission' => 'permissions.view'],
         ['label' => 'المشرفين',       'route' => 'dashboard.supervisors.index', 'active' => 'dashboard.supervisors.*', 'icon' => 'user-check', 'permission' => 'supervisors.view'],
