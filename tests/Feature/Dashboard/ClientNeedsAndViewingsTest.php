@@ -149,9 +149,12 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertSame('+966', $updated->changes['phone_code']['new']);
     }
 
-    public function test_viewing_on_a_sold_property_is_rejected(): void
+    public function test_viewing_on_a_sold_property_is_allowed_and_the_lookup_only_badges_it(): void
     {
         $this->property->update(['status_id' => PropertyStatus::where('key', 'sold')->value('id')]);
+
+        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()
+            ->assertJsonPath('0.badge', 'مباع')->assertJsonMissingPath('0.blocked');
 
         $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
             'name' => 'عميل',
@@ -160,10 +163,14 @@ class ClientNeedsAndViewingsTest extends TestCase
             'viewings' => [
                 ['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->format('Y-m-d H:i')],
             ],
-        ])->assertSessionHasErrors('viewings.0.property_id');
+        ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('client_viewings', 0);
-        $this->assertDatabaseCount('clients', 0);
+        $this->assertDatabaseCount('client_viewings', 1);
+        $this->assertSame('sold', $this->property->fresh()->status->key);
+
+        // العقار المتاح بلا شارة
+        $this->property->update(['status_id' => $this->available->id]);
+        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()->assertJsonPath('0.badge', null);
     }
 
     public function test_moving_the_schedule_to_the_future_re_arms_the_reminder(): void
@@ -331,7 +338,7 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertSame('available', $this->property->refresh()->status->key);
 
         $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()
-            ->assertJsonPath('0.blocked', null)
+            ->assertJsonPath('0.badge', null)
             ->assertJsonMissingPath('0.busy');
     }
 

@@ -23,14 +23,15 @@
                         <div x-show="open" x-cloak
                              class="absolute z-40 mt-1 w-full min-w-[280px] rounded-2xl bg-white border border-gray-100 shadow-2xl p-1.5 max-h-64 overflow-y-auto">
                             <template x-for="(item, j) in results" :key="item.id">
-                                <button type="button" @mousedown.prevent="pick(item)" @mouseenter="hi = j" :disabled="!! item.blocked"
+                                <button type="button" @mousedown.prevent="pick(item)" @mouseenter="hi = j"
                                         :class="hi === j ? 'bg-primary-50' : ''"
-                                        class="w-full text-start rounded-xl px-3 py-2 text-sm transition disabled:opacity-60 disabled:cursor-not-allowed">
+                                        class="w-full text-start rounded-xl px-3 py-2 text-sm transition">
                                     <span class="flex items-center justify-between gap-2">
                                         <span class="flex items-center gap-2 min-w-0">
                                             <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
-                                            {{-- مباع: حالة العقار --}}
-                                            <span x-show="item.blocked" x-text="item.blocked" class="rounded-full bg-danger/10 text-danger px-2 py-0.5 text-[10px] font-bold"></span>
+                                            {{-- شارة حالة العقار (غير متاح) — للعلم فقط ولا تمنع الاختيار --}}
+                                            <span x-show="item.badge" x-text="item.badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                                  :style="item.badge_color ? `color:${item.badge_color};background-color:${item.badge_color}1a` : ''"></span>
                                         </span>
                                         <span class="text-[11px] text-gray-400" x-text="item.area || ''"></span>
                                     </span>

@@ -1,7 +1,7 @@
 {{--
     علامتا واتساب للمعاينة: (1) أُبلغ مسؤول العقار ببيانات العميل · (2) أُرسلت نتيجة المعاينة للمسؤول.
     زر الإرسال يحمل الحمولة في data-wa-send وتفتحه نافذة _wa-modal (whatsapp.js).
-    زر النتيجة قبل تسجيلها يحمل data-wa-blocked فيعرض «يجب اختيار النتيجة أولاً» عند النقر.
+    زر النتيجة قبل تسجيلها يحمل data-wa-blocked فيعرض «يجب اختيار النتيجة أولاً» فوراً عند التمرير وعند النقر.
     يتوقع $viewing مع property.contacts و client.
 --}}
 @inject('whatsapp', 'App\Services\WhatsApp\WhatsAppService')
@@ -48,7 +48,7 @@
                 @endif
             </span>
         @elseif ($canSend && ! $step['enabled'])
-            <button type="button" data-wa-blocked="{{ $step['hint'] }}" title="{{ $step['hint'] }}" aria-disabled="true"
+            <button type="button" data-wa-blocked="{{ $step['hint'] }}" aria-label="{{ $step['hint'] }}" aria-disabled="true"
                     class="{{ $chip }} border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
                 {!! $waIcon !!}{{ $step['todo'] }}
             </button>

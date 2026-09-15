@@ -64,11 +64,6 @@ withAlpine((Alpine) => {
         },
 
         pick(item) {
-            // مباع — لا يُختار
-            if (item.blocked) {
-                return;
-            }
-
             this.row.property_id = String(item.id);
             this.row.property_label = item.label;
             this.row.property_purpose = item.purpose ?? '';

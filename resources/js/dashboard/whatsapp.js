@@ -2,7 +2,7 @@
  * واتساب:
  *  - نافذة إرسال رسالة معاينة: تُفتح من أي زر يحمل data-wa-send (حمولة JSON من السيرفر)
  *    وتعرض أرقام المسؤولين عن العقار بصفاتهم ونص القالب معبّأً قابلاً للتعديل.
- *  - زر محجوب (data-wa-blocked): يعرض سبب الحجب في فقاعة بدل أن يكون معطّلاً بلا تفسير.
+ *  - زر محجوب (data-wa-blocked): يعرض سبب الحجب فوراً عند التمرير (فقاعة ملتصقة بالزر) وعند النقر.
  *  - لوحة ربط الرقم بالـ QR (شاشة واتساب): استطلاع كل 3 ثوانٍ حتى «متصل».
  */
 import { withAlpine } from './alpine';
@@ -19,6 +19,42 @@ export function toast(message, tone = 'bg-primary-950') {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), TOAST_MS);
 }
+
+/** فقاعة تلميح فورية فوق الزر المحجوب — بلا تأخير الـ title الأصلي (~ثانية) */
+let hint = null;
+
+function showHint(target) {
+    hideHint();
+    const rect = target.getBoundingClientRect();
+    hint = document.createElement('div');
+    hint.setAttribute('role', 'tooltip');
+    hint.className = 'fixed z-[80] pointer-events-none rounded-lg bg-primary-950 text-white text-[11px] font-semibold px-2.5 py-1.5 shadow-lg whitespace-nowrap';
+    hint.textContent = target.dataset.waBlocked || 'يجب اختيار النتيجة أولاً';
+    document.body.appendChild(hint);
+    const top = rect.top - hint.offsetHeight - 6;
+    hint.style.top = (top < 4 ? rect.bottom + 6 : top) + 'px';
+    hint.style.left = Math.max(4, Math.min(innerWidth - hint.offsetWidth - 4, rect.left + rect.width / 2 - hint.offsetWidth / 2)) + 'px';
+}
+
+function hideHint() {
+    hint?.remove();
+    hint = null;
+}
+
+document.addEventListener('mouseover', (event) => {
+    const blocked = event.target.closest('[data-wa-blocked]');
+    if (blocked && ! blocked.contains(event.relatedTarget)) {
+        showHint(blocked);
+    }
+});
+document.addEventListener('mouseout', (event) => {
+    const blocked = event.target.closest('[data-wa-blocked]');
+    if (blocked && ! blocked.contains(event.relatedTarget)) {
+        hideHint();
+    }
+});
+window.addEventListener('scroll', hideHint, true);
+window.addEventListener('live-filters:updated', hideHint);
 
 // تفويض: يعمل داخل الجداول التي تُستبدل بالفلاتر الحيّة وخارج أي x-data
 document.addEventListener('click', (event) => {

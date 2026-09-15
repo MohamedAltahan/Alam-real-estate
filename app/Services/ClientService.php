@@ -17,7 +17,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 /**
  * منطق العملاء المشترك — يخدم الداشبورد (Blade) والـ API معاً (API-first).
@@ -402,12 +401,8 @@ class ClientService
             ];
 
             $viewing = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
-            $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
-
-            // التحقق من العقار عند إضافة معاينة أو تغيير عقار معاينة موجودة فقط
-            if (! $viewing || (int) $viewing->property_id !== $propertyId) {
-                $this->ensurePropertyCanBeViewed($property, $index);
-            }
+            // أي عقار قابل للمعاينة مهما كانت حالته (مباع/قيد التدقيق) — الحالة للعلم فقط
+            $property = Property::query()->with('status')->findOrFail($propertyId);
 
             if ($viewing) {
                 $previous = $viewing->outcome;
@@ -455,15 +450,5 @@ class ClientService
         }
 
         $client->unsetRelation('viewings');
-    }
-
-    /** لا معاينة لعقار مباع */
-    private function ensurePropertyCanBeViewed(Property $property, int $index): void
-    {
-        if ($property->status?->key === 'sold') {
-            throw ValidationException::withMessages([
-                "viewings.{$index}.property_id" => 'لا يمكن جدولة معاينة لعقار مباع.',
-            ]);
-        }
     }
 }

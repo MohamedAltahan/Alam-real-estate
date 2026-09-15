@@ -8,10 +8,11 @@ use App\Models\Property;
 final class PropertyLookup
 {
     /**
-     * @param  bool  $flagSold  تعليم العقار المباع كمحجوب عن الاختيار
+     * كل العقارات قابلة للاختيار؛ الحالة غير «متاح» تظهر كشارة فقط (مباع / قيد التدقيق…) ولا تمنع الاختيار.
+     *
      * @return array<int, array<string, mixed>>
      */
-    public static function search(string $q, bool $flagSold = true, int $limit = 20): array
+    public static function search(string $q, int $limit = 20): array
     {
         $q = trim($q);
         $term = '%'.mb_strtolower($q).'%';
@@ -26,7 +27,7 @@ final class PropertyLookup
             ->limit($limit)
             ->get();
 
-        return $properties->map(function (Property $property) use ($flagSold) {
+        return $properties->map(function (Property $property) {
             $statusKey = $property->status?->key;
 
             return [
@@ -38,7 +39,8 @@ final class PropertyLookup
                 'status' => $property->status?->name,
                 'status_key' => $statusKey,
                 'purpose' => $property->purpose,
-                'blocked' => $flagSold && $statusKey === 'sold' ? 'مباع' : null,
+                'badge' => $statusKey && $statusKey !== 'available' ? (string) $property->status?->name : null,
+                'badge_color' => $property->status?->color,
             ];
         })->values()->all();
     }
