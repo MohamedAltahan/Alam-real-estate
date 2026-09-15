@@ -29,6 +29,7 @@
                                     <span class="flex items-center justify-between gap-2">
                                         <span class="flex items-center gap-2 min-w-0">
                                             <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
+                                            <span x-show="item.building" x-text="'— ' + item.building" class="text-xs text-gray-500 truncate"></span>
                                             {{-- شارة حالة العقار (غير متاح) — للعلم فقط ولا تمنع الاختيار --}}
                                             <span x-show="item.badge" x-text="item.badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold"
                                                   :style="item.badge_color ? `color:${item.badge_color};background-color:${item.badge_color}1a` : ''"></span>

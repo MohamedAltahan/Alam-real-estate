@@ -169,6 +169,18 @@ class Property extends Model implements HasMedia
         return $this->video_id ? "https://img.youtube.com/vi/{$this->video_id}/hqdefault.jpg" : null;
     }
 
+    /** «مبنى: برج السالمية» — يُعرض بجانب الرقم المرجعي أينما ظهر العقار */
+    public function buildingLabel(): ?string
+    {
+        return filled($this->building_name) ? 'مبنى: '.$this->building_name : null;
+    }
+
+    /** «12 — مبنى: برج السالمية» (نص عادي للقوائم والبحث) */
+    public function codeLabel(): string
+    {
+        return trim(($this->reference_code ?: '#'.$this->id).($this->buildingLabel() ? ' — '.$this->buildingLabel() : ''));
+    }
+
     public function isSold(): bool
     {
         return $this->status?->key === 'sold';

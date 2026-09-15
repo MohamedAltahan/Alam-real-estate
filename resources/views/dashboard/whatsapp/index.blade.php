@@ -258,7 +258,7 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-600"><bdi dir="ltr">{{ $message->viewing?->property?->reference_code ?? '—' }}</bdi></td>
+                                <td class="px-4 py-3 text-gray-600"><bdi dir="ltr">{{ $message->viewing?->property?->reference_code ?? '—' }}</bdi>@if ($message->viewing?->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $message->viewing?->property->building_name }}</span>@endif</td>
                                 <td class="px-4 py-3 text-gray-600 text-xs">{{ $message->to_label ?: $message->to_phone }}</td>
                                 <td class="px-4 py-3"><x-whatsapp-status :message="$message" /></td>
                                 <td class="px-4 py-3 text-gray-600 text-xs">{{ $message->sender?->name ?? 'النظام' }}</td>

@@ -391,7 +391,7 @@
                                             @if ($firstViewing)
                                                 <span class="flex items-center gap-2">
                                                     <span class="font-semibold text-ink"
-                                                        dir="ltr">{{ $firstViewing->property?->reference_code ?: '—' }}</span>
+                                                        dir="ltr">{{ $firstViewing->property?->reference_code ?: '—' }}</span>{!! $firstViewing->property?->building_name ? '<span class="text-xs font-normal text-gray-500">— مبنى: '.e($firstViewing->property->building_name).'</span>' : '' !!}
                                                     @if ($c->viewings->count() > 1)
                                                         <span
                                                             class="rounded-full bg-primary-100 text-primary-700 text-[11px] font-bold px-2 py-0.5">+{{ $c->viewings->count() - 1 }}</span>

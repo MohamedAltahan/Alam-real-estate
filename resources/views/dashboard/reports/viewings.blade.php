@@ -90,7 +90,7 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="font-semibold text-ink" dir="ltr">{{ $viewing->property?->reference_code ?? '—' }}</span>
+                                    <span class="font-semibold text-ink"><bdi dir="ltr">{{ $viewing->property?->reference_code ?? '—' }}</bdi>@if ($viewing->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $viewing->property->building_name }}</span>@endif</span>
                                     <span class="block text-xs text-gray-400 truncate max-w-[200px]">{{ $viewing->property?->title }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-gray-600 whitespace-nowrap"><bdi dir="ltr">{{ $viewing->scheduled_at?->format('Y-m-d h:i A') }}</bdi></td>

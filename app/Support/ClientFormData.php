@@ -103,7 +103,7 @@ final class ClientFormData
 
     public static function propertyLabel(Property $property): string
     {
-        return trim(($property->reference_code ?: '#'.$property->id).($property->title ? ' — '.$property->title : ''));
+        return trim($property->codeLabel().($property->title ? ' — '.$property->title : ''));
     }
 
     /** أخطاء الأسطر والهاتف فقط، بصيغة {"needs.0.area_id": "..."} لعرضها داخل Alpine */

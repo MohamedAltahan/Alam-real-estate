@@ -112,7 +112,7 @@
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block font-semibold text-ink truncate">{{ $p->title }}</span>
-                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->is_furnished) · مفروشة @endif</span>
+                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->building_name) — مبنى: {{ $p->building_name }}@endif @if ($p->is_furnished) · مفروشة @endif</span>
                                     </span>
                                 </div>
                             </td>

@@ -168,9 +168,15 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertDatabaseCount('client_viewings', 1);
         $this->assertSame('sold', $this->property->fresh()->status->key);
 
-        // العقار المتاح بلا شارة
-        $this->property->update(['status_id' => $this->available->id]);
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()->assertJsonPath('0.badge', null);
+        // العقار المتاح بلا شارة، واسم المبنى يظهر بجانب الرقم في البحث والجداول
+        $this->property->update(['status_id' => $this->available->id, 'building_name' => 'برج السالمية']);
+        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()
+            ->assertJsonPath('0.badge', null)->assertJsonPath('0.building', 'مبنى: برج السالمية')
+            ->assertJsonPath('0.label', '501 — مبنى: برج السالمية — شقة السالمية');
+        $client = Client::where('phone', '55000000')->firstOrFail();
+        $this->actingAs($this->user)->get(route('dashboard.clients.show', $client))->assertOk()->assertSee('— مبنى: برج السالمية');
+        $this->actingAs($this->user)->get(route('dashboard.clients.viewings', $client))->assertOk()->assertSee('— مبنى: برج السالمية');
+        $this->actingAs($this->user)->get(route('dashboard.viewings.index'))->assertOk()->assertSee('— مبنى: برج السالمية');
     }
 
     public function test_moving_the_schedule_to_the_future_re_arms_the_reminder(): void

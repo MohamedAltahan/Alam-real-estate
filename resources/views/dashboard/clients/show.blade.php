@@ -131,9 +131,9 @@
                                                 <span class="w-11 h-9 rounded-lg bg-gray-100 overflow-hidden shrink-0">@if ($viewing->property?->cover_url)<img src="{{ $viewing->property->cover_url }}" class="w-full h-full object-cover" alt="">@endif</span>
                                                 <span class="min-w-0">
                                                     @can('properties.view')
-                                                        <a href="{{ $viewing->property ? route('dashboard.properties.show', $viewing->property) : '#' }}" class="block font-semibold text-ink hover:text-primary-700"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi></a>
+                                                        <a href="{{ $viewing->property ? route('dashboard.properties.show', $viewing->property) : '#' }}" class="block font-semibold text-ink hover:text-primary-700"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi>@if ($viewing->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $viewing->property->building_name }}</span>@endif</a>
                                                     @else
-                                                        <span class="block font-semibold text-ink"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi></span>
+                                                        <span class="block font-semibold text-ink"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi>@if ($viewing->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $viewing->property->building_name }}</span>@endif</span>
                                                     @endcan
                                                     <span class="block text-xs text-gray-400 truncate max-w-[220px]">{{ $viewing->property?->title }}</span>
                                                 </span>

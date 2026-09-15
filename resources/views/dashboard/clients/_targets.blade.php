@@ -27,9 +27,9 @@
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     @can('properties.view')
                         <a href="{{ $viewing->property ? route('dashboard.properties.show', $viewing->property) : '#' }}"
-                           class="font-semibold text-sm text-ink hover:text-primary-700" dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</a>
+                           class="font-semibold text-sm text-ink hover:text-primary-700"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi>@if ($viewing->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $viewing->property->building_name }}</span>@endif</a>
                     @else
-                        <span class="font-semibold text-sm text-ink" dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</span>
+                        <span class="font-semibold text-sm text-ink"><bdi dir="ltr">{{ $viewing->property?->reference_code ?: '—' }}</bdi>@if ($viewing->property->building_name)<span class="text-xs font-normal text-gray-500"> — مبنى: {{ $viewing->property->building_name }}</span>@endif</span>
                     @endcan
 
                     {{-- تغيير حالة المعاينة بدون إغلاق النافذة --}}

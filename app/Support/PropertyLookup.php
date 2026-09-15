@@ -33,6 +33,7 @@ final class PropertyLookup
             return [
                 'id' => $property->id,
                 'reference_code' => $property->reference_code,
+                'building' => $property->buildingLabel(),
                 'title' => $property->title,
                 'label' => ClientFormData::propertyLabel($property),
                 'area' => $property->area?->name,
