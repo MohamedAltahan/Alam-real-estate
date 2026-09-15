@@ -33,7 +33,7 @@ class ViewingService
 
     public function paginate(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
-        return ClientViewing::query()
+        return $this->filtered($filters)
             ->with([
                 'client:id,name,agent_id,phone_code,phone',
                 'client.agent:id,name,phone',
@@ -42,6 +42,36 @@ class ViewingService
                 'property.area:id,name',
                 'property.contacts',
             ])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * عدّادات أزرار النتيجة فوق الجدول: كل الفلاتر الحالية عدا النتيجة نفسها.
+     *
+     * @return array{total:int, outcomes:array<string,int>}
+     */
+    public function outcomeCounts(array $filters = []): array
+    {
+        $base = $this->filtered(array_diff_key($filters, ['outcome' => null]));
+
+        return [
+            'total' => (clone $base)->count(),
+            'outcomes' => (clone $base)
+                ->selectRaw('outcome, COUNT(*) as aggregate')
+                ->groupBy('outcome')
+                ->pluck('aggregate', 'outcome')
+                ->map(fn ($n) => (int) $n)
+                ->all(),
+        ];
+    }
+
+    /** استعلام المعاينات بعد تطبيق الفلاتر — يخدم القائمة وعدّادات النتائج معاً */
+    private function filtered(array $filters = []): Builder
+    {
+        return ClientViewing::query()
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('scheduled_at', '>=', CarbonImmutable::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('scheduled_at', '<=', CarbonImmutable::parse($v)->endOfDay()))
             ->when($filters['agent_id'] ?? null, fn (Builder $q, $v) => $q->whereHas('client', fn (Builder $c) => $c->where('agent_id', $v)))
@@ -60,11 +90,7 @@ class ViewingService
                     $q->whereHas('client', fn (Builder $c) => $c->whereRaw('LOWER(name) LIKE ?', [$term]))
                         ->orWhereHas('property', fn (Builder $p) => $p->whereRaw('LOWER(reference_code) LIKE ?', [$term]));
                 });
-            })
-            ->orderByDesc('scheduled_at')
-            ->orderByDesc('id')
-            ->paginate($perPage)
-            ->withQueryString();
+            });
     }
 
     /** حالة واتساب: مكتملة (العلامتان) · لم يُبلَّغ المسؤول · لم تُرسل النتيجة */

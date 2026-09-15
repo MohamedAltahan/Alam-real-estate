@@ -38,8 +38,9 @@ document.addEventListener('change', async (event) => {
 
         // إعادة تلوين القائمة فوراً بلون الحالة الجديدة
         if (data.status?.color) {
-            select.style.color = data.status.color;
-            select.style.backgroundColor = data.status.color + '1a';
+            const pill = select.parentElement;
+            pill.style.color = data.status.color;
+            pill.style.backgroundColor = data.status.color + '1a';
         }
 
         toast('تم تغيير حالة العقار إلى «' + (data.status?.name ?? '') + '»', 'bg-success');

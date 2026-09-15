@@ -29,6 +29,7 @@ class ViewingController extends Controller
 
         return view('dashboard.viewings.index', [
             'viewings' => $this->viewings->paginate($filters),
+            'outcomeCounts' => $this->viewings->outcomeCounts($filters),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'outcomes' => ClientFields::OUTCOMES,
             'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),

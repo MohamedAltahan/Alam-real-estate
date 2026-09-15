@@ -62,6 +62,28 @@ class ViewingsPageAndReportTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('dashboard.viewings.index'))->assertForbidden();
     }
 
+    public function test_outcome_pills_above_the_table_carry_counts_that_ignore_the_outcome_filter(): void
+    {
+        $viewer = $this->userWith(['clients.view']);
+        $this->viewing('ع1', null, now()->addDay());
+        $this->viewing('ع2', null, now()->addDay(), ClientViewing::OUTCOME_INTERESTED);
+        $this->viewing('ع3', null, now()->addDay(), ClientViewing::OUTCOME_INTERESTED);
+        $this->viewing('ع4', null, now()->subDays(30), ClientViewing::OUTCOME_CANCELLED);
+
+        $page = $this->actingAs($viewer)->get(route('dashboard.viewings.index', ['outcome' => 'interested']))->assertOk();
+        $counts = $page->viewData('outcomeCounts');
+        $this->assertSame(4, $counts['total']);
+        $this->assertEqualsCanonicalizing(['pending' => 1, 'interested' => 2, 'cancelled' => 1], $counts['outcomes']);
+        $page->assertSee('data-filter-set="outcome" data-filter-value="interested"', false)
+            ->assertSee('data-filter-set="outcome" data-filter-value=""', false)
+            ->assertSee('كل المعاينات')->assertSee('ع2')->assertDontSee('ع1');
+
+        // الفلاتر الأخرى تُطبَّق على العدّادات
+        $narrow = $this->actingAs($viewer)->get(route('dashboard.viewings.index', ['from' => now()->toDateString()]))->assertOk()->viewData('outcomeCounts');
+        $this->assertSame(3, $narrow['total']);
+        $this->assertArrayNotHasKey('cancelled', $narrow['outcomes']);
+    }
+
     public function test_viewings_can_be_filtered_by_property_location_purpose_presence_and_whatsapp_state(): void
     {
         $viewer = $this->userWith(['clients.view']);

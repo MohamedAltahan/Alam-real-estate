@@ -53,12 +53,13 @@
             <dt class="text-[11px] font-semibold text-gray-400 mb-1">المسند إليه</dt>
             @if ($canTouch)
                 {{-- تغيير الإسناد مباشرة بعد الحفظ — يُحفظ فور الاختيار --}}
-                <dd>
+                <dd class="relative w-full max-w-[220px] text-gray-500">
                     <select @change="quickAssign({{ $task->id }}, $event.target.value)" title="تغيير المسند إليه"
-                            class="w-full max-w-[220px] appearance-none rounded-field bg-white border border-gray-200 ps-3 pe-8 h-9 text-sm font-semibold text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+                            class="w-full appearance-none rounded-field bg-white border border-gray-200 ps-3 pe-8 h-9 text-sm font-semibold text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
                         <option value="" @selected(! $task->assignee_id)>— غير مسندة —</option>
                         @foreach ($users as $u)<option value="{{ $u->id }}" @selected((int) $task->assignee_id === (int) $u->id)>{{ $u->name }}</option>@endforeach
                     </select>
+                    <x-select-chevron size="14" class="end-3" />
                 </dd>
             @else
                 <dd class="font-semibold text-ink">{{ $task->assignee?->name ?? '— غير مسندة —' }}</dd>

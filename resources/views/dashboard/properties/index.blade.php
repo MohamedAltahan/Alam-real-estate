@@ -121,13 +121,16 @@
                             <td class="px-4 py-3">
                                 @can('properties.edit')
                                     {{-- تغيير الحالة من الجدول مباشرة (property-status.js) — النقر لا يفتح العقار --}}
-                                    <select data-property-status="{{ route('dashboard.properties.status', $p) }}" @click.stop title="تغيير حالة العقار"
-                                            class="appearance-none rounded-full border-0 ps-3 pe-7 py-1 text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                                            style="color: {{ $p->status?->color ?? '#6B7280' }}; background-color: {{ ($p->status?->color ?? '#6B7280') }}1a;">
-                                        @foreach ($statuses as $status)
-                                            <option value="{{ $status->id }}" @selected((int) $p->status_id === (int) $status->id)>{{ $status->name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <span class="relative inline-flex items-center rounded-full" @click.stop
+                                          style="color: {{ $p->status?->color ?? '#6B7280' }}; background-color: {{ ($p->status?->color ?? '#6B7280') }}1a;">
+                                        <select data-property-status="{{ route('dashboard.properties.status', $p) }}" title="تغيير حالة العقار"
+                                                class="appearance-none rounded-full border-0 bg-transparent ps-3 pe-7 py-1 text-xs font-semibold cursor-pointer text-inherit focus:outline-none focus:ring-2 focus:ring-primary-500/20">
+                                            @foreach ($statuses as $status)
+                                                <option value="{{ $status->id }}" @selected((int) $p->status_id === (int) $status->id)>{{ $status->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <x-select-chevron class="end-2" />
+                                    </span>
                                 @else
                                     @if ($p->status)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap" style="color: {{ $p->status->color }}; background-color: {{ $p->status->color }}1a;"><span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $p->status->color }}"></span>{{ $p->status->name }}</span>@endif
                                 @endcan

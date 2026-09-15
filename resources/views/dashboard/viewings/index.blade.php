@@ -5,10 +5,22 @@
 
 @php
     use App\Support\ClientFields;
+
+    $activeOutcome = (string) ($filters['outcome'] ?? '');
+    // رابط زر النتيجة = نفس الفلاتر الحالية مع تبديل outcome فقط
+    $outcomeUrl = fn (?string $key) => route('dashboard.viewings.index',
+        array_filter(array_merge($filters, ['outcome' => $key]), fn ($v) => $v !== null && $v !== ''));
+    $pill = 'inline-flex items-center gap-2 rounded-full h-9 px-3.5 text-sm font-semibold whitespace-nowrap transition';
+    $pillOn = $pill.' bg-primary-900 text-white';
+    $pillOff = $pill.' text-gray-600 hover:bg-white hover:text-ink';
+    $badgeOn = 'grid place-items-center min-w-5 h-5 px-1 rounded-full bg-white/20 text-white text-[11px] font-bold tabular-nums';
+    $badgeOff = 'grid place-items-center min-w-5 h-5 px-1 rounded-full bg-gray-200/80 text-gray-600 text-[11px] font-bold tabular-nums';
+    // الفلاتر المتقدمة (كل شيء عدا البحث والنتيجة) — اللوحة تُفتح تلقائياً لو أحدها مفعّل
+    $advancedActive = collect($filters)->except(['search', 'outcome'])->filter(fn ($v) => $v !== null && $v !== '')->isNotEmpty();
 @endphp
 
 @section('content')
-<div>
+<div x-data="{ filtersOpen: {{ $advancedActive ? 'true' : 'false' }} }">
     <x-flash />
 
     <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
@@ -16,6 +28,23 @@
             <h2 class="text-xl font-bold text-ink">مواعيد المعاينات</h2>
             <p class="text-sm text-gray-500">{{ number_format($viewings->total()) }} معاينة</p>
         </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+            {{-- البحث دائم الظهور وينضمّ لنموذج الفلاتر بالخاصية form --}}
+            <div class="relative w-[260px] max-w-[55vw]">
+                <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="باسم العميل أو رقم العقار..." autocomplete="off" form="viewings-filters"
+                       class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
+            </div>
+
+            {{-- إظهار/إخفاء الفلاتر المتقدمة (مثل شاشة العملاء) --}}
+            <button type="button" @click="filtersOpen = ! filtersOpen"
+                    :class="filtersOpen ? 'bg-primary-50 border-primary-200 text-primary-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-2 rounded-full border px-4 h-11 text-sm font-semibold transition">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                فلاتر
+                @if ($advancedActive)<span class="w-2 h-2 rounded-full bg-accent-500"></span>@endif
+            </button>
         @can('reports.view')
             <a href="{{ route('dashboard.reports.conversion') }}" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 px-4 h-11 transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/></svg>
@@ -26,12 +55,14 @@
                 تقرير واتساب المعاينات
             </a>
         @endcan
+        </div>
     </div>
 
-    {{-- الفلاتر (خارج منطقة النتائج) — تُطبَّق فور الاختيار --}}
-    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-6" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
-        <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
-                        placeholder="باسم العميل أو رقم العقار..." span="col-span-2 md:col-span-1" />
+    {{-- الفلاتر المتقدمة (خارج منطقة النتائج حتى لا تُستبدَل مع كل فلترة) — تُطبَّق فور الاختيار --}}
+    <div x-show="filtersOpen" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 -translate-y-2">
+    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-5" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
         <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
         <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
         <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل مندوبي المبيعات"
@@ -62,8 +93,30 @@
         <x-filter-select label="حضوري" name="in_person" placeholder="الكل"
                          :options="['1' => 'نعم', '0' => 'لا']" :selected="$filters['in_person'] ?? null" />
     </x-filter-bar>
+    </div>
 
     <div data-results>
+        {{-- صفّ النتائج (مثل مراحل العملاء) — يبدّل حقل outcome في نموذج الفلاتر --}}
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="inline-flex items-center gap-1 rounded-full bg-gray-100/70 border border-gray-100 p-1 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <a href="{{ $outcomeUrl(null) }}" data-filter-set="outcome" data-filter-value="" class="{{ $activeOutcome === '' ? $pillOn : $pillOff }}">
+                    كل المعاينات
+                    <span class="{{ $activeOutcome === '' ? $badgeOn : $badgeOff }}">{{ $outcomeCounts['total'] }}</span>
+                </a>
+                @foreach ($outcomes as $key => $label)
+                    @php $on = $activeOutcome === $key; @endphp
+                    <a href="{{ $outcomeUrl($key) }}" data-filter-set="outcome" data-filter-value="{{ $key }}" class="{{ $on ? $pillOn : $pillOff }}">
+                        {{ $label }}
+                        <span class="{{ $on ? $badgeOn : $badgeOff }}">{{ $outcomeCounts['outcomes'][$key] ?? 0 }}</span>
+                    </a>
+                @endforeach
+            </div>
+
+            @if (array_filter($filters, fn ($v) => $v !== null && $v !== ''))
+                <a href="{{ route('dashboard.viewings.index') }}" class="text-sm text-gray-500 hover:text-danger whitespace-nowrap">مسح الفلاتر</a>
+            @endif
+        </div>
+
         <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
