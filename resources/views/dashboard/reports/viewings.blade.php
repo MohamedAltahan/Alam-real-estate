@@ -11,10 +11,10 @@
     $cards = [
         ['label' => 'إجمالي المعاينات', 'value' => $kpis['total'], 'tone' => 'bg-info-soft text-info'],
         ['label' => 'مكتملة (العلامتان)', 'value' => $kpis['complete'], 'tone' => 'bg-success-soft text-success'],
-        ['label' => 'أُبلغ المالك', 'value' => $kpis['owner_sent'], 'tone' => 'bg-primary-50 text-primary-700'],
-        ['label' => 'أُرسلت المتابعة', 'value' => $kpis['client_sent'], 'tone' => 'bg-primary-50 text-primary-700'],
-        ['label' => 'بلا إبلاغ المالك', 'value' => $kpis['missing_owner'], 'tone' => 'bg-danger/10 text-danger'],
-        ['label' => 'بلا متابعة', 'value' => $kpis['missing_client'], 'tone' => 'bg-warning-soft text-warning'],
+        ['label' => 'أُبلغ المسؤول', 'value' => $kpis['owner_sent'], 'tone' => 'bg-primary-50 text-primary-700'],
+        ['label' => 'أُرسلت النتيجة', 'value' => $kpis['client_sent'], 'tone' => 'bg-primary-50 text-primary-700'],
+        ['label' => 'بلا إبلاغ المسؤول', 'value' => $kpis['missing_owner'], 'tone' => 'bg-danger/10 text-danger'],
+        ['label' => 'بلا إرسال النتيجة', 'value' => $kpis['missing_client'], 'tone' => 'bg-warning-soft text-warning'],
     ];
     $check = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
     $cross = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
@@ -24,13 +24,13 @@
 <div>
     <div class="mb-5">
         <h2 class="text-xl font-bold text-ink">واتساب المعاينات</h2>
-        <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل للمالك، وإرسال المتابعة للعميل</p>
+        <p class="text-sm text-gray-500">لكل معاينة علامتان: إرسال بيانات العميل لمسؤول العقار، وإرسال نتيجة المعاينة له</p>
     </div>
 
     <x-filter-bar id="wa-report-filters" cols="xl:grid-cols-4" :reset="array_filter($filters) ? route('dashboard.reports.viewings') : null">
         <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
         <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
-        <x-filter-select label="المسؤول" name="agent_id" placeholder="كل المسؤولين"
+        <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل مندوبي المبيعات"
                          :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
         <x-filter-select label="حالة الإرسال" name="state" placeholder="كل المعاينات"
                          :options="$states" :selected="$filters['state'] ?? null" />
@@ -63,10 +63,10 @@
                             <th class="text-start font-medium px-4 py-3">العميل</th>
                             <th class="text-start font-medium px-4 py-3">العقار</th>
                             <th class="text-start font-medium px-4 py-3">الموعد</th>
-                            <th class="text-start font-medium px-4 py-3">المسؤول</th>
+                            <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                             <th class="text-start font-medium px-4 py-3">النتيجة</th>
-                            <th class="text-start font-medium px-4 py-3">بيانات العميل للمالك</th>
-                            <th class="text-start font-medium px-4 py-3">متابعة العميل</th>
+                            <th class="text-start font-medium px-4 py-3">إبلاغ المسؤول</th>
+                            <th class="text-start font-medium px-4 py-3">إرسال النتيجة</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">

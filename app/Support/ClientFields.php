@@ -45,17 +45,19 @@ final class ClientFields
 
     public const OUTCOMES = [
         'pending' => 'قيد الانتظار',
-        'chosen' => 'تم اختيار العقار',
-        'rejected' => 'لم يختر',
-        'vacated' => 'إخلاء العقار',
+        'studying' => 'قيد الدراسة',
+        'interested' => 'مهتم',
+        'not_interested' => 'غير مهتم',
+        'cancelled' => 'إلغاء الموعد',
     ];
 
     /** ألوان شارة النتيجة (Tailwind) */
     public const OUTCOME_TONES = [
         'pending' => 'bg-warning-soft text-warning',
-        'chosen' => 'bg-success-soft text-success',
-        'rejected' => 'bg-danger/10 text-danger',
-        'vacated' => 'bg-gray-100 text-gray-500',
+        'studying' => 'bg-info-soft text-info',
+        'interested' => 'bg-success-soft text-success',
+        'not_interested' => 'bg-danger/10 text-danger',
+        'cancelled' => 'bg-gray-100 text-gray-500',
     ];
 
     /** تسمية كل عمود (عميل / احتياج / معاينة / تواصل) لسجل التعديلات والفورم */
@@ -77,7 +79,10 @@ final class ClientFields
         'notes' => 'الملاحظات',
         'recorded_by' => 'سجّل البيانات',
         'is_featured' => 'طلب مميز',
+        'category' => 'نوع العقار',
         'unit_type_id' => 'نوع الوحدة',
+        'area_size' => 'المساحة (م²)',
+        'rooms' => 'عدد الغرف',
         'city_id' => 'المحافظة',
         'area_id' => 'المنطقة',
         'property_id' => 'العقار',
@@ -85,7 +90,6 @@ final class ClientFields
         'in_person' => 'حضوري',
         'outcome' => 'النتيجة',
         'outcome_at' => 'تاريخ النتيجة',
-        'contract_ends_at' => 'تاريخ انتهاء العقد',
         'relation' => 'نوع الارتباط',
         'type' => 'نوع التواصل',
         'occurred_at' => 'التاريخ',
@@ -115,6 +119,7 @@ final class ClientFields
         'preferred_contact' => self::CONTACT_METHODS,
         'social_status' => self::SOCIAL_STATUSES,
         'outcome' => self::OUTCOMES,
+        'category' => UnitType::CATEGORIES,
         'relation' => self::RELATIONS,
         'type' => self::INTERACTION_TYPES,
     ];

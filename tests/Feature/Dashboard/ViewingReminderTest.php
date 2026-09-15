@@ -75,7 +75,7 @@ class ViewingReminderTest extends TestCase
     {
         $this->viewing(now()->subDays(2), agentId: $this->agent->id);
         $decided = $this->viewing(now()->addMinutes(20), agentId: $this->agent->id);
-        $decided->update(['outcome' => ClientViewing::OUTCOME_CHOSEN]);
+        $decided->update(['outcome' => ClientViewing::OUTCOME_INTERESTED]);
 
         $this->actingAs($this->agent)->getJson(route('dashboard.notifications.poll'))->assertOk();
 

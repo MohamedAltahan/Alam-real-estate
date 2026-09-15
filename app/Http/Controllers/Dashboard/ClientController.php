@@ -69,7 +69,7 @@ class ClientController extends Controller
         $client->load([
             'needs.city', 'needs.area', 'needs.unitType', 'agent',
             'viewings.property.area', 'viewings.property.media',
-            'viewings.property.owner.contacts', 'viewings.property.agent',
+            'viewings.property.contacts', 'viewings.property.agent',
         ]);
 
         // العميل نفسه هو صاحب كل معاينة — نضبط العلاقة بدل استعلام لكل سطر
@@ -103,14 +103,10 @@ class ClientController extends Controller
         return back()->with('success', 'تم تسجيل التواصل وتحديث الحالة.');
     }
 
-    /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة، مع تعليم العقار المشغول الذي اختاره عميل آخر */
+    /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة */
     public function propertyLookup(Request $request): JsonResponse
     {
-        return response()->json(PropertyLookup::search(
-            (string) $request->query('q', ''),
-            flagBusy: true,
-            exceptClientId: $request->integer('client') ?: null,
-        ));
+        return response()->json(PropertyLookup::search((string) $request->query('q', '')));
     }
 
     private function agents()

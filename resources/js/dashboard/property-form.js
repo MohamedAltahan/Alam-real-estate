@@ -3,8 +3,25 @@
  * المحافظة → المنطقة، والتصنيف (سكني/تجاري) → أنواع الوحدات، وغرف النوم للسكني فقط.
  */
 import { withAlpine } from './alpine';
+import { rowRepeater } from './repeater';
+
+const BLANK_CONTACT = { id: '', phone_code: '+965', phone: '', role: '', name: '' };
 
 withAlpine((Alpine) => {
+    /** المسؤولون عن العقار: أسطر رقم + صفة + اسم — سطر واحد على الأقل */
+    Alpine.data('propertyContacts', (opts = {}) => ({
+        ...rowRepeater({ prefix: 'contacts', blank: BLANK_CONTACT, rows: opts.rows ?? [], errors: opts.errors ?? {} }),
+        countries: opts.countries ?? [],
+
+        removeContact(index) {
+            if (this.rows.length <= 1) {
+                return;
+            }
+
+            this.rows.splice(index, 1);
+        },
+    }));
+
     Alpine.data('propertyForm', (opts = {}) => ({
         purpose: opts.purpose || 'sale',
         category: String(opts.category ?? ''),

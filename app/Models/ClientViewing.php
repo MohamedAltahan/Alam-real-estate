@@ -11,24 +11,28 @@ class ClientViewing extends Model
 {
     public const OUTCOME_PENDING = 'pending';
 
-    public const OUTCOME_CHOSEN = 'chosen';
+    public const OUTCOME_STUDYING = 'studying';
 
-    public const OUTCOME_REJECTED = 'rejected';
+    /** العميل مهتم بالعقار — يحوّل العميل إلى مرحلة «ربح»؛ حالة العقار تُغيَّر يدوياً */
+    public const OUTCOME_INTERESTED = 'interested';
 
-    /** انتهى عقد الإيجار وترك العميل العقار — يحرّر العقار لعملاء آخرين ويبقى الاختيار محسوباً في التقرير */
-    public const OUTCOME_VACATED = 'vacated';
+    public const OUTCOME_NOT_INTERESTED = 'not_interested';
 
-    public const OUTCOMES = [self::OUTCOME_PENDING, self::OUTCOME_CHOSEN, self::OUTCOME_REJECTED, self::OUTCOME_VACATED];
+    public const OUTCOME_CANCELLED = 'cancelled';
+
+    public const OUTCOMES = [
+        self::OUTCOME_PENDING, self::OUTCOME_STUDYING, self::OUTCOME_INTERESTED,
+        self::OUTCOME_NOT_INTERESTED, self::OUTCOME_CANCELLED,
+    ];
 
     protected $fillable = [
         'client_id', 'property_id', 'scheduled_at', 'in_person',
-        'outcome', 'outcome_at', 'contract_ends_at', 'notes', 'reminded_at', 'created_by',
+        'outcome', 'outcome_at', 'notes', 'reminded_at', 'created_by',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
         'outcome_at' => 'datetime',
-        'contract_ends_at' => 'date',
         'reminded_at' => 'datetime',
         'owner_notified_at' => 'datetime',
         'client_followed_up_at' => 'datetime',
@@ -60,10 +64,9 @@ class ClientViewing extends Model
         return $query->where('outcome', self::OUTCOME_PENDING);
     }
 
-    /** معاينات اختار فيها العميل العقار (يسكنه الآن) — تجعل العقار «مشغولاً» */
-    public function scopeChosen(Builder $query): Builder
+    public function scopeInterested(Builder $query): Builder
     {
-        return $query->where('outcome', self::OUTCOME_CHOSEN);
+        return $query->where('outcome', self::OUTCOME_INTERESTED);
     }
 
     public function scopeUpcoming(Builder $query): Builder

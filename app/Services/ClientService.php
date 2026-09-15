@@ -9,7 +9,6 @@ use App\Models\ClientStage;
 use App\Models\ClientType;
 use App\Models\ClientViewing;
 use App\Models\Property;
-use App\Support\PropertyLookup;
 use App\Support\FullTextQuery;
 use App\Support\PhoneCountries;
 use App\Support\PhoneNumber;
@@ -27,9 +26,12 @@ class ClientService
 {
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
-        'search', 'stage_id', 'agent_id', 'city_id', 'area_id', 'unit_type_id',
+        'search', 'stage_id', 'agent_id', 'city_id', 'area_id', 'unit_type_id', 'category', 'area_from', 'area_to', 'rooms',
         'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q',
     ];
+
+    /** فلاتر احتياج العقار — تُطبَّق معاً على سطر الاحتياج نفسه */
+    private const NEED_FILTER_KEYS = ['city_id', 'area_id', 'unit_type_id', 'category', 'area_from', 'area_to', 'rooms'];
 
     /** فلاتر تبويب «الطلبات المميزة» في شاشة طلبات التواصل — الأساسية فقط */
     public const FEATURED_FILTER_KEYS = ['search', 'stage_id', 'agent_id'];
@@ -43,15 +45,35 @@ class ClientService
             ->when($filters['search'] ?? null, fn (Builder $q, $search) => $this->applySearch($q, (string) $search))
             ->when($filters['stage_id'] ?? null, fn (Builder $q, $v) => $q->where('stage_id', $v))
             ->when($filters['agent_id'] ?? null, fn (Builder $q, $v) => $q->where('agent_id', $v))
-            ->when($filters['city_id'] ?? null, fn (Builder $q, $v) => $q->whereHas('needs', fn (Builder $n) => $n->where('city_id', $v)))
-            ->when($filters['area_id'] ?? null, fn (Builder $q, $v) => $q->whereHas('needs', fn (Builder $n) => $n->where('area_id', $v)))
-            ->when($filters['unit_type_id'] ?? null, fn (Builder $q, $v) => $q->whereHas('needs', fn (Builder $n) => $n->where('unit_type_id', $v)))
+            ->when($this->needFilters($filters), fn (Builder $q, array $need) => $q->whereHas('needs', fn (Builder $n) => $this->applyNeedFilters($n, $need)))
             ->when($filters['nationality'] ?? null, fn (Builder $q, $v) => $q->whereRaw('LOWER(nationality) LIKE ?', ['%'.mb_strtolower(trim((string) $v)).'%']))
             ->when($filters['social_status'] ?? null, fn (Builder $q, $v) => $q->where('social_status', $v))
             ->when($filters['preferred_contact'] ?? null, fn (Builder $q, $v) => $q->where('preferred_contact', $v))
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
             ->when($this->notesTerm($filters), fn (Builder $q, $term) => $this->applyNotesSearch($q, $term));
+    }
+
+    /** @return array<string, string> فلاتر الاحتياج المعبّأة فقط */
+    private function needFilters(array $filters): array
+    {
+        return collect($filters)->only(self::NEED_FILTER_KEYS)
+            ->filter(fn ($v) => $v !== null && $v !== '')
+            ->map(fn ($v) => (string) $v)
+            ->all();
+    }
+
+    /** كل الشروط على سطر الاحتياج نفسه: محافظة/منطقة/نوع وحدة/نوع عقار/نطاق مساحة/عدد غرف */
+    private function applyNeedFilters(Builder $query, array $need): void
+    {
+        $query
+            ->when($need['city_id'] ?? null, fn (Builder $n, $v) => $n->where('city_id', $v))
+            ->when($need['area_id'] ?? null, fn (Builder $n, $v) => $n->where('area_id', $v))
+            ->when($need['unit_type_id'] ?? null, fn (Builder $n, $v) => $n->where('unit_type_id', $v))
+            ->when($need['category'] ?? null, fn (Builder $n, $v) => $n->where('category', $v))
+            ->when(is_numeric($need['area_from'] ?? null), fn (Builder $n) => $n->where('area_size', '>=', (float) $need['area_from']))
+            ->when(is_numeric($need['area_to'] ?? null), fn (Builder $n) => $n->where('area_size', '<=', (float) $need['area_to']))
+            ->when(is_numeric($need['rooms'] ?? null), fn (Builder $n) => $n->where('rooms', (int) $need['rooms']));
     }
 
     /** بحث عام: الاسم والبريد (بدون حساسية لحالة الأحرف) والهاتف بالأرقام فقط */
@@ -174,7 +196,7 @@ class ClientService
             'stage', 'type', 'agent', 'source', 'recordedBy',
             'needs.city', 'needs.area', 'needs.unitType',
             'viewings.property.status', 'viewings.property.media', 'viewings.createdBy',
-            'viewings.property.owner.contacts', 'viewings.property.agent', 'viewings.property.area',
+            'viewings.property.contacts', 'viewings.property.agent', 'viewings.property.area',
             'interactions.user', 'interactions.stage',
             'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
             'auditLogs' => fn ($q) => $q->with('user')->limit(50),
@@ -314,13 +336,16 @@ class ClientService
 
         $existing = $client->needs()->get()->keyBy('id');
         $kept = [];
-        $fields = ['unit_type_id', 'city_id', 'area_id'];
+        $fields = ['category', 'unit_type_id', 'city_id', 'area_id', 'area_size', 'rooms'];
 
         foreach (array_values($rows) as $index => $row) {
             $attributes = [
-                'unit_type_id' => $row['unit_type_id'] ?: null,
-                'city_id' => $row['city_id'] ?: null,
-                'area_id' => $row['area_id'] ?: null,
+                'category' => ($row['category'] ?? null) ?: null,
+                'unit_type_id' => ($row['unit_type_id'] ?? null) ?: null,
+                'city_id' => ($row['city_id'] ?? null) ?: null,
+                'area_id' => ($row['area_id'] ?? null) ?: null,
+                'area_size' => is_numeric($row['area_size'] ?? null) ? round((float) $row['area_size'], 2) : null,
+                'rooms' => is_numeric($row['rooms'] ?? null) ? (int) $row['rooms'] : null,
                 'sort_order' => $index,
             ];
 
@@ -362,7 +387,7 @@ class ClientService
 
         $existing = $client->viewings()->get()->keyBy('id');
         $kept = [];
-        $fields = ['property_id', 'scheduled_at', 'in_person', 'outcome', 'contract_ends_at', 'notes'];
+        $fields = ['property_id', 'scheduled_at', 'in_person', 'outcome', 'notes'];
 
         foreach (array_values($rows) as $index => $row) {
             $propertyId = (int) $row['property_id'];
@@ -373,25 +398,19 @@ class ClientService
                 'scheduled_at' => $row['scheduled_at'],
                 'in_person' => array_key_exists('in_person', $row) && $row['in_person'] !== null ? (bool) $row['in_person'] : true,
                 'outcome' => $outcome,
-                // تاريخ انتهاء العقد يخص «تم اختيار العقار» ويبقى مع «إخلاء العقار» كسجل
-                'contract_ends_at' => in_array($outcome, [ClientViewing::OUTCOME_CHOSEN, ClientViewing::OUTCOME_VACATED], true)
-                    ? (($row['contract_ends_at'] ?? null) ?: null)
-                    : null,
                 'notes' => $row['notes'] ?? null,
             ];
 
             $viewing = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
             $property = Property::query()->lockForUpdate()->with('status')->findOrFail($propertyId);
 
-            // التحقق من العقار عند إضافة معاينة أو تغيير عقار معاينة موجودة فقط —
-            // فإعادة حفظ معاينة مختارة على عقار بيع صار «مباعاً» بسببها لا تُحجب
+            // التحقق من العقار عند إضافة معاينة أو تغيير عقار معاينة موجودة فقط
             if (! $viewing || (int) $viewing->property_id !== $propertyId) {
-                $this->ensurePropertyCanBeViewed($property, $index, $client);
+                $this->ensurePropertyCanBeViewed($property, $index);
             }
 
             if ($viewing) {
                 $previous = $viewing->outcome;
-                $previousPropertyId = (int) $viewing->property_id;
                 $viewing->fill($attributes);
 
                 if ($viewing->isDirty('outcome')) {
@@ -412,18 +431,6 @@ class ClientService
                 if ($changes) {
                     $this->audit->record($client, 'viewing_updated', $viewing, $changes);
                 }
-
-                // انتقلت المعاينة لعقار آخر: يُحرَّر القديم كأنها حُذفت منه، ثم تُطبَّق على الجديد كأنها جديدة
-                if ($previousPropertyId !== $propertyId) {
-                    $old = Property::query()->with('status')->find($previousPropertyId);
-
-                    if ($old) {
-                        $viewing->setRelation('client', $client)->setRelation('property', $old);
-                        $this->sync->apply($viewing, $previous, deleted: true);
-                    }
-
-                    $previous = null;
-                }
             } else {
                 $previous = null;
                 $viewing = $client->viewings()->create($attributes + [
@@ -434,7 +441,7 @@ class ClientService
                 $this->audit->record($client, 'viewing_added', $viewing, $this->audit->snapshot($viewing, $fields));
             }
 
-            // أثر النتيجة على العميل والعقار (ربح / مباع / متاح)
+            // أثر النتيجة على العميل («مهتم» ⇒ ربح)
             $viewing->setRelation('client', $client)->setRelation('property', $property);
             $this->sync->apply($viewing, $previous);
 
@@ -445,29 +452,17 @@ class ClientService
             /** @var ClientViewing $viewing */
             $this->audit->record($client, 'viewing_removed', $viewing, $this->audit->snapshot($viewing, $fields, removed: true));
             $viewing->delete();
-
-            // حذف معاينة مختارة يحرّر عقار البيع
-            $viewing->setRelation('client', $client);
-            $this->sync->apply($viewing, $viewing->outcome, deleted: true);
         }
 
         $client->unsetRelation('viewings');
     }
 
-    /** لا معاينة لعقار مباع، ولا لعقار مشغول اختاره عميل آخر بالفعل */
-    private function ensurePropertyCanBeViewed(Property $property, int $index, Client $client): void
+    /** لا معاينة لعقار مباع */
+    private function ensurePropertyCanBeViewed(Property $property, int $index): void
     {
         if ($property->status?->key === 'sold') {
             throw ValidationException::withMessages([
                 "viewings.{$index}.property_id" => 'لا يمكن جدولة معاينة لعقار مباع.',
-            ]);
-        }
-
-        $busy = PropertyLookup::busyViewings($property->busyViewings(), $client->id)->first();
-
-        if ($busy) {
-            throw ValidationException::withMessages([
-                "viewings.{$index}.property_id" => 'العقار مشغول: '.PropertyLookup::busyText($busy).'.',
             ]);
         }
     }

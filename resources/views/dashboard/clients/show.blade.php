@@ -86,7 +86,7 @@
 
                 {{-- احتياج العقار --}}
                 <div class="mt-5 pt-4 border-t border-gray-100">
-                    <p class="text-xs text-gray-400 mb-2">احتياج العقار <span class="text-gray-300">(نوع الوحدة المطلوبة · المحافظة · المنطقة)</span></p>
+                    <p class="text-xs text-gray-400 mb-2">احتياج العقار <span class="text-gray-300">(نوع العقار · نوع الوحدة · المحافظة · المنطقة · الغرف · المساحة)</span></p>
                     @forelse ($client->needs as $need)
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-50 text-primary-800 text-xs font-medium px-3 py-1.5 me-1.5 mb-1.5">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
@@ -143,7 +143,7 @@
                                         <td class="px-3 py-2.5 text-gray-600">{{ $viewing->in_person ? 'نعم' : 'لا' }}</td>
                                         <td class="px-3 py-2.5">@include('dashboard.viewings._outcome', ['viewing' => $viewing])</td>
                                         <td class="px-3 py-2.5">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
-                                        <td class="px-3 py-2.5 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
+                                        <td class="px-3 py-2.5 max-w-[220px]">@include('dashboard.viewings._notes', ['viewing' => $viewing])</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -208,11 +208,12 @@
     </x-modal>
 
     @include('dashboard.viewings._wa-modal')
+    @include('dashboard.viewings._notes-modal')
 
     @can('clients.edit')
-        <div x-show="editOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" @keydown.escape.window="editOpen = false">
+        <div x-show="editOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-3" role="dialog" @keydown.escape.window="editOpen = false">
             <div class="absolute inset-0 bg-primary-950/50" @click="editOpen = false"></div>
-            <div class="relative w-full max-w-6xl bg-white rounded-card shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="relative w-full max-w-[min(96vw,88rem)] bg-white rounded-card shadow-2xl max-h-[94vh] overflow-y-auto">
                 <div class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-ink">تعديل بيانات العميل</h3><button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
                 <form method="POST" action="{{ route('dashboard.clients.update', $client) }}" enctype="multipart/form-data">@csrf @method('PUT')<div class="p-6">@include('dashboard.clients._form', ['client' => $client, 'form' => $form])</div><div class="sticky bottom-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/95"><button type="button" @click="editOpen = false" class="rounded-full px-4 py-2.5 text-sm text-gray-600">إلغاء</button><button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">حفظ التعديلات</button></div></form>
             </div>

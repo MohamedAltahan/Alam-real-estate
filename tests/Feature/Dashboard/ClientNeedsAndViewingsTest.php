@@ -14,6 +14,7 @@ use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ClientService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -69,9 +70,9 @@ class ClientNeedsAndViewingsTest extends TestCase
             'phone' => '5511 2233',
             'preferred_contact' => 'email',
             'needs' => [
-                ['unit_type_id' => $this->unitType->id, 'city_id' => $this->city->id, 'area_id' => $this->area->id],
+                ['category' => 'residential', 'unit_type_id' => $this->unitType->id, 'city_id' => $this->city->id, 'area_id' => $this->area->id, 'area_size' => '120.5', 'rooms' => '3'],
                 ['unit_type_id' => $this->unitType->id, 'city_id' => '', 'area_id' => ''],
-                ['unit_type_id' => '', 'city_id' => '', 'area_id' => ''], // سطر فارغ يُهمل
+                ['unit_type_id' => '', 'city_id' => '', 'area_id' => '', 'category' => '', 'area_size' => '', 'rooms' => ''], // سطر فارغ يُهمل
             ],
             'viewings' => [
                 ['property_id' => $this->property->id, 'scheduled_at' => $scheduled, 'in_person' => '0', 'outcome' => 'pending', 'notes' => 'معاينة أولى'],
@@ -85,7 +86,12 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertSame('email', $client->preferred_contact);
         $this->assertSame(ClientType::where('key', 'tenant')->value('id'), $client->type_id);
         $this->assertCount(2, $client->needs);
-        $this->assertSame($this->area->id, $client->needs->first()->area_id);
+        $first = $client->needs->first();
+        $this->assertSame($this->area->id, $first->area_id);
+        $this->assertSame('residential', $first->category);
+        $this->assertSame(120.5, (float) $first->area_size);
+        $this->assertSame(3, $first->rooms);
+        $this->assertNull($client->needs->last()->rooms);
         $this->assertCount(1, $client->viewings);
 
         $viewing = $client->viewings->first();
@@ -115,7 +121,7 @@ class ClientNeedsAndViewingsTest extends TestCase
                 ['unit_type_id' => '', 'city_id' => $this->city->id, 'area_id' => ''],
             ],
             'viewings' => [
-                ['id' => $viewing->id, 'property_id' => $this->property->id, 'scheduled_at' => $viewing->scheduled_at->format('Y-m-d H:i'), 'in_person' => '1', 'outcome' => 'chosen', 'notes' => ''],
+                ['id' => $viewing->id, 'property_id' => $this->property->id, 'scheduled_at' => $viewing->scheduled_at->format('Y-m-d H:i'), 'in_person' => '1', 'outcome' => 'interested', 'notes' => ''],
             ],
         ])->assertSessionHasNoErrors();
 
@@ -128,7 +134,7 @@ class ClientNeedsAndViewingsTest extends TestCase
         $this->assertSame($this->otherArea->id, $firstNeed->refresh()->area_id);
 
         $viewing->refresh();
-        $this->assertSame('chosen', $viewing->outcome);
+        $this->assertSame('interested', $viewing->outcome);
         $this->assertNotNull($viewing->outcome_at);
 
         $actions = ClientAuditLog::where('client_id', $client->id)->pluck('action');
@@ -136,7 +142,7 @@ class ClientNeedsAndViewingsTest extends TestCase
             $this->assertTrue($actions->contains($expected), "missing audit action {$expected}");
         }
 
-        // «تم اختيار العقار» يحرّك مرحلة العميل أيضاً (سطر «تعديل» ثانٍ) — نلتقط سطر تعديل البيانات نفسه
+        // «مهتم» يحرّك مرحلة العميل أيضاً (سطر «تعديل» ثانٍ) — نلتقط سطر تعديل البيانات نفسه
         $updated = ClientAuditLog::where('client_id', $client->id)->where('action', 'updated')->get()
             ->first(fn (ClientAuditLog $log) => isset($log->changes['phone_code']));
         $this->assertSame('+965', $updated->changes['phone_code']['old']);
@@ -158,142 +164,6 @@ class ClientNeedsAndViewingsTest extends TestCase
 
         $this->assertDatabaseCount('client_viewings', 0);
         $this->assertDatabaseCount('clients', 0);
-    }
-
-    public function test_property_chosen_by_another_client_is_busy_and_cannot_be_scheduled(): void
-    {
-        $other = Client::create(['name' => 'المشتري', 'phone' => '123']);
-        $other->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subDay(), 'outcome' => ClientViewing::OUTCOME_CHOSEN]);
-
-        // البحث يعلّم العقار مشغولاً ويذكر من اختاره
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))
-            ->assertOk()
-            ->assertJsonPath('0.busy', 'اختاره العميل المشتري');
-
-        // العميل نفسه لا يُحجب عن عقاره (شاشة التعديل تمرر client)
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501', 'client' => $other->id]))
-            ->assertOk()
-            ->assertJsonPath('0.busy', null);
-
-        $payload = [
-            'name' => 'عميل جديد', 'phone_code' => '+965', 'phone' => '55000000',
-            'viewings' => [['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->format('Y-m-d H:i')]],
-        ];
-
-        // جدولة معاينة لعميل جديد على عقار مشغول تُرفض
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)
-            ->assertSessionHasErrors(['viewings.0.property_id' => 'العقار مشغول: اختاره العميل المشتري.']);
-        $this->assertDatabaseCount('clients', 1);
-
-        // لو تراجع عن اختياره يتحرر العقار
-        $other->viewings()->update(['outcome' => ClientViewing::OUTCOME_REJECTED]);
-
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('clients', 2);
-    }
-
-    public function test_pending_viewing_with_another_client_does_not_make_the_property_busy(): void
-    {
-        $other = Client::create(['name' => 'عميل آخر', 'phone' => '124']);
-        $other->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->addDay(), 'outcome' => ClientViewing::OUTCOME_PENDING]);
-
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))
-            ->assertJsonPath('0.busy', null);
-
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
-            'name' => 'عميل جديد', 'phone_code' => '+965', 'phone' => '55000000',
-            'viewings' => [['property_id' => $this->property->id, 'scheduled_at' => now()->addDays(2)->format('Y-m-d H:i')]],
-        ])->assertSessionHasNoErrors();
-
-        $this->assertSame(2, ClientViewing::where('property_id', $this->property->id)->count());
-    }
-
-    public function test_chosen_rental_viewing_requires_a_contract_end_date_and_stores_it(): void
-    {
-        $rental = Property::create([
-            'reference_code' => '777', 'title' => ['ar' => 'شقة للإيجار', 'en' => 'Rental'],
-            'status_id' => $this->available->id, 'purpose' => 'rent',
-        ]);
-        $ends = now()->addYear()->format('Y-m-d');
-        $payload = [
-            'name' => 'مستأجر', 'phone_code' => '+965', 'phone' => '55000001',
-            'viewings' => [['property_id' => $rental->id, 'scheduled_at' => now()->subDay()->format('Y-m-d H:i'), 'outcome' => 'chosen']],
-        ];
-
-        // إيجار + تم اختيار العقار بدون تاريخ → مرفوض
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)
-            ->assertSessionHasErrors('viewings.0.contract_ends_at');
-
-        $payload['viewings'][0]['contract_ends_at'] = $ends;
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)->assertSessionHasNoErrors();
-
-        $viewing = ClientViewing::where('property_id', $rental->id)->firstOrFail();
-        $this->assertSame($ends, $viewing->contract_ends_at->format('Y-m-d'));
-
-        // البحث يذكر تاريخ انتهاء العقد مع «مشغول»
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '777']))
-            ->assertJsonPath('0.busy', "اختاره العميل مستأجر · ينتهي العقد {$ends}");
-
-        // عقار للبيع لا يحتاج التاريخ
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
-            'name' => 'مشترٍ', 'phone_code' => '+965', 'phone' => '55000002',
-            'viewings' => [['property_id' => $this->property->id, 'scheduled_at' => now()->subDay()->format('Y-m-d H:i'), 'outcome' => 'chosen']],
-        ])->assertSessionHasNoErrors();
-    }
-
-    public function test_inline_outcome_update_requires_the_contract_end_date_for_rentals_and_keeps_it_on_vacate(): void
-    {
-        $rental = Property::create([
-            'reference_code' => '778', 'title' => ['ar' => 'شقة للإيجار', 'en' => 'Rental'],
-            'status_id' => $this->available->id, 'purpose' => 'rent',
-        ]);
-        $client = Client::create(['name' => 'مستأجر', 'phone' => '125']);
-        $viewing = $client->viewings()->create(['property_id' => $rental->id, 'scheduled_at' => now()->subDay()]);
-        $ends = now()->addMonths(6)->format('Y-m-d');
-
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'chosen'])
-            ->assertSessionHasErrors('contract_ends_at');
-
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'chosen', 'contract_ends_at' => $ends])
-            ->assertSessionHasNoErrors();
-        $this->assertSame($ends, $viewing->fresh()->contract_ends_at->format('Y-m-d'));
-
-        // الإخلاء يحرّر العقار ويحتفظ بالتاريخ كسجل
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'vacated'])->assertSessionHasNoErrors();
-        $viewing->refresh();
-        $this->assertSame('vacated', $viewing->outcome);
-        $this->assertSame($ends, $viewing->contract_ends_at->format('Y-m-d'));
-
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '778']))
-            ->assertJsonPath('0.busy', null);
-    }
-
-    public function test_daily_check_vacates_viewings_whose_contract_ended(): void
-    {
-        $rental = Property::create([
-            'reference_code' => '779', 'title' => ['ar' => 'شقة للإيجار', 'en' => 'Rental'],
-            'status_id' => $this->available->id, 'purpose' => 'rent',
-        ]);
-        $client = Client::create(['name' => 'مستأجر قديم', 'phone' => '126']);
-        $expired = $client->viewings()->create(['property_id' => $rental->id, 'scheduled_at' => now()->subYear(), 'outcome' => 'chosen', 'contract_ends_at' => now()->subDay()->toDateString()]);
-        $endsToday = $client->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subYear(), 'outcome' => 'chosen', 'contract_ends_at' => now()->toDateString()]);
-        $current = $client->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subMonth(), 'outcome' => 'chosen', 'contract_ends_at' => now()->addMonth()->toDateString()]);
-        $openEnded = $client->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subMonth(), 'outcome' => 'chosen']);
-
-        $this->artisan('viewings:vacate-expired')->assertSuccessful();
-
-        $this->assertSame('vacated', $expired->fresh()->outcome);
-        $this->assertNotNull($expired->fresh()->outcome_at);
-        $this->assertSame('chosen', $endsToday->fresh()->outcome); // اليوم الأخير من العقد ما زال سارياً
-        $this->assertSame('chosen', $current->fresh()->outcome);
-        $this->assertSame('chosen', $openEnded->fresh()->outcome);
-        $this->assertDatabaseHas('client_audit_logs', ['client_id' => $client->id, 'action' => 'outcome_updated']);
-
-        // العقار المخلى لم يعد مشغولاً، ومن أخلى ما زال محسوباً «تم اختيار العقار» في التقرير
-        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '779']))
-            ->assertJsonPath('0.busy', null);
-        $report = app(\App\Services\ViewingService::class)->conversionReport(['from' => now()->subYears(2)->toDateString(), 'to' => now()->toDateString()]);
-        $this->assertSame(4, $report['kpis']['chosen']);
     }
 
     public function test_moving_the_schedule_to_the_future_re_arms_the_reminder(): void
@@ -324,6 +194,53 @@ class ClientNeedsAndViewingsTest extends TestCase
                 ['unit_type_id' => '', 'city_id' => $this->city->id, 'area_id' => $this->otherArea->id],
             ],
         ])->assertSessionHasErrors('needs.0.area_id');
+    }
+
+    public function test_index_filters_by_need_category_rooms_and_area_range_on_the_same_row(): void
+    {
+        $shop = UnitType::create(['name' => ['ar' => 'محل', 'en' => 'Shop'], 'category' => 'commercial']);
+
+        $small = Client::create(['name' => 'عميل صغير', 'phone_code' => '+965', 'phone' => '55200001']);
+        $small->needs()->create(['category' => 'residential', 'unit_type_id' => $this->unitType->id, 'city_id' => $this->city->id, 'area_size' => 80, 'rooms' => 2]);
+
+        $big = Client::create(['name' => 'عميل كبير', 'phone_code' => '+965', 'phone' => '55200002']);
+        $big->needs()->create(['category' => 'residential', 'unit_type_id' => $this->unitType->id, 'city_id' => $this->city->id, 'area_size' => 150, 'rooms' => 3]);
+        // سطر ثانٍ لنفس العميل: تجاري في محافظة أخرى بلا غرف
+        $big->needs()->create(['category' => 'commercial', 'unit_type_id' => $shop->id, 'city_id' => $this->otherArea->city_id, 'area_size' => 40]);
+
+        $index = fn (array $q) => $this->actingAs($this->user)->get(route('dashboard.clients.index', $q))->assertOk();
+
+        $index(['category' => 'commercial'])->assertSee('عميل كبير')->assertDontSee('عميل صغير');
+        $index(['rooms' => 2])->assertSee('عميل صغير')->assertDontSee('عميل كبير');
+        $index(['area_from' => 100, 'area_to' => 200])->assertSee('عميل كبير')->assertDontSee('عميل صغير');
+        $index(['area_to' => 100])->assertSee('عميل صغير')->assertSee('عميل كبير'); // السطر التجاري 40 م²
+
+        // الشروط تُطبَّق على سطر الاحتياج نفسه: تجاري + 3 غرف لا يطابق أي سطر عند «عميل كبير»
+        $index(['category' => 'commercial', 'rooms' => 3])->assertDontSee('عميل كبير')->assertDontSee('عميل صغير');
+        $index(['category' => 'residential', 'rooms' => 3])->assertSee('عميل كبير')->assertDontSee('عميل صغير');
+        $index(['unit_type_id' => $shop->id])->assertSee('عميل كبير')->assertDontSee('عميل صغير');
+    }
+
+    public function test_need_unit_type_must_match_its_category(): void
+    {
+        $shop = UnitType::create(['name' => ['ar' => 'محل', 'en' => 'Shop'], 'category' => 'commercial']);
+
+        $payload = [
+            'name' => 'عميل', 'phone_code' => '+965', 'phone' => '55300001',
+            'needs' => [['category' => 'residential', 'unit_type_id' => $shop->id, 'area_size' => '-5', 'rooms' => '1.5']],
+        ];
+
+        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)
+            ->assertSessionHasErrors(['needs.0.unit_type_id', 'needs.0.area_size', 'needs.0.rooms']);
+
+        $payload['needs'][0] = ['category' => 'commercial', 'unit_type_id' => $shop->id, 'area_size' => '45', 'rooms' => ''];
+        $this->actingAs($this->user)->post(route('dashboard.clients.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
+
+        $need = Client::where('phone', '55300001')->firstOrFail()->needs()->firstOrFail();
+        $this->assertSame('commercial', $need->category);
+        $this->assertSame(45.0, (float) $need->area_size);
+        $this->assertNull($need->rooms);
+        $this->assertSame('تجاري · محل · 45 م²', $need->describe());
     }
 
     public function test_index_filters_by_need_city_and_notes_search(): void
@@ -369,134 +286,75 @@ class ClientNeedsAndViewingsTest extends TestCase
             ->assertDontSee('كل الوكلاء');
     }
 
-    // ===== أثر نتيجة المعاينة على العميل والعقار =====
+    // ===== أثر نتيجة المعاينة على العميل (حالة العقار يدوية دائماً) =====
 
-    public function test_choosing_a_sale_property_sells_it_and_wins_the_client(): void
+    public function test_interested_outcome_wins_the_client_and_leaves_property_status_alone(): void
     {
         $client = $this->makeClient();
         $viewing = $client->viewings()->first();
 
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'chosen'])
+        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'interested'])
             ->assertSessionHasNoErrors();
-
-        $this->property->refresh();
-        $this->assertSame('sold', $this->property->status->key);
-        $this->assertNotNull($this->property->sold_at);
-
-        $client->refresh();
-        $this->assertSame('closed_won', $client->stage->key);
-        $this->assertNotNull($client->won_at);
-
-        $synced = ClientAuditLog::where('client_id', $client->id)->where('action', 'property_status_synced')->firstOrFail();
-        $this->assertSame('متاح', $synced->changes['status']['old']);
-        $this->assertSame('مباع', $synced->changes['status']['new']);
-        $this->assertSame(Property::class, $synced->subject_type);
-
-        $stageChange = ClientAuditLog::where('client_id', $client->id)->where('action', 'updated')->get()
-            ->first(fn (ClientAuditLog $log) => isset($log->changes['stage_id']));
-        $this->assertNotNull($stageChange);
-        $this->assertArrayNotHasKey('won_at', $stageChange->changes);
-
-        // إعادة حفظ فورم العميل بنفس المعاينة المختارة لا تُحجب بسبب «عقار مباع»
-        $this->actingAs($this->user)->put(route('dashboard.clients.update', $client), [
-            'name' => $client->name, 'phone_code' => '+965', 'phone' => $client->phone,
-            'viewings' => [['id' => $viewing->id, 'property_id' => $this->property->id, 'scheduled_at' => $viewing->scheduled_at->format('Y-m-d H:i'), 'outcome' => 'chosen']],
-        ])->assertSessionHasNoErrors();
-    }
-
-    public function test_choosing_a_rental_property_wins_the_client_but_keeps_it_available(): void
-    {
-        $rental = Property::create([
-            'reference_code' => '780', 'title' => ['ar' => 'شقة للإيجار', 'en' => 'Rental'],
-            'status_id' => $this->available->id, 'purpose' => 'rent',
-        ]);
-        $client = Client::create(['name' => 'مستأجر', 'phone' => '127']);
-        $viewing = $client->viewings()->create(['property_id' => $rental->id, 'scheduled_at' => now()->subDay()]);
-
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), [
-            'outcome' => 'chosen', 'contract_ends_at' => now()->addYear()->format('Y-m-d'),
-        ])->assertSessionHasNoErrors();
-
-        $rental->refresh();
-        $this->assertSame('available', $rental->status->key);
-        $this->assertNull($rental->sold_at);
-        $this->assertSame('closed_won', $client->refresh()->stage->key);
-        $this->assertDatabaseMissing('client_audit_logs', ['client_id' => $client->id, 'action' => 'property_status_synced']);
-    }
-
-    public function test_reverting_a_chosen_sale_viewing_frees_the_property_but_not_the_client(): void
-    {
-        $client = $this->makeClient();
-        $viewing = $client->viewings()->first();
-
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'chosen'])->assertSessionHasNoErrors();
-        $this->assertSame('sold', $this->property->refresh()->status->key);
-
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'rejected'])->assertSessionHasNoErrors();
 
         $this->property->refresh();
         $this->assertSame('available', $this->property->status->key);
         $this->assertNull($this->property->sold_at);
-        $this->assertSame('closed_won', $client->refresh()->stage->key); // المرحلة لا تُنزَّل تلقائياً
-    }
 
-    public function test_vacating_a_chosen_sale_viewing_frees_the_property(): void
-    {
-        $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
-            'name' => 'مشترٍ', 'phone_code' => '+965', 'phone' => '55000003',
-            'viewings' => [['property_id' => $this->property->id, 'scheduled_at' => now()->subMonth()->format('Y-m-d H:i'), 'outcome' => 'chosen', 'contract_ends_at' => now()->subDay()->format('Y-m-d')]],
-        ])->assertSessionHasNoErrors();
-        $this->assertSame('sold', $this->property->refresh()->status->key);
+        $client->refresh();
+        $this->assertSame('closed_won', $client->stage->key);
+        $this->assertNotNull($client->won_at);
+        $this->assertNotNull($viewing->fresh()->outcome_at);
 
-        $this->artisan('viewings:vacate-expired')->assertSuccessful();
+        $this->assertDatabaseMissing('client_audit_logs', ['client_id' => $client->id, 'action' => 'property_status_synced']);
 
-        $this->assertSame('vacated', ClientViewing::where('property_id', $this->property->id)->value('outcome'));
+        $stageChange = ClientAuditLog::where('client_id', $client->id)->where('action', 'updated')->get()
+            ->first(fn (ClientAuditLog $log) => isset($log->changes['stage_id']));
+        $this->assertNotNull($stageChange);
+
+        // التراجع عن «مهتم» لا يُنزّل المرحلة
+        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'not_interested'])->assertSessionHasNoErrors();
+        $this->assertSame('closed_won', $client->refresh()->stage->key);
         $this->assertSame('available', $this->property->refresh()->status->key);
-        $this->assertNull($this->property->sold_at);
     }
 
-    public function test_removing_a_chosen_viewing_from_the_client_form_frees_the_property(): void
+    public function test_two_clients_can_both_be_interested_in_the_same_property(): void
     {
-        $second = Property::create([
-            'reference_code' => '502', 'title' => ['ar' => 'شقة ثانية', 'en' => 'Second flat'],
-            'status_id' => $this->available->id, 'area_id' => $this->area->id,
-        ]);
-        $scheduled = now()->addDay()->format('Y-m-d H:i');
+        $first = $this->makeClient('الأول', '55000001');
+        $first->viewings()->update(['outcome' => ClientViewing::OUTCOME_INTERESTED]);
 
         $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
-            'name' => 'مشترٍ', 'phone_code' => '+965', 'phone' => '55000004',
-            'viewings' => [
-                ['property_id' => $this->property->id, 'scheduled_at' => now()->subDay()->format('Y-m-d H:i'), 'outcome' => 'chosen'],
-                ['property_id' => $second->id, 'scheduled_at' => $scheduled, 'outcome' => 'pending'],
-            ],
-        ])->assertSessionHasNoErrors();
-        $this->assertSame('sold', $this->property->refresh()->status->key);
-
-        $client = Client::where('phone', '55000004')->firstOrFail();
-        $kept = $client->viewings()->where('property_id', $second->id)->firstOrFail();
-
-        $this->actingAs($this->user)->put(route('dashboard.clients.update', $client), [
-            'name' => $client->name, 'phone_code' => '+965', 'phone' => $client->phone,
-            'viewings' => [['id' => $kept->id, 'property_id' => $second->id, 'scheduled_at' => $scheduled, 'outcome' => 'pending']],
+            'name' => 'الثاني', 'phone_code' => '+965', 'phone' => '55000002',
+            'viewings' => [['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->format('Y-m-d H:i'), 'outcome' => 'interested']],
         ])->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('client_viewings', ['client_id' => $client->id, 'property_id' => $this->property->id]);
+        $this->assertSame(2, ClientViewing::where('property_id', $this->property->id)->where('outcome', 'interested')->count());
         $this->assertSame('available', $this->property->refresh()->status->key);
+
+        $this->actingAs($this->user)->getJson(route('dashboard.clients.property-lookup', ['q' => '501']))->assertOk()
+            ->assertJsonPath('0.blocked', null)
+            ->assertJsonMissingPath('0.busy');
     }
 
-    public function test_a_second_chosen_viewing_keeps_the_property_sold(): void
+    public function test_all_five_outcomes_are_accepted_and_legacy_values_are_rejected(): void
     {
-        $first = Client::create(['name' => 'الأول', 'phone' => '128']);
-        $secondClient = Client::create(['name' => 'الثاني', 'phone' => '129']);
-        $a = $first->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subDay(), 'outcome' => ClientViewing::OUTCOME_CHOSEN]);
-        $b = $secondClient->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->subDay(), 'outcome' => ClientViewing::OUTCOME_CHOSEN]);
-        $this->property->update(['status_id' => PropertyStatus::where('key', 'sold')->value('id')]);
+        $client = $this->makeClient();
+        $viewing = $client->viewings()->first();
 
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $a), ['outcome' => 'rejected'])->assertSessionHasNoErrors();
-        $this->assertSame('sold', $this->property->refresh()->status->key);
+        foreach (['studying', 'cancelled', 'not_interested', 'pending'] as $outcome) {
+            $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => $outcome])->assertSessionHasNoErrors();
+            $this->assertSame($outcome, $viewing->fresh()->outcome);
+        }
 
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $b), ['outcome' => 'rejected'])->assertSessionHasNoErrors();
-        $this->assertSame('available', $this->property->refresh()->status->key);
+        $this->assertNull($viewing->fresh()->outcome_at);
+        $this->assertSame('new', $client->refresh()->stage?->key ?? 'new');
+
+        foreach (['chosen', 'rejected', 'vacated'] as $legacy) {
+            $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => $legacy])->assertSessionHasErrors('outcome');
+        }
+
+        // بلا حقل تاريخ انتهاء العقد في الفورم ولا في القاعدة
+        $this->assertFalse(Schema::hasColumn('client_viewings', 'contract_ends_at'));
+        $this->actingAs($this->user)->get(route('dashboard.clients.show', $client))->assertOk()->assertDontSee('انتهاء العقد');
     }
 
     private function makeClient(string $name = 'عميل الاختبار', string $phone = '55112233', ?string $notes = null): Client

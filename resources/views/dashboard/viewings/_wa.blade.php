@@ -1,7 +1,8 @@
 {{--
-    علامتا واتساب للمعاينة: (1) أُبلغ المالك ببيانات العميل · (2) أُرسلت المتابعة للعميل.
+    علامتا واتساب للمعاينة: (1) أُبلغ مسؤول العقار ببيانات العميل · (2) أُرسلت نتيجة المعاينة للمسؤول.
     زر الإرسال يحمل الحمولة في data-wa-send وتفتحه نافذة _wa-modal (whatsapp.js).
-    يتوقع $viewing مع property.owner.contacts و client.
+    زر النتيجة قبل تسجيلها يحمل data-wa-blocked فيعرض «يجب اختيار النتيجة أولاً» عند النقر.
+    يتوقع $viewing مع property.contacts و client.
 --}}
 @inject('whatsapp', 'App\Services\WhatsApp\WhatsAppService')
 @php
@@ -14,20 +15,20 @@
         [
             'kind' => WhatsAppTemplates::KIND_OWNER,
             'at' => $viewing->owner_notified_at,
-            'done' => 'أُبلغ المالك',
-            'todo' => 'إبلاغ المالك',
-            'missing' => 'لم يُبلَّغ المالك',
+            'done' => 'أُبلغ المسؤول',
+            'todo' => 'إبلاغ المسؤول',
+            'missing' => 'لم يُبلَّغ المسؤول',
             'enabled' => true,
-            'hint' => 'إرسال بيانات العميل وموعد المعاينة لأحد أرقام المالك',
+            'hint' => 'إرسال بيانات العميل وموعد المعاينة لأحد المسؤولين عن العقار',
         ],
         [
             'kind' => WhatsAppTemplates::KIND_CLIENT,
             'at' => $viewing->client_followed_up_at,
-            'done' => 'أُرسلت المتابعة',
-            'todo' => 'متابعة العميل',
-            'missing' => 'لم تُرسل المتابعة',
+            'done' => 'أُرسلت النتيجة',
+            'todo' => 'إرسال النتيجة',
+            'missing' => 'لم تُرسل النتيجة',
             'enabled' => $decided,
-            'hint' => $decided ? 'إرسال نتيجة المعاينة للعميل' : 'سجّل نتيجة المعاينة أولاً',
+            'hint' => $decided ? 'إرسال نتيجة المعاينة لأحد المسؤولين عن العقار' : 'يجب اختيار النتيجة أولاً',
         ],
     ];
     $chip = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap';
@@ -46,10 +47,15 @@
                     </button>
                 @endif
             </span>
+        @elseif ($canSend && ! $step['enabled'])
+            <button type="button" data-wa-blocked="{{ $step['hint'] }}" title="{{ $step['hint'] }}" aria-disabled="true"
+                    class="{{ $chip }} border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
+                {!! $waIcon !!}{{ $step['todo'] }}
+            </button>
         @elseif ($canSend)
             <button type="button" data-wa-send="{{ json_encode($whatsapp->sendPayload($viewing, $step['kind']), JSON_UNESCAPED_UNICODE) }}"
-                    @disabled(! $step['enabled']) title="{{ $step['hint'] }}"
-                    class="{{ $chip }} border border-success/40 text-success bg-white hover:bg-success-soft transition disabled:border-gray-200 disabled:text-gray-400 disabled:bg-gray-50 disabled:cursor-not-allowed">
+                    title="{{ $step['hint'] }}"
+                    class="{{ $chip }} border border-success/40 text-success bg-white hover:bg-success-soft transition">
                 {!! $waIcon !!}{{ $step['todo'] }}
             </button>
         @else

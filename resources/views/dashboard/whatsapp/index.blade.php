@@ -20,7 +20,7 @@
     <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
             <h2 class="text-xl font-bold text-ink">واتساب المكتب</h2>
-            <p class="text-sm text-gray-500">إرسال تفاصيل المعاينات للمالك ومتابعة العميل من رقم المكتب المربوط</p>
+            <p class="text-sm text-gray-500">إرسال تفاصيل المعاينات ونتائجها لمسؤولي العقار من رقم المكتب المربوط</p>
         </div>
         <div class="flex items-center gap-2">
             <span class="inline-flex items-center gap-2 rounded-full px-3.5 h-10 text-sm font-semibold {{ $tone[$status['tone']] }}">

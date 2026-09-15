@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class TaskBoardTest extends TestCase
@@ -184,9 +185,10 @@ class TaskBoardTest extends TestCase
         $me = $this->userWith(['tasks.view']);
         $other = User::factory()->create();
 
-        Task::create(['title' => 'مهمتي المتأخرة', 'assignee_id' => $me->id, 'priority' => 'urgent', 'due_date' => now()->subDay()]);
-        Task::create(['title' => 'مهمة زميلي', 'assignee_id' => $other->id, 'priority' => 'low', 'due_date' => now()->addDays(3)]);
-        Task::create(['title' => 'قديمة مكتملة', 'status' => 'done', 'completed_at' => now()->subDays(40)]);
+        // كلها مرئية لـ $me: مسندة له أو أسندها هو (غير الأدمن لا يرى غير ذلك)
+        Task::create(['title' => 'مهمتي المتأخرة', 'assignee_id' => $me->id, 'created_by' => $other->id, 'priority' => 'urgent', 'due_date' => now()->subDay()]);
+        Task::create(['title' => 'مهمة زميلي', 'assignee_id' => $other->id, 'created_by' => $me->id, 'priority' => 'low', 'due_date' => now()->addDays(3)]);
+        Task::create(['title' => 'قديمة مكتملة', 'status' => 'done', 'created_by' => $me->id, 'completed_at' => now()->subDays(40)]);
 
         $this->actingAs($me)->get(route('dashboard.tasks.index', ['mine' => 1]))
             ->assertOk()->assertSee('مهمتي المتأخرة')->assertDontSee('مهمة زميلي');
@@ -203,6 +205,44 @@ class TaskBoardTest extends TestCase
         // المكتملة القديمة مخفية إلا مع «عرض كل المكتملة»
         $this->actingAs($me)->get(route('dashboard.tasks.index'))->assertOk()->assertDontSee('قديمة مكتملة');
         $this->actingAs($me)->get(route('dashboard.tasks.index', ['all_done' => 1]))->assertOk()->assertSee('قديمة مكتملة');
+    }
+
+    public function test_non_admins_only_see_tasks_assigned_to_or_by_them_while_super_admin_sees_all(): void
+    {
+        $me = $this->userWith(['tasks.view', 'tasks.edit']);
+        $colleague = User::factory()->create(['name' => 'زميل']);
+        $stranger = User::factory()->create(['name' => 'غريب']);
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']));
+
+        $toMe = Task::create(['title' => 'مسندة لي', 'assignee_id' => $me->id, 'created_by' => $colleague->id]);
+        $byMe = Task::create(['title' => 'أسندتها لزميل', 'assignee_id' => $colleague->id, 'created_by' => $me->id]);
+        $mineUnassigned = Task::create(['title' => 'أنشأتها بلا إسناد', 'created_by' => $me->id]);
+        $selfAssigned = Task::create(['title' => 'أسندتها لنفسي', 'assignee_id' => $me->id, 'created_by' => $me->id]);
+        $foreign = Task::create(['title' => 'مهمة غريبة', 'assignee_id' => $stranger->id, 'created_by' => $colleague->id]);
+
+        $page = $this->actingAs($me)->get(route('dashboard.tasks.index'))->assertOk();
+        $page->assertSee('مسندة لي')->assertSee('أسندتها لزميل')->assertSee('أنشأتها بلا إسناد')->assertSee('أسندتها لنفسي')->assertDontSee('مهمة غريبة');
+        // الكارت يعرض المسنِد والمسند إليه
+        $page->assertSee('أسندها:')->assertSee('المسند إليه:')->assertSee('زميل');
+
+        // صلاحية التعديل لا تكفي لرؤية مهام الآخرين — الأدمن فقط
+        $this->actingAs($me)->get(route('dashboard.tasks.index', ['task' => $foreign->id]))->assertOk()->assertDontSee('مهمة غريبة');
+        $this->actingAs($me)->get(route('dashboard.tasks.show', $foreign), ['X-Requested-With' => 'XMLHttpRequest'])->assertForbidden();
+        $this->actingAs($me)->get(route('dashboard.tasks.show', $toMe), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk();
+
+        $this->actingAs($admin)->get(route('dashboard.tasks.index'))->assertOk()
+            ->assertSee('مسندة لي')->assertSee('أسندتها لزميل')->assertSee('مهمة غريبة');
+
+        // «مهامي» = المسندة لي فقط · «أسندتها» = التي أسندتها لغيري أو لم أُسندها بعد
+        $this->actingAs($me)->get(route('dashboard.tasks.index', ['mine' => 1]))->assertOk()
+            ->assertSee('مسندة لي')->assertSee('أسندتها لنفسي')->assertDontSee('أسندتها لزميل')->assertDontSee('أنشأتها بلا إسناد');
+        $this->actingAs($me)->get(route('dashboard.tasks.index', ['delegated' => 1]))->assertOk()
+            ->assertSee('أسندتها لزميل')->assertSee('أنشأتها بلا إسناد')->assertDontSee('مسندة لي')->assertDontSee('أسندتها لنفسي')->assertDontSee('مهمة غريبة');
+
+        $this->assertSame($byMe->id, Task::query()->delegatedBy($me->id)->orderBy('id')->first()->id);
+        $this->assertSame($mineUnassigned->id, Task::query()->delegatedBy($me->id)->orderBy('id')->skip(1)->first()->id);
+        $this->assertSame($selfAssigned->id, Task::query()->mine($me->id)->orderByDesc('id')->first()->id);
     }
 
     public function test_comments_notify_the_other_side_and_delete_cascades(): void

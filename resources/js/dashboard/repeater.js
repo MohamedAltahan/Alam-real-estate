@@ -44,11 +44,34 @@ export function rowRepeater(opts = {}) {
 withAlpine((Alpine) => {
     Alpine.data('rowRepeater', rowRepeater);
 
-    /** احتياجات العقار: المنطقة تعتمد على المحافظة المختارة */
+    /** احتياجات العقار: نوع الوحدة يتبع نوع العقار (سكني/تجاري)، والمنطقة تعتمد على المحافظة المختارة */
     Alpine.data('clientNeeds', (opts = {}) => ({
-        ...rowRepeater({ prefix: 'needs', blank: { id: '', unit_type_id: '', city_id: '', area_id: '' }, ...opts }),
+        ...rowRepeater({ prefix: 'needs', blank: { id: '', category: '', unit_type_id: '', city_id: '', area_id: '', area_size: '', rooms: '' }, ...opts }),
         cities: opts.cities ?? [],
         areas: opts.areas ?? [],
+        unitTypes: opts.unitTypes ?? [],
+
+        unitTypesFor(row) {
+            if (! row.category) {
+                return this.unitTypes;
+            }
+
+            return this.unitTypes.filter((t) => t.category === row.category);
+        },
+
+        onCategoryChange(row) {
+            if (row.unit_type_id && ! this.unitTypesFor(row).some((t) => String(t.id) === String(row.unit_type_id))) {
+                row.unit_type_id = '';
+            }
+        },
+
+        // اختيار نوع وحدة بدون نوع عقار يضبط نوع العقار تلقائياً
+        onUnitTypeChange(row) {
+            const type = this.unitTypes.find((t) => String(t.id) === String(row.unit_type_id));
+            if (type && type.category && ! row.category) {
+                row.category = type.category;
+            }
+        },
 
         areasFor(row) {
             if (! row.city_id) {
@@ -76,20 +99,9 @@ withAlpine((Alpine) => {
     Alpine.data('clientViewings', (opts = {}) => ({
         ...rowRepeater({
             prefix: 'viewings',
-            blank: { id: '', property_id: '', property_label: '', property_purpose: '', scheduled_at: '', in_person: '1', outcome: 'pending', contract_ends_at: '', notes: '' },
+            blank: { id: '', property_id: '', property_label: '', property_purpose: '', scheduled_at: '', in_person: '1', outcome: 'pending', notes: '' },
             ...opts,
         }),
         lookupUrl: opts.lookupUrl ?? '',
-
-        /** حذف معاينة نتيجتها «تم اختيار العقار» يحرّر العقار لعملاء آخرين — يحتاج تأكيداً */
-        remove(index) {
-            const row = this.rows[index];
-
-            if (row?.outcome === 'chosen' && ! window.confirm('هذه المعاينة نتيجتها «تم اختيار العقار».\nحذفها يحذف سجل الاختيار ويجعل العقار متاحاً لعملاء آخرين.\n\nهل تريد حذفها؟')) {
-                return;
-            }
-
-            this.rows.splice(index, 1);
-        },
     }));
 });

@@ -151,7 +151,7 @@ class ClientOwnerWorkflowTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard.clients.show', $client))
             ->assertOk()
-            ->assertSee('نوع الوحدة المطلوبة')
+            ->assertSee('نوع العقار · نوع الوحدة')
             ->assertSee('فيلا')
             ->assertSee('سجّل البيانات');
     }

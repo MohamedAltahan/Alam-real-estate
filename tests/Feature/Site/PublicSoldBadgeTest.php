@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Site;
 
-use App\Models\Client;
-use App\Models\ClientViewing;
 use App\Models\Property;
 use App\Models\PropertyStatus;
 use App\Models\Setting;
@@ -13,12 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
-/** شارة «مشغول / مباع» الحمراء على الموقع العام — إعداد عام يُدار من تبويب «التفضيلات» */
-class PublicBusyBadgeTest extends TestCase
+/** شارة «مباع» الحمراء على الموقع العام — إعداد عام يُدار من تبويب «التفضيلات» */
+class PublicSoldBadgeTest extends TestCase
 {
     use RefreshDatabase;
-
-    private Property $busy;
 
     private Property $sold;
 
@@ -31,12 +27,8 @@ class PublicBusyBadgeTest extends TestCase
         $available = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
         $soldStatus = PropertyStatus::create(['name' => ['ar' => 'مباع', 'en' => 'Sold'], 'key' => 'sold']);
 
-        $this->busy = Property::create(['reference_code' => '901', 'title' => ['ar' => 'عقار مختار', 'en' => 'Chosen one'], 'status_id' => $available->id]);
         $this->sold = Property::create(['reference_code' => '902', 'title' => ['ar' => 'عقار مباع', 'en' => 'Sold one'], 'status_id' => $soldStatus->id]);
         $this->plain = Property::create(['reference_code' => '903', 'title' => ['ar' => 'عقار عادي', 'en' => 'Plain one'], 'status_id' => $available->id]);
-
-        $client = Client::create(['name' => 'المشتري السري', 'phone' => '123']);
-        $client->viewings()->create(['property_id' => $this->busy->id, 'scheduled_at' => now()->subDay(), 'outcome' => ClientViewing::OUTCOME_CHOSEN]);
     }
 
     public function test_toggle_is_shown_only_to_users_who_can_edit_the_website(): void
@@ -50,7 +42,7 @@ class PublicBusyBadgeTest extends TestCase
             ->get(route('dashboard.profile.edit', ['tab' => 'preferences']))
             ->assertOk()
             ->assertSee('name="site_busy_badge"', false)
-            ->assertSee('شارة «مشغول / مباع» على الموقع');
+            ->assertSee('شارة «مباع» على الموقع');
     }
 
     public function test_saving_the_toggle_requires_permission_and_persists_the_global_setting(): void
@@ -86,17 +78,13 @@ class PublicBusyBadgeTest extends TestCase
         $list = $this->get(route('site.properties'))->assertOk();
         $html = $list->getContent();
 
-        $this->assertSame(1, substr_count($html, 'data-badge="busy"'));
         $this->assertSame(1, substr_count($html, 'data-badge="sold"'));
-        $this->assertMatchesRegularExpression('/data-badge="busy"[^>]*>(مشغول|Busy)</u', $html);
+        $this->assertStringNotContainsString('data-badge="busy"', $html);
         $this->assertMatchesRegularExpression('/data-badge="sold"[^>]*>(مباع|Sold)</u', $html);
-        $list->assertDontSee('المشتري السري'); // اسم العميل لا يظهر للزوّار أبداً
 
         // صفحة العقار: الشارة بجانب العنوان
         $this->get(route('site.property', $this->sold))->assertOk()
             ->assertSee('data-badge="sold"', false);
-        $this->get(route('site.property', $this->busy))->assertOk()
-            ->assertSee('data-badge="busy"', false);
 
         // العقار العادي: لا شارة بجانب عنوانه (شارات «عقارات مشابهة» أسفل الصفحة لا تُحتسب)
         $plain = $this->get(route('site.property', $this->plain))->assertOk()->getContent();

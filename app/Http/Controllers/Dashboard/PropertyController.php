@@ -9,6 +9,7 @@ use App\Models\City;
 use App\Models\FieldOwner;
 use App\Models\Property;
 use App\Models\PropertyCategory;
+use App\Models\PropertyContact;
 use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\PublishingChannel;
@@ -16,6 +17,8 @@ use App\Models\UnitType;
 use App\Models\User;
 use App\Services\FieldOwnerService;
 use App\Services\PropertyService;
+use App\Support\PhoneCountries;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -61,8 +64,14 @@ class PropertyController extends Controller
 
         $property = new Property($fieldOwner ? $this->fieldOwners->propertyPrefill($fieldOwner) : []);
 
-        return view('dashboard.properties.form', $this->formData($property) + [
-            'nextCode' => $this->properties->generateReferenceCode(),
+        // أرقام الزيارة الميدانية تُقترح كمسؤولين عن العقار
+        $prefillContacts = $fieldOwner?->contacts->map(fn ($c) => [
+            'id' => '', 'phone_code' => (string) ($c->phone_code ?: PhoneCountries::DEFAULT), 'phone' => (string) $c->phone,
+            'role' => (string) ($c->role ?? ''), 'name' => (string) ($c->name ?? ''),
+        ])->values()->all();
+
+        return view('dashboard.properties.form', $this->formData($property, $prefillContacts ?: null) + [
+            'nextCode' => $this->generateNextCode(),
             'fieldOwner' => $fieldOwner,
         ]);
     }
@@ -79,6 +88,7 @@ class PropertyController extends Controller
         $property = $fieldOwner
             ? $this->fieldOwners->createProperty($fieldOwner, $data, $request->input('amenities', []))
             : $this->properties->create($data, $request->input('amenities', []));
+        $this->properties->syncContacts($property, $request->input('contacts', []));
         $this->syncImages($request, $property);
 
         return redirect()
@@ -88,7 +98,7 @@ class PropertyController extends Controller
 
     public function show(Property $property): View
     {
-        $property->load(['area', 'city', 'category', 'unitType', 'status', 'owner', 'agent', 'amenities', 'media', 'reviews.createdBy', 'channels.media']);
+        $property->load(['area', 'city', 'category', 'unitType', 'status', 'owner', 'agent', 'contacts', 'amenities', 'media', 'reviews.createdBy', 'channels.media']);
 
         return view('dashboard.properties.show', ['property' => $property]);
     }
@@ -96,7 +106,7 @@ class PropertyController extends Controller
     public function edit(Property $property): View
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
-        $property->load('amenities', 'media');
+        $property->load('amenities', 'media', 'contacts');
 
         return view('dashboard.properties.form', $this->formData($property));
     }
@@ -107,6 +117,7 @@ class PropertyController extends Controller
 
         $data = $this->validated($request);
         $this->properties->update($property, $data, $request->input('amenities', []));
+        $this->properties->syncContacts($property, $request->input('contacts', []));
         $this->syncImages($request, $property);
 
         return redirect()
@@ -133,6 +144,29 @@ class PropertyController extends Controller
         $this->properties->addReview($property, $data);
 
         return back()->with('success', 'تمت إضافة التقييم.');
+    }
+
+    /** تغيير حالة العقار من عمود الحالة في الجدول (JSON) */
+    public function updateStatus(Request $request, Property $property): JsonResponse
+    {
+        abort_unless($request->user()->can('properties.edit'), 403);
+
+        $data = $request->validate([
+            'status_id' => ['required', Rule::exists('property_statuses', 'id')->where('is_active', true)],
+        ], [], ['status_id' => 'الحالة']);
+
+        $property = $this->properties->updateStatus($property, (int) $data['status_id']);
+
+        return response()->json([
+            'ok' => true,
+            'status' => [
+                'id' => (int) $property->status->id,
+                'key' => $property->status->key,
+                'name' => $property->status->name,
+                'color' => $property->status->color,
+            ],
+            'sold_at' => $property->sold_at?->toDateTimeString(),
+        ]);
     }
 
     /** حفظ قنوات النشر (مواقع أو سوشال) التي نُشر عليها العقار مع روابط الإعلانات */
@@ -167,10 +201,40 @@ class PropertyController extends Controller
         ];
     }
 
-    private function formData(Property $property): array
+    private function generateNextCode(): string
     {
+        return $this->properties->generateReferenceCode();
+    }
+
+    /** @param  array<int, array<string, string>>|null  $contactRows  صفوف مقترحة (من زيارة ميدانية) عند عدم وجود old() */
+    private function formData(Property $property, ?array $contactRows = null): array
+    {
+        $old = old('contacts');
+
+        if (is_array($old)) {
+            $contactRows = array_values(array_map(fn ($row) => [
+                'id' => (string) ($row['id'] ?? ''), 'phone_code' => (string) ($row['phone_code'] ?? PhoneCountries::DEFAULT),
+                'phone' => (string) ($row['phone'] ?? ''), 'role' => (string) ($row['role'] ?? ''), 'name' => (string) ($row['name'] ?? ''),
+            ], $old));
+        } elseif ($contactRows === null && $property->exists) {
+            $contactRows = $property->contacts->map(fn (PropertyContact $c) => [
+                'id' => (string) $c->id, 'phone_code' => (string) ($c->phone_code ?: PhoneCountries::DEFAULT),
+                'phone' => (string) $c->phone, 'role' => (string) ($c->role ?? ''), 'name' => (string) ($c->name ?? ''),
+            ])->values()->all();
+        }
+
+        $rowErrors = [];
+        foreach (session('errors')?->getBag('default')->toArray() ?? [] as $key => $messages) {
+            if (str_starts_with($key, 'contacts.')) {
+                $rowErrors[$key] = $messages[0] ?? '';
+            }
+        }
+
         return [
             'property' => $property,
+            'contactRows' => $contactRows ?: [],
+            'contactErrors' => $rowErrors,
+            'countries' => PhoneCountries::all(),
             'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
             'categories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
@@ -182,8 +246,41 @@ class PropertyController extends Controller
         ];
     }
 
+    /** تطبيع صفوف المسؤولين قبل التحقق: أرقام فقط، بلا صفر بادئ، والسطر الفارغ يُهمل */
+    private function normalizeContacts(Request $request): void
+    {
+        $contacts = [];
+
+        foreach ((array) $request->input('contacts', []) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $phone = preg_replace('/\D+/', '', (string) ($row['phone'] ?? '')) ?? '';
+            $role = trim((string) ($row['role'] ?? ''));
+            $name = trim((string) ($row['name'] ?? ''));
+
+            if ($phone === '' && $role === '' && $name === '') {
+                continue;
+            }
+
+            $contacts[] = [
+                'id' => $row['id'] ?? null,
+                'phone_code' => filled($row['phone_code'] ?? null) ? $row['phone_code'] : PhoneCountries::DEFAULT,
+                'phone' => ltrim($phone, '0'),
+                'role' => $role,
+                'name' => $name,
+            ];
+        }
+
+        $request->merge(['contacts' => $contacts]);
+    }
+
     private function validated(Request $request): array
     {
+        $this->normalizeContacts($request);
+        $propertyId = $request->route('property')?->id ?? 0;
+
         $v = $request->validate([
             'title.ar' => ['required', 'string', 'max:255'],
             'title.en' => ['nullable', 'string', 'max:255'],
@@ -215,8 +312,6 @@ class PropertyController extends Controller
             'map_url' => ['nullable', 'url', 'max:500'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'guard_name' => ['nullable', 'string', 'max:150'],
-            'guard_phone' => ['nullable', 'string', 'max:40'],
             'video_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['nullable', 'boolean'],
             'cover' => Property::imageRules(),
@@ -224,13 +319,24 @@ class PropertyController extends Controller
             'amenities' => ['array'],
             'amenities.*' => ['exists:amenities,id'],
             'field_owner_id' => ['nullable', 'integer', 'exists:field_owners,id'],
+            'contacts' => ['required', 'array', 'min:1', 'max:20'],
+            'contacts.*.id' => ['nullable', 'integer', Rule::exists('property_contacts', 'id')->where('property_id', $propertyId)],
+            'contacts.*.phone_code' => ['required', 'string', Rule::in(PhoneCountries::codes())],
+            'contacts.*.phone' => ['required', 'string', 'regex:/^[0-9]{4,15}$/'],
+            'contacts.*.role' => ['nullable', 'string', 'max:60'],
+            'contacts.*.name' => ['nullable', 'string', 'max:150'],
         ], [
             'map_url.url' => 'رابط الموقع يجب أن يكون رابط خرائط جوجل صالحًا (يبدأ بـ https://).',
+            'contacts.required' => 'أضف مسؤولاً واحداً عن العقار على الأقل (رقم هاتف).',
+            'contacts.min' => 'أضف مسؤولاً واحداً عن العقار على الأقل (رقم هاتف).',
+            'contacts.*.phone.required' => 'رقم هاتف المسؤول مطلوب.',
+            'contacts.*.phone.regex' => 'رقم الهاتف يجب أن يكون أرقاماً فقط (من 4 إلى 15 رقماً).',
         ], [
             'title.ar' => 'العنوان (عربي)', 'city_id' => 'المحافظة', 'area_id' => 'المنطقة', 'category_id' => 'التصنيف',
             'unit_type_id' => 'نوع الوحدة', 'purpose' => 'الغرض', 'price' => 'السعر', 'status_id' => 'الحالة',
             'owner_commission_rate' => 'نسبة العمولة من المالك', 'building_name' => 'إسم المبنى',
-            'map_url' => 'رابط موقع العقار', 'guard_name' => 'حارس العقار', 'guard_phone' => 'رقم الحارس',
+            'map_url' => 'رابط موقع العقار', 'contacts' => 'المسؤولون عن العقار',
+            'contacts.*.phone' => 'رقم الهاتف', 'contacts.*.phone_code' => 'مفتاح الدولة', 'contacts.*.role' => 'صفته', 'contacts.*.name' => 'اسمه',
         ]);
 
         // المنطقة تتبع المحافظة، ونوع الوحدة يتبع التصنيف
@@ -269,8 +375,6 @@ class PropertyController extends Controller
             'map_url' => $v['map_url'] ?? null,
             'latitude' => $v['latitude'] ?? null,
             'longitude' => $v['longitude'] ?? null,
-            'guard_name' => $v['guard_name'] ?? null,
-            'guard_phone' => $v['guard_phone'] ?? null,
             'video_url' => $v['video_url'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
         ];

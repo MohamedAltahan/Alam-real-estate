@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Site;
 
-use App\Support\Honeypot;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\ContactRequest;
@@ -14,7 +13,7 @@ use App\Models\RequestType;
 use App\Models\Testimonial;
 use App\Models\UnitType;
 use App\Models\User;
-use App\Support\SiteFlags;
+use App\Support\Honeypot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -80,7 +79,6 @@ class SiteController extends Controller
     {
         $properties = Property::query()
             ->with(['area', 'agent', 'status', 'unitType', 'media'])
-            ->when(SiteFlags::busyBadgeEnabled(), fn ($q) => $q->with('busyViewings:id,property_id'))
             ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
             ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
             ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
@@ -114,19 +112,16 @@ class SiteController extends Controller
     /** تفاصيل عقار */
     public function property(Property $property): View
     {
-        // شارة «مشغول/مباع» تحتاج المعاينات المختارة — تُحمَّل فقط عندما يكون الإعداد مفعّلاً
-        $badge = SiteFlags::busyBadgeEnabled() ? ['busyViewings:id,property_id'] : [];
+        $property->load(['area', 'agent', 'owner', 'status', 'unitType', 'category', 'amenities', 'media', 'reviews.createdBy']);
 
-        $property->load(array_merge(['area', 'agent', 'owner', 'status', 'unitType', 'category', 'amenities', 'media', 'reviews.createdBy'], $badge));
-
-        $similar = Property::with(array_merge(['area', 'agent', 'status', 'media'], $badge))
+        $similar = Property::with(['area', 'agent', 'status', 'media'])
             ->where('id', '!=', $property->id)
             ->where(fn ($q) => $q->where('area_id', $property->area_id)->orWhere('unit_type_id', $property->unit_type_id))
             ->latest()->take(8)->get();
 
         // لا يوجد شبيه بنفس المنطقة/النوع ⇒ اعرض أحدث العقارات الأخرى بدل قسم فارغ
         if ($similar->isEmpty()) {
-            $similar = Property::with(array_merge(['area', 'agent', 'status', 'media'], $badge))
+            $similar = Property::with(['area', 'agent', 'status', 'media'])
                 ->where('id', '!=', $property->id)
                 ->latest()->take(8)->get();
         }
@@ -141,7 +136,6 @@ class SiteController extends Controller
 
         $properties = $agent->properties()
             ->with(['area', 'agent', 'status', 'media'])
-            ->when(SiteFlags::busyBadgeEnabled(), fn ($q) => $q->with('busyViewings:id,property_id'))
             ->latest()->paginate(6);
 
         $reviews = $agent->reviews()->where('is_published', true)->latest()->get();

@@ -219,8 +219,8 @@
                         @if ($canEditSite)
                             <div x-data="{ enabled: @js((bool) $siteBusyBadge) }" class="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3.5">
                                 <div class="flex-1">
-                                    <p class="text-sm font-bold text-ink">شارة «مشغول / مباع» على الموقع</p>
-                                    <p class="text-xs text-gray-400 mt-0.5">إعداد عام لكل الزوّار: شارة حمراء أعلى كارت العقار وفي صفحته على الموقع للعقار المباع أو الذي اختاره عميل.</p>
+                                    <p class="text-sm font-bold text-ink">شارة «مباع» على الموقع</p>
+                                    <p class="text-xs text-gray-400 mt-0.5">إعداد عام لكل الزوّار: شارة حمراء أعلى كارت العقار وفي صفحته على الموقع للعقار المباع.</p>
                                 </div>
                                 <input type="hidden" name="site_busy_badge" value="{{ $siteBusyBadge ? 1 : 0 }}" :value="enabled ? 1 : 0">
                                 <button type="button" role="switch" :aria-checked="enabled" @click="enabled = ! enabled"

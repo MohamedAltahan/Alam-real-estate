@@ -3,18 +3,22 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\City;
 use App\Models\ClientViewing;
+use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ViewingService;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Support\ClientFields;
 use App\Support\WhatsAppTemplates;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
-/** صفحة المعاينات: كل مواعيد المعاينات مع فلاتر التاريخ والمسؤول والنتيجة */
+/** صفحة المعاينات: كل مواعيد المعاينات مع فلاتر التاريخ ومندوب المبيعات والنتيجة */
 class ViewingController extends Controller
 {
     public function __construct(private ViewingService $viewings) {}
@@ -27,8 +31,28 @@ class ViewingController extends Controller
             'viewings' => $this->viewings->paginate($filters),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'outcomes' => ClientFields::OUTCOMES,
+            'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
+            'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
+            'waStates' => ViewingService::WA_STATES,
             'filters' => $filters,
         ]);
+    }
+
+    /** تعديل ملاحظة المعاينة من الجداول دون الدخول إليها (JSON للنافذة، أو رجوع مع رسالة) */
+    public function updateNotes(Request $request, ClientViewing $viewing): JsonResponse|RedirectResponse
+    {
+        abort_unless($request->user()->can('clients.edit'), 403);
+
+        $data = $request->validate(['notes' => ['nullable', 'string', 'max:2000']], [], ['notes' => 'الملاحظة']);
+
+        $viewing = $this->viewings->updateNotes($viewing, $data['notes'] ?? null);
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'notes' => $viewing->notes]);
+        }
+
+        return back()->with('success', 'تم حفظ ملاحظة المعاينة.');
     }
 
     public function updateOutcome(Request $request, ClientViewing $viewing): RedirectResponse
@@ -38,17 +62,9 @@ class ViewingController extends Controller
         $data = $request->validate([
             'outcome' => ['required', Rule::in(array_keys(ClientFields::OUTCOMES))],
             'notes' => ['nullable', 'string', 'max:2000'],
-            // «تم اختيار العقار» لعقار إيجار يحتاج تاريخ انتهاء العقد (الفحص اليومي يعتمد عليه)
-            'contract_ends_at' => [
-                'nullable', 'date_format:Y-m-d',
-                Rule::requiredIf(fn () => $request->input('outcome') === ClientViewing::OUTCOME_CHOSEN && $viewing->property?->purpose === 'rent'),
-            ],
-        ], [
-            'contract_ends_at.required' => 'حدّد تاريخ انتهاء العقد للعقار المختار.',
-            'contract_ends_at.date_format' => 'صيغة تاريخ انتهاء العقد غير صحيحة.',
         ]);
 
-        $this->viewings->updateOutcome($viewing, $data['outcome'], $data['notes'] ?? null, $data['contract_ends_at'] ?? null);
+        $this->viewings->updateOutcome($viewing, $data['outcome'], $data['notes'] ?? null);
 
         return back()->with('success', 'تم تحديث نتيجة المعاينة.');
     }
@@ -64,7 +80,7 @@ class ViewingController extends Controller
             'body' => ['required', 'string', 'max:4000'],
         ], [], ['kind' => 'نوع الرسالة', 'to' => 'المستلم', 'body' => 'نص الرسالة']);
 
-        $viewing->load(['client.agent', 'property.owner.contacts', 'property.agent', 'property.area']);
+        $viewing->load(['client.agent', 'property.contacts', 'property.agent', 'property.area']);
 
         $message = $whatsapp->send($viewing, $data['kind'], $data['to'], str_replace("\r\n", "\n", $data['body']), $request->user());
 

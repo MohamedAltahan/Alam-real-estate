@@ -19,7 +19,7 @@
         @can('reports.view')
             <a href="{{ route('dashboard.reports.conversion') }}" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 px-4 h-11 transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/></svg>
-                تقرير معدل التحول
+                تقرير تحول المعاينات
             </a>
             <a href="{{ route('dashboard.reports.viewings') }}" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 px-4 h-11 transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -29,15 +29,38 @@
     </div>
 
     {{-- الفلاتر (خارج منطقة النتائج) — تُطبَّق فور الاختيار --}}
-    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-5" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
+    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-6" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
         <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
                         placeholder="باسم العميل أو رقم العقار..." span="col-span-2 md:col-span-1" />
         <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
         <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
-        <x-filter-select label="المسؤول" name="agent_id" placeholder="كل المسؤولين"
+        <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل مندوبي المبيعات"
                          :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
         <x-filter-select label="النتيجة" name="outcome" placeholder="كل النتائج"
                          :options="$outcomes" :selected="$filters['outcome'] ?? null" />
+        <x-filter-select label="حالة واتساب" name="wa_state" placeholder="الكل"
+                         :options="$waStates" :selected="$filters['wa_state'] ?? null" />
+        {{-- المنطقة تتبع المحافظة — نطاق Alpine واحد بلا كسر الشبكة (display:contents) --}}
+        <div class="contents" x-data="{
+                city: @js((string) ($filters['city_id'] ?? '')),
+                area: @js((string) ($filters['area_id'] ?? '')),
+                areas: @js($areas->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values()),
+                areasFor() { return this.city ? this.areas.filter(a => String(a.city_id) === String(this.city)) : this.areas; }
+             }">
+            <x-filter-select label="محافظة العقار" name="city_id" placeholder="كل المحافظات"
+                             :options="$cities->pluck('name', 'id')" x-model="city" @change="area = ''; $refs.areaSelect.value = ''" />
+            <x-filter-select label="منطقة العقار" name="area_id" placeholder="كل المناطق" x-ref="areaSelect" x-model="area">
+                <template x-for="a in areasFor()" :key="a.id">
+                    <option :value="a.id" x-text="a.name" :selected="String(a.id) === String(area)"></option>
+                </template>
+            </x-filter-select>
+        </div>
+        <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
+                         :options="$unitTypes->pluck('name', 'id')" :selected="$filters['unit_type_id'] ?? null" />
+        <x-filter-select label="الغرض" name="purpose" placeholder="بيع وإيجار"
+                         :options="['sale' => 'بيع', 'rent' => 'إيجار']" :selected="$filters['purpose'] ?? null" />
+        <x-filter-select label="حضوري" name="in_person" placeholder="الكل"
+                         :options="['1' => 'نعم', '0' => 'لا']" :selected="$filters['in_person'] ?? null" />
     </x-filter-bar>
 
     <div data-results>
@@ -51,7 +74,7 @@
                             <th class="text-start font-medium px-4 py-3">العقار</th>
                             <th class="text-start font-medium px-4 py-3">الموعد</th>
                             <th class="text-start font-medium px-4 py-3">حضوري</th>
-                            <th class="text-start font-medium px-4 py-3">المسؤول</th>
+                            <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                             <th class="text-start font-medium px-4 py-3">النتيجة</th>
                             <th class="text-start font-medium px-4 py-3">واتساب</th>
                             <th class="text-start font-medium px-4 py-3">ملاحظة</th>
@@ -93,7 +116,7 @@
                                 <td class="px-4 py-3 text-gray-600">{{ $agent?->name ?: '—' }}</td>
                                 <td class="px-4 py-3">@include('dashboard.viewings._outcome', ['viewing' => $viewing])</td>
                                 <td class="px-4 py-3">@include('dashboard.viewings._wa', ['viewing' => $viewing])</td>
-                                <td class="px-4 py-3 text-xs text-gray-500 max-w-[200px]"><span class="block truncate" title="{{ $viewing->notes }}">{{ $viewing->notes ?: '—' }}</span></td>
+                                <td class="px-4 py-3 max-w-[220px]">@include('dashboard.viewings._notes', ['viewing' => $viewing])</td>
                             </tr>
                         @empty
                             <tr><td colspan="9" class="px-4 py-16 text-center text-gray-400">لا توجد معاينات مطابقة.</td></tr>
@@ -107,5 +130,6 @@
     </div>
 
     @include('dashboard.viewings._wa-modal')
+    @include('dashboard.viewings._notes-modal')
 </div>
 @endsection

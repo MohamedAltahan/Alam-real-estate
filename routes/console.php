@@ -13,6 +13,3 @@ Schedule::command('viewings:remind')->everyMinute();
 
 // حالات تسليم رسائل واتساب (وصلت/قُرئت) — بديل الويب هوك؛ نقطة الاستطلاع تقوم بنفس المهمة بدون cron
 Schedule::command('whatsapp:sync-statuses')->everyMinute();
-
-// عقود الإيجار المنتهية → «إخلاء العقار» مرة كل يوم — نقطة الاستطلاع تقوم بنفس المهمة بدون cron
-Schedule::command('viewings:vacate-expired')->daily();

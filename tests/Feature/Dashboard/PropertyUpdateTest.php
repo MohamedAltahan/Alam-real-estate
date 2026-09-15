@@ -57,6 +57,7 @@ class PropertyUpdateTest extends TestCase
             'price' => 125000,
             'status_id' => $status->id,
             'gallery' => [UploadedFile::fake()->image('gallery.jpg', 800, 600)],
+            'contacts' => [['phone_code' => '+965', 'phone' => '99887766', 'role' => 'الحارس', 'name' => 'أبو خالد']],
             'amenities' => [],
         ])->assertRedirect(route('dashboard.properties.show', $property))
             ->assertSessionHasNoErrors();

@@ -33,6 +33,10 @@
         'city_id',
         'area_id',
         'unit_type_id',
+        'category',
+        'area_from',
+        'area_to',
+        'rooms',
         'nationality',
         'social_status',
         'preferred_contact',
@@ -183,7 +187,11 @@
                 city: @js((string) ($filters['city_id'] ?? '')),
                 area: @js((string) ($filters['area_id'] ?? '')),
                 areas: @js($areas->map(fn($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values()),
-                areasFor() { return this.city ? this.areas.filter(a => String(a.city_id) === String(this.city)) : this.areas; }
+                areasFor() { return this.city ? this.areas.filter(a => String(a.city_id) === String(this.city)) : this.areas; },
+                category: @js((string) ($filters['category'] ?? '')),
+                unitType: @js((string) ($filters['unit_type_id'] ?? '')),
+                unitTypes: @js($unitTypes->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'category' => $t->category])->values()),
+                unitTypesFor() { return this.category ? this.unitTypes.filter(t => t.category === this.category) : this.unitTypes; }
             }">
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                 <div>
@@ -217,13 +225,38 @@
                     </select>
                 </div>
                 <div>
-                    <label class="{{ $filterLabel }}">نوع الوحدة المطلوبة</label>
-                    <select name="unit_type_id" form="clients-filters" class="{{ $filterSelect }}">
-                        <option value="">كل الأنواع</option>
-                        @foreach ($unitTypes as $type)
-                            <option value="{{ $type->id }}" @selected(($filters['unit_type_id'] ?? '') == $type->id)>{{ $type->name }}</option>
+                    <label class="{{ $filterLabel }}">نوع العقار المطلوب</label>
+                    <select name="category" form="clients-filters" x-model="category"
+                        @change="unitType = ''; $refs.unitTypeSelect.value = ''" class="{{ $filterSelect }}">
+                        <option value="">سكني وتجاري</option>
+                        @foreach (\App\Models\UnitType::CATEGORIES as $key => $text)
+                            <option value="{{ $key }}">{{ $text }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">نوع الوحدة المطلوبة</label>
+                    <select name="unit_type_id" form="clients-filters" x-ref="unitTypeSelect" x-model="unitType" class="{{ $filterSelect }}">
+                        <option value="">كل الأنواع</option>
+                        <template x-for="t in unitTypesFor()" :key="t.id">
+                            <option :value="t.id" x-text="t.name" :selected="String(t.id) === String(unitType)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">المساحة من (م²)</label>
+                    <input type="number" min="0" step="0.5" inputmode="decimal" name="area_from" form="clients-filters"
+                        value="{{ $filters['area_from'] ?? '' }}" placeholder="من" dir="ltr" class="{{ $filterInput }}">
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">المساحة إلى (م²)</label>
+                    <input type="number" min="0" step="0.5" inputmode="decimal" name="area_to" form="clients-filters"
+                        value="{{ $filters['area_to'] ?? '' }}" placeholder="إلى" dir="ltr" class="{{ $filterInput }}">
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">عدد الغرف</label>
+                    <input type="number" min="0" max="50" step="1" inputmode="numeric" name="rooms" form="clients-filters"
+                        value="{{ $filters['rooms'] ?? '' }}" placeholder="الكل" dir="ltr" class="{{ $filterInput }}">
                 </div>
                 <div>
                     <label class="{{ $filterLabel }}">الجنسية</label>
@@ -454,10 +487,10 @@
         </div>{{-- /منطقة النتائج --}}
 
         {{-- ===== مودال إضافة عميل ===== --}}
-        <div x-show="addOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
+        <div x-show="addOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-3" role="dialog"
             @keydown.escape.window="addOpen = false">
             <div class="absolute inset-0 bg-primary-950/50" @click="addOpen = false"></div>
-            <div class="relative w-full max-w-6xl bg-white rounded-card shadow-2xl max-h-[90vh] overflow-y-auto"
+            <div class="relative w-full max-w-[min(96vw,88rem)] bg-white rounded-card shadow-2xl max-h-[94vh] overflow-y-auto"
                 x-transition.opacity>
                 <div
                     class="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100">

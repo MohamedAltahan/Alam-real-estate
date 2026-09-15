@@ -89,6 +89,23 @@ class Task extends Model implements HasMedia
         return $query->where('assignee_id', $userId);
     }
 
+    /** المهام التي أسندها المستخدم لغيره (أو لم يُسندها لأحد بعد) */
+    public function scopeDelegatedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('created_by', $userId)
+            ->where(fn (Builder $w) => $w->whereNull('assignee_id')->orWhere('assignee_id', '!=', $userId));
+    }
+
+    /** ما يراه المستخدم: مدير النظام يرى الكل، وغيره المسندة له أو التي أسندها هو */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $w) => $w->where('assignee_id', $user->id)->orWhere('created_by', $user->id));
+    }
+
     /** متأخرة: فات موعدها ولم تكتمل */
     public function scopeOverdue(Builder $query): Builder
     {

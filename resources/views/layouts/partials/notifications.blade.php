@@ -31,7 +31,7 @@
             aria-label="الإشعارات">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
              stroke-linecap="round" stroke-linejoin="round">{!! $bellIcons['bell'] !!}</svg>
-        <span x-show="unread > 0" x-cloak class="absolute top-2 end-2.5 w-2.5 h-2.5 rounded-full bg-danger ring-2 ring-white"></span>
+        <span x-show="unread > 0" x-cloak x-text="unread > 99 ? '99+' : unread" class="absolute -top-1 -end-1 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold ring-2 ring-white tabular-nums"></span>
     </button>
 
     <div x-cloak x-show="open" @click.outside="open = false"

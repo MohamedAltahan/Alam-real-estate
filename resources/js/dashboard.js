@@ -17,3 +17,5 @@ import './dashboard/owner-form';
 import './dashboard/field-owner-form';
 import './dashboard/task-board';
 import './dashboard/whatsapp';
+import './dashboard/viewing-notes';
+import './dashboard/property-status';

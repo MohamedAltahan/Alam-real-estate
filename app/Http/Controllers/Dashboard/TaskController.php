@@ -13,7 +13,6 @@ use App\Support\TaskAuditPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -50,6 +49,8 @@ class TaskController extends Controller
     /** تفاصيل المهمة: جزء HTML يُحقن في النافذة (XHR) — وإلا نعيد التوجيه للوحة مع فتح المهمة */
     public function show(Request $request, Task $task): View|RedirectResponse
     {
+        abort_unless($this->tasks->canSee($task, $request->user()), 403);
+
         if (! $request->ajax()) {
             return redirect()->route('dashboard.tasks.index', ['task' => $task->id]);
         }

@@ -25,15 +25,26 @@
         </a>
     @endif
 
-    <div class="flex items-center justify-between gap-2 mt-3">
-        @if ($task->assignee)
-            <span class="inline-flex items-center gap-1.5 min-w-0" title="المسند إليه: {{ $task->assignee->name }}">
-                <span class="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-primary-900 text-white text-[10px] font-bold">{{ mb_substr($task->assignee->name, 0, 1) }}</span>
-                <span class="text-[11px] text-gray-600 truncate">{{ $task->assignee->name }}</span>
-            </span>
-        @else
-            <span class="text-[11px] text-gray-400">غير مسندة</span>
-        @endif
+    {{-- المسنِد والمسند إليه --}}
+    <div class="mt-3 space-y-1 text-[11px]">
+        <p class="flex items-center gap-1.5 min-w-0 text-gray-500" title="أسندها: {{ $task->creator?->name ?? '—' }}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-gray-400"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            <span class="text-gray-400">أسندها:</span>
+            <span class="truncate">{{ $task->creator?->name ?? '—' }}</span>
+        </p>
+        <p class="flex items-center gap-1.5 min-w-0" title="المسند إليه: {{ $task->assignee?->name ?? 'غير مسندة' }}">
+            @if ($task->assignee)
+                <span class="grid place-items-center w-5 h-5 shrink-0 rounded-full bg-primary-900 text-white text-[10px] font-bold">{{ mb_substr($task->assignee->name, 0, 1) }}</span>
+                <span class="text-gray-400">المسند إليه:</span>
+                <span class="text-gray-700 font-semibold truncate">{{ $task->assignee->name }}</span>
+            @else
+                <span class="grid place-items-center w-5 h-5 shrink-0 rounded-full bg-gray-100 text-gray-400 text-[10px] font-bold">؟</span>
+                <span class="text-gray-400">غير مسندة</span>
+            @endif
+        </p>
+    </div>
+
+    <div class="flex items-center justify-end gap-2 mt-2">
 
         <span class="flex items-center gap-2 shrink-0 text-[11px] text-gray-400">
             @if ($task->due_date)

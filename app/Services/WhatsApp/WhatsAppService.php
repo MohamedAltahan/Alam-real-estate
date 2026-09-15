@@ -3,11 +3,11 @@
 namespace App\Services\WhatsApp;
 
 use App\Models\ClientViewing;
+use App\Models\PropertyContact;
 use App\Models\User;
 use App\Models\WhatsappInstance;
 use App\Models\WhatsappMessage;
 use App\Services\ClientAuditLogger;
-use App\Support\PhoneNumber;
 use App\Support\WhatsAppTemplates;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Client\ConnectionException;
@@ -205,46 +205,27 @@ class WhatsAppService
     // ===== رسائل المعاينات =====
 
     /**
-     * المستلمون المتاحون لنوع الرسالة: أرقام المالك بصفاتهم (تفاصيل المعاينة) أو رقم العميل (المتابعة).
+     * المستلمون المتاحون: المسؤولون عن العقار بصفاتهم — لكلا النوعين (تفاصيل المعاينة · نتيجتها).
+     * لا يُعرض المالك ولا العميل.
      *
      * @return array<int, array{phone:string, name:string, label:string, display:string}>
      */
     public function recipients(ClientViewing $viewing, string $kind): array
     {
-        if ($kind === WhatsAppTemplates::KIND_CLIENT) {
-            $client = $viewing->client;
+        abort_unless(isset(WhatsAppTemplates::KINDS[$kind]), 404);
 
-            return $client && filled($client->phone) ? [[
-                'phone' => PhoneNumber::digits($client->phone_code, $client->phone),
-                'name' => (string) $client->name,
-                'label' => 'العميل · '.$client->name,
-                'display' => $client->full_phone,
-            ]] : [];
-        }
+        $contacts = $viewing->property?->contacts ?? collect();
 
-        $owner = $viewing->property?->owner;
-
-        if (! $owner) {
-            return [];
-        }
-
-        $rows = $owner->contacts->map(fn ($contact) => [
-            'phone' => $contact->whatsapp_number,
-            'name' => (string) ($contact->name ?: $owner->name),
-            'label' => collect([$contact->role ?: 'المالك', $contact->name])->filter()->implode(' · '),
-            'display' => $contact->full_phone,
-        ]);
-
-        if ($rows->isEmpty() && filled($owner->phone)) {
-            $rows->push([
-                'phone' => $owner->whatsapp_number,
-                'name' => (string) $owner->name,
-                'label' => 'المالك · '.$owner->name,
-                'display' => $owner->full_phone,
-            ]);
-        }
-
-        return $rows->filter(fn (array $row) => $row['phone'] !== '')->values()->all();
+        return $contacts
+            ->map(fn (PropertyContact $contact) => [
+                'phone' => $contact->whatsapp_number,
+                'name' => (string) ($contact->name ?: ($contact->role ?: PropertyContact::DEFAULT_ROLE)),
+                'label' => $contact->label(),
+                'display' => $contact->full_phone,
+            ])
+            ->filter(fn (array $row) => $row['phone'] !== '')
+            ->values()
+            ->all();
     }
 
     /** حمولة زر الإرسال (نافذة الاختيار): المستلمون + نص القالب معبّأً لكل مستلم */
@@ -278,9 +259,9 @@ class WhatsAppService
     {
         abort_unless(isset(WhatsAppTemplates::KINDS[$kind]), 404);
 
-        // المتابعة تُرسل بعد تسجيل نتيجة المعاينة فقط
+        // رسالة النتيجة تُرسل بعد تسجيل نتيجة المعاينة فقط
         if ($kind === WhatsAppTemplates::KIND_CLIENT && $viewing->outcome === ClientViewing::OUTCOME_PENDING) {
-            throw ValidationException::withMessages(['kind' => 'سجّل نتيجة المعاينة أولاً قبل إرسال المتابعة للعميل.']);
+            throw ValidationException::withMessages(['kind' => 'يجب اختيار النتيجة أولاً قبل إرسال نتيجة المعاينة لمسؤول العقار.']);
         }
 
         $recipient = collect($this->recipients($viewing, $kind))

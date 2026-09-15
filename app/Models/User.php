@@ -137,4 +137,10 @@ class User extends Authenticatable implements HasMedia
     {
         return $query->where('is_agent', true);
     }
+
+    /** مدير النظام (super-admin): يرى كل المهام على النظام لا المسندة له/منه فقط */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
 }

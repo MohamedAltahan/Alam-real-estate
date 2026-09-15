@@ -1,15 +1,36 @@
 /**
  * واتساب:
  *  - نافذة إرسال رسالة معاينة: تُفتح من أي زر يحمل data-wa-send (حمولة JSON من السيرفر)
- *    وتعرض أرقام المستلمين (المالك بصفاته / العميل) ونص القالب معبّأً قابلاً للتعديل.
+ *    وتعرض أرقام المسؤولين عن العقار بصفاتهم ونص القالب معبّأً قابلاً للتعديل.
+ *  - زر محجوب (data-wa-blocked): يعرض سبب الحجب في فقاعة بدل أن يكون معطّلاً بلا تفسير.
  *  - لوحة ربط الرقم بالـ QR (شاشة واتساب): استطلاع كل 3 ثوانٍ حتى «متصل».
  */
 import { withAlpine } from './alpine';
 
 const QR_POLL_MS = 3000;
+const TOAST_MS = 2500;
+
+/** فقاعة قصيرة أعلى الصفحة (نفس شكل «تم نسخ بيانات العميل») */
+export function toast(message, tone = 'bg-primary-950') {
+    const el = document.createElement('div');
+    el.setAttribute('role', 'status');
+    el.className = `fixed top-20 start-1/2 -translate-x-1/2 z-[70] rounded-full ${tone} text-white px-5 py-2.5 text-sm shadow-xl`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), TOAST_MS);
+}
 
 // تفويض: يعمل داخل الجداول التي تُستبدل بالفلاتر الحيّة وخارج أي x-data
 document.addEventListener('click', (event) => {
+    const blocked = event.target.closest('[data-wa-blocked]');
+
+    if (blocked) {
+        event.preventDefault();
+        toast(blocked.dataset.waBlocked || 'يجب اختيار النتيجة أولاً', 'bg-danger');
+
+        return;
+    }
+
     const trigger = event.target.closest('[data-wa-send]');
 
     if (! trigger || trigger.disabled) {

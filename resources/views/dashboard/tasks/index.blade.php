@@ -7,6 +7,7 @@
     use App\Models\Task;
     $total = collect($columns)->sum(fn ($c) => $c->count());
     $mine = ! empty($filters['mine']);
+    $delegated = ! empty($filters['delegated']);
 @endphp
 
 @section('content')
@@ -28,6 +29,7 @@
             {{-- نموذج الفلترة الموحّد: كل عناصره تنضمّ له بالخاصية form="tasks-filters" --}}
             <form method="GET" id="tasks-filters" data-live-filters></form>
             <input type="hidden" name="mine" form="tasks-filters" x-ref="mine" value="{{ $mine ? '1' : '' }}">
+            <input type="hidden" name="delegated" form="tasks-filters" x-ref="delegated" value="{{ $delegated ? '1' : '' }}">
 
             <div class="relative w-[240px] max-w-[50vw]">
                 <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -42,6 +44,15 @@
                     class="inline-flex items-center gap-2 rounded-full border px-4 h-11 text-sm font-semibold transition">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
                 مهامي
+            </button>
+
+            {{-- أسندتها: المهام التي أسندها المستخدم لزميل آخر --}}
+            <button type="button" x-data="{ on: {{ $delegated ? 'true' : 'false' }} }"
+                    @click="on = ! on; $refs.delegated.value = on ? '1' : ''; $refs.delegated.dispatchEvent(new Event('input', { bubbles: true }))"
+                    :class="on ? 'bg-primary-50 border-primary-200 text-primary-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-2 rounded-full border px-4 h-11 text-sm font-semibold transition" title="المهام التي أسندتها لطرف آخر">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M17 21a8 8 0 0 0-16 0"/><path d="M19 8v6M16 11h6"/></svg>
+                أسندتها
             </button>
 
             @can('tasks.create')

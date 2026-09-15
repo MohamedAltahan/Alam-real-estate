@@ -42,6 +42,9 @@ class WhatsAppViewingsTest extends TestCase
         $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55220000', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
 
         $this->property = Property::create(['reference_code' => '12', 'title' => ['ar' => 'شقة السالمية', 'en' => 'Salmiya flat'], 'owner_id' => $this->owner->id]);
+        // المسؤولون عن العقار — إليهم تذهب الرسائل (لا المالك ولا العميل)
+        $this->property->contacts()->create(['phone_code' => '+965', 'phone' => '55110000', 'role' => 'الحارس', 'name' => 'أبو خالد', 'sort_order' => 0]);
+        $this->property->contacts()->create(['phone_code' => '+965', 'phone' => '55220000', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
         $this->client = Client::create(['name' => 'عميل المعاينة', 'phone_code' => '+965', 'phone' => '66000001', 'agent_id' => $agent->id]);
         $this->viewing = $this->client->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->setTime(17, 0)]);
     }
@@ -146,18 +149,22 @@ class WhatsAppViewingsTest extends TestCase
         Http::fake(['*/messages/send' => Http::response(['id' => 123, 'status' => 'queued', 'delay_ms' => 2400], 202)]);
         $user = $this->userWith(['clients.view', 'clients.edit']);
 
-        // زر الإرسال يحمل كل أرقام المالك بصفاتها ونص القالب معبّأً
-        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->load('property.owner.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER);
+        // زر الإرسال يحمل كل أرقام المسؤولين عن العقار بصفاتها ونص القالب معبّأً
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->load('property.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER);
         $this->assertSame(['96555110000', '96555220000'], array_column($payload['recipients'], 'phone'));
         $this->assertSame('الوكيل · سالم', $payload['recipients'][1]['label']);
         $this->assertStringContainsString('السلام عليكم سالم', $payload['bodies']['96555220000']);
         $this->assertStringContainsString('عميل المعاينة', $payload['bodies']['96555220000']);
-        $this->assertStringContainsString('+965 66000001', $payload['bodies']['96555220000']);
+        // هاتف العميل: مفتاح ملتصق بالرقم مع LRM وآخر رقمين مخفيان
+        $this->assertStringContainsString("\u{200E}+965660000xx", $payload['bodies']['96555220000']);
+        $this->assertStringNotContainsString('66000001', $payload['bodies']['96555220000']);
+        $this->assertStringContainsString("\u{200E}+96599000005", $payload['bodies']['96555220000']);
         $this->assertStringContainsString('12 — شقة السالمية', $payload['bodies']['96555220000']);
 
         $this->actingAs($user)->get(route('dashboard.clients.show', $this->client))
             ->assertOk()
-            ->assertSee('إبلاغ المالك')
+            ->assertSee('إبلاغ المسؤول')
+            ->assertDontSee('إبلاغ المالك')
             ->assertSee('data-wa-send=', false);
 
         $this->actingAs($user)->from(route('dashboard.clients.show', $this->client))
@@ -182,7 +189,7 @@ class WhatsAppViewingsTest extends TestCase
         $this->assertNull($this->viewing->client_followed_up_at);
         $this->assertDatabaseHas('client_audit_logs', ['client_id' => $this->client->id, 'action' => 'whatsapp_sent', 'user_id' => $user->id]);
 
-        $this->actingAs($user)->get(route('dashboard.clients.show', $this->client))->assertOk()->assertSee('أُبلغ المالك');
+        $this->actingAs($user)->get(route('dashboard.clients.show', $this->client))->assertOk()->assertSee('أُبلغ المسؤول');
         $this->actingAs($this->userWith(['whatsapp.view']))->get(route('dashboard.whatsapp.index', ['tab' => 'messages']))
             ->assertOk()->assertSee('الوكيل · سالم')->assertSee('أُرسلت');
     }
@@ -202,16 +209,23 @@ class WhatsAppViewingsTest extends TestCase
             ->assertOk()
             ->assertSee('12')
             ->assertSee('شقة السالمية')
-            ->assertSee('إبلاغ المالك')
-            ->assertSee('متابعة العميل')
+            ->assertSee('إبلاغ المسؤول')
+            ->assertSee('إرسال النتيجة')
             ->assertSee('data-wa-send=', false)
+            // قبل تسجيل النتيجة: زر النتيجة محجوب برسالة واضحة بدل disabled
+            ->assertSee('data-wa-blocked="يجب اختيار النتيجة أولاً"', false)
+            ->assertDontSee(' disabled', false)
             ->assertSee(route('dashboard.viewings.outcome', $this->viewing), false)
             ->assertSee('saveOutcome($event)', false);
+
+        $this->viewing->forceFill(['outcome' => ClientViewing::OUTCOME_STUDYING, 'outcome_at' => now()])->save();
+        $this->actingAs($editor)->get(route('dashboard.clients.viewings', $this->client))
+            ->assertOk()->assertDontSee('data-wa-blocked=', false);
 
         // بلا صلاحية التعديل: لا أزرار إرسال ولا تغيير للنتيجة
         $this->actingAs($this->userWith(['clients.view']))->get(route('dashboard.clients.viewings', $this->client))
             ->assertOk()
-            ->assertSee('قيد الانتظار')
+            ->assertSee('قيد الدراسة')
             ->assertDontSee('data-wa-send=', false)
             ->assertDontSee('saveOutcome($event)', false);
 
@@ -260,28 +274,45 @@ class WhatsAppViewingsTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_client_follow_up_goes_to_the_client_only_after_the_outcome_is_recorded(): void
+    public function test_outcome_message_goes_to_the_property_contacts_only_after_the_outcome_is_recorded(): void
     {
         $this->connectedInstance();
         Http::fake(['*/messages/send' => Http::response(['id' => 7, 'status' => 'queued'], 202)]);
         $user = $this->userWith(['clients.view', 'clients.edit']);
 
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
-            'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96566000001', 'body' => 'متابعة',
+            'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96555110000', 'body' => 'النتيجة',
         ])->assertSessionHasErrors('kind');
 
-        $this->viewing->forceFill(['outcome' => ClientViewing::OUTCOME_CHOSEN, 'outcome_at' => now()])->save();
+        $this->viewing->forceFill(['outcome' => ClientViewing::OUTCOME_INTERESTED, 'outcome_at' => now()])->save();
 
-        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property'), WhatsAppTemplates::KIND_CLIENT);
-        $this->assertSame([['phone' => '96566000001', 'name' => 'عميل المعاينة', 'label' => 'العميل · عميل المعاينة', 'display' => '+965 66000001']], $payload['recipients']);
-        $this->assertStringContainsString('تم اختيار العقار', $payload['bodies']['96566000001']);
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.contacts'), WhatsAppTemplates::KIND_CLIENT);
+        $this->assertSame(['96555110000', '96555220000'], array_column($payload['recipients'], 'phone'));
+        $this->assertSame('الحارس · أبو خالد', $payload['recipients'][0]['label']);
+        $this->assertStringContainsString('السلام عليكم أبو خالد', $payload['bodies']['96555110000']);
+        $this->assertStringContainsString('نتيجة المعاينة: مهتم', $payload['bodies']['96555110000']);
+        $this->assertStringContainsString('عميل المعاينة', $payload['bodies']['96555110000']);
+
+        // رقم العميل ليس من المستلمين المتاحين
+        $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
+            'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96566000001', 'body' => 'النتيجة',
+        ])->assertSessionHasErrors('to');
 
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
-            'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96566000001', 'body' => 'متابعة',
+            'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96555110000', 'body' => 'النتيجة',
         ])->assertSessionHas('success');
 
         $this->assertNotNull($this->viewing->fresh()->client_followed_up_at);
-        Http::assertSent(fn (ClientRequest $r) => $r['to'] === '96566000001');
+        Http::assertSent(fn (ClientRequest $r) => $r['to'] === '96555110000');
+        Http::assertNotSent(fn (ClientRequest $r) => $r['to'] === '96566000001');
+    }
+
+    public function test_owner_numbers_are_never_offered_when_the_property_has_no_contacts(): void
+    {
+        $this->property->contacts()->delete();
+
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.contacts'), WhatsAppTemplates::KIND_OWNER);
+        $this->assertSame([], $payload['recipients']);
     }
 
     public function test_templates_are_editable_and_used_for_new_messages(): void
@@ -292,11 +323,11 @@ class WhatsAppViewingsTest extends TestCase
             ->assertOk()->assertSee('{اسم_العميل}')->assertSee('حفظ القالب');
 
         $this->actingAs($admin)->put(route('dashboard.whatsapp.templates.update', WhatsAppTemplates::KIND_OWNER), [
-            'body' => "معاينة {رقم_العقار} للعميل {اسم_العميل} يوم {موعد_المعاينة} — {اسم_المستلم}",
+            'body' => 'معاينة {رقم_العقار} للعميل {اسم_العميل} يوم {موعد_المعاينة} — {اسم_المستلم}',
         ])->assertRedirect(route('dashboard.whatsapp.index', ['tab' => 'templates']))->assertSessionHas('success');
 
         $body = app(WhatsAppService::class)
-            ->sendPayload($this->viewing->load('property.owner.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER)['bodies']['96555110000'];
+            ->sendPayload($this->viewing->load('property.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER)['bodies']['96555110000'];
 
         $this->assertSame('معاينة 12 للعميل عميل المعاينة يوم '.$this->viewing->scheduled_at->format('Y-m-d — h:i A').' — أبو خالد', $body);
 
@@ -307,7 +338,7 @@ class WhatsAppViewingsTest extends TestCase
     {
         $reporter = $this->userWith(['reports.view']);
 
-        $this->viewing->forceFill(['owner_notified_at' => now(), 'client_followed_up_at' => now(), 'outcome' => 'chosen'])->save();
+        $this->viewing->forceFill(['owner_notified_at' => now(), 'client_followed_up_at' => now(), 'outcome' => 'interested'])->save();
         $other = Client::create(['name' => 'عميل بلا رسائل', 'phone_code' => '+965', 'phone' => '66000002']);
         $other->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->addDays(2)]);
 

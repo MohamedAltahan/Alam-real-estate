@@ -28,7 +28,7 @@ final class ClientFormData
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()
                 ->map(fn (Area $area) => ['id' => $area->id, 'name' => $area->name, 'city_id' => $area->city_id])->values()->all(),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get()
-                ->map(fn (UnitType $type) => ['id' => $type->id, 'name' => $type->name])->values()->all(),
+                ->map(fn (UnitType $type) => ['id' => $type->id, 'name' => $type->name, 'category' => $type->category])->values()->all(),
             'countries' => PhoneCountries::all(),
             'lookupUrl' => route('dashboard.clients.property-lookup', $client ? ['client' => $client->id] : []),
         ];
@@ -42,17 +42,23 @@ final class ClientFormData
         if (is_array($old)) {
             return array_values(array_map(fn ($row) => [
                 'id' => (string) ($row['id'] ?? ''),
+                'category' => (string) ($row['category'] ?? ''),
                 'unit_type_id' => (string) ($row['unit_type_id'] ?? ''),
                 'city_id' => (string) ($row['city_id'] ?? ''),
                 'area_id' => (string) ($row['area_id'] ?? ''),
+                'area_size' => (string) ($row['area_size'] ?? ''),
+                'rooms' => (string) ($row['rooms'] ?? ''),
             ], $old));
         }
 
         return $client?->needs->map(fn (ClientPropertyNeed $need) => [
             'id' => (string) $need->id,
+            'category' => (string) ($need->category ?? ''),
             'unit_type_id' => (string) ($need->unit_type_id ?? ''),
             'city_id' => (string) ($need->city_id ?? ''),
             'area_id' => (string) ($need->area_id ?? ''),
+            'area_size' => $need->area_size !== null ? rtrim(rtrim(number_format((float) $need->area_size, 2, '.', ''), '0'), '.') : '',
+            'rooms' => (string) ($need->rooms ?? ''),
         ])->values()->all() ?? [];
     }
 
@@ -78,7 +84,6 @@ final class ClientFormData
                     'scheduled_at' => (string) ($row['scheduled_at'] ?? ''),
                     'in_person' => (string) ($row['in_person'] ?? '1'),
                     'outcome' => (string) ($row['outcome'] ?? 'pending'),
-                    'contract_ends_at' => (string) ($row['contract_ends_at'] ?? ''),
                     'notes' => (string) ($row['notes'] ?? ''),
                 ];
             }, $old));
@@ -92,7 +97,6 @@ final class ClientFormData
             'scheduled_at' => $viewing->scheduled_at?->format('Y-m-d H:i') ?? '',
             'in_person' => $viewing->in_person ? '1' : '0',
             'outcome' => $viewing->outcome,
-            'contract_ends_at' => $viewing->contract_ends_at?->format('Y-m-d') ?? '',
             'notes' => (string) ($viewing->notes ?? ''),
         ])->values()->all() ?? [];
     }

@@ -19,6 +19,7 @@
         'unitTypes' => $unitTypes->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'category' => $u->category])->values(),
         'areas' => $areas->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values(),
     ];
+    $contactRows = $contactRows ?: [['id' => '', 'phone_code' => '+965', 'phone' => '', 'role' => '', 'name' => '']];
 @endphp
 
 @section('content')
@@ -180,9 +181,56 @@
                     <input name="map_url" type="url" value="{{ old('map_url', $property->map_url) }}" dir="ltr" placeholder="https://maps.app.goo.gl/..." class="{{ $inputCls }}">
                     @error('map_url')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
-                <x-input label="حارس العقار" name="guard_name" :value="$property->guard_name" />
-                <x-input label="رقم الحارس" name="guard_phone" :value="$property->guard_phone" dir="ltr" class="text-end" />
             </div>
+        </div>
+
+        {{-- ===== المسؤولون عن العقار (أكثر من رقم) — إليهم تُرسل رسائل المعاينة ===== --}}
+        <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6"
+             x-data="propertyContacts({ rows: @js($contactRows), countries: @js($countries), errors: @js($contactErrors) })">
+            <div class="flex items-center justify-between gap-3 mb-1">
+                <h3 class="font-bold text-ink">المسؤولون عن العقار <span class="text-danger">*</span></h3>
+                <p class="text-xs text-gray-400">رقم الهاتف · صفته (الحارس / الوكيل / المدير…) · اسمه</p>
+            </div>
+            <p class="text-xs text-gray-400 mb-4">تُرسل إليهم رسائل واتساب الخاصة بمواعيد المعاينات ونتائجها (لا تُرسل للمالك).</p>
+            @error('contacts')<p class="mb-2 text-xs text-danger">{{ $message }}</p>@enderror
+            <div class="space-y-3">
+                <template x-for="(row, i) in rows" :key="row._key">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto] gap-3 items-start rounded-2xl border p-3"
+                         :class="hasErrors(i) ? 'border-danger/40 bg-danger/5' : 'border-gray-100 bg-gray-50/60'">
+                        <input type="hidden" :name="name(i, 'id')" :value="row.id">
+                        <div>
+                            <label class="{{ $labelCls }}">رقم الهاتف <span class="text-danger">*</span></label>
+                            <x-phone-field dynamic countries="countries" code="row.phone_code" national="row.phone"
+                                           code-name="name(i, 'phone_code')" phone-name="name(i, 'phone')" :show-errors="false"
+                                           x-init="$watch('code', v => row.phone_code = v); $watch('national', v => row.phone = v)" />
+                            <p x-show="errorFor(i, 'phone')" x-text="errorFor(i, 'phone')" class="mt-1 text-xs text-danger"></p>
+                        </div>
+                        <div>
+                            <label class="{{ $labelCls }}">صفته</label>
+                            <input :name="name(i, 'role')" x-model="row.role" placeholder="الحارس · الوكيل · المدير" list="property-contact-roles" class="{{ $inputCls }}">
+                            <p x-show="errorFor(i, 'role')" x-text="errorFor(i, 'role')" class="mt-1 text-xs text-danger"></p>
+                        </div>
+                        <div>
+                            <label class="{{ $labelCls }}">اسمه</label>
+                            <input :name="name(i, 'name')" x-model="row.name" class="{{ $inputCls }}">
+                            <p x-show="errorFor(i, 'name')" x-text="errorFor(i, 'name')" class="mt-1 text-xs text-danger"></p>
+                        </div>
+                        <button type="button" @click="removeContact(i)" :disabled="rows.length <= 1" title="حذف السطر"
+                                class="lg:mt-8 grid place-items-center w-9 h-9 rounded-full text-danger hover:bg-danger/10 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition justify-self-end">
+                            <x-icon.trash />
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <datalist id="property-contact-roles">
+                <option value="الحارس"></option><option value="الوكيل"></option><option value="المدير"></option>
+                <option value="المالك"></option><option value="قريب المالك"></option><option value="المحامي"></option>
+            </datalist>
+            <button type="button" @click="add()"
+                    class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary-300 text-primary-700 hover:bg-primary-50 px-4 py-2 text-sm font-semibold transition">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                إضافة مسؤول
+            </button>
         </div>
 
         {{-- ===== الوصف والمواصفات ===== --}}

@@ -72,10 +72,60 @@ class PropertyFormDependenciesTest extends TestCase
         $this->assertSame('https://maps.app.goo.gl/abc', $created->map_url);
         $this->assertSame('برج السالمية', $created->building_name);
         $this->assertSame('2.50', $created->owner_commission_rate);
-        $this->assertSame('أبو خالد', $created->guard_name);
-        $this->assertSame('99887766', $created->guard_phone);
+        $contact = $created->contacts()->firstOrFail();
+        $this->assertSame('أبو خالد', $contact->name);
+        $this->assertSame('99887766', $contact->phone);
+        $this->assertSame('الحارس', $contact->role);
+        $this->assertSame('96599887766', $contact->whatsapp_number);
         $this->assertTrue($created->is_furnished);
         $this->assertSame(3, $created->bedrooms);
+    }
+
+    public function test_property_requires_at_least_one_responsible_person_and_syncs_them_by_id(): void
+    {
+        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload(['contacts' => []]))
+            ->assertSessionHasErrors('contacts');
+
+        // سطر فارغ بالكامل يُهمل ⇒ لا مسؤول ⇒ خطأ
+        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload([
+            'contacts' => [['phone_code' => '+965', 'phone' => '', 'role' => '', 'name' => '']],
+        ]))->assertSessionHasErrors('contacts');
+
+        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload([
+            'contacts' => [
+                ['phone_code' => '+965', 'phone' => '0 5511-2233', 'role' => 'الحارس', 'name' => 'أبو خالد'],
+                ['phone_code' => '+966', 'phone' => '501234567', 'role' => '', 'name' => 'الوكيل سالم'],
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $property = Property::latest('id')->firstOrFail();
+        $this->assertSame(['55112233', '501234567'], $property->contacts->pluck('phone')->all());
+        $this->assertSame('مسؤول العقار · الوكيل سالم', $property->contacts->last()->label());
+
+        [$guard, $agent] = $property->contacts;
+
+        // تعديل: الأول يُحدَّث بمعرّفه، الثاني يُحذف، وثالث يُضاف
+        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
+            'contacts' => [
+                ['id' => $guard->id, 'phone_code' => '+965', 'phone' => '55112233', 'role' => 'المدير', 'name' => 'أبو خالد'],
+                ['phone_code' => '+965', 'phone' => '66000000', 'role' => 'الوكيل', 'name' => ''],
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $property->refresh();
+        $this->assertSame(['المدير', 'الوكيل'], $property->contacts->pluck('role')->all());
+        $this->assertDatabaseMissing('property_contacts', ['id' => $agent->id]);
+        $this->assertSame($guard->id, $property->contacts->first()->id);
+
+        // معرّف يخص عقاراً آخر يُرفض
+        $other = Property::create(['reference_code' => '77', 'title' => ['ar' => 'آخر', 'en' => 'Other']]);
+        $foreign = $other->contacts()->create(['phone_code' => '+965', 'phone' => '11111111']);
+        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
+            'contacts' => [['id' => $foreign->id, 'phone_code' => '+965', 'phone' => '11111111']],
+        ]))->assertSessionHasErrors('contacts.0.id');
+
+        $this->actingAs($this->user)->get(route('dashboard.properties.show', $property))
+            ->assertOk()->assertSee('المسؤولون عن العقار')->assertSee('المدير · أبو خالد')->assertSee('wa.me/96566000000');
     }
 
     public function test_area_must_belong_to_the_selected_governorate(): void
@@ -143,8 +193,7 @@ class PropertyFormDependenciesTest extends TestCase
             'building_name' => 'برج السالمية',
             'map_url' => 'https://maps.app.goo.gl/abc',
             'owner_commission_rate' => 2.5,
-            'guard_name' => 'أبو خالد',
-            'guard_phone' => '99887766',
+            'contacts' => [['phone_code' => '+965', 'phone' => '99887766', 'role' => 'الحارس', 'name' => 'أبو خالد']],
             'amenities' => [],
         ], $overrides);
     }

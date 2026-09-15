@@ -17,13 +17,14 @@ use Illuminate\Support\Facades\DB;
  */
 class TaskService
 {
-    public const FILTER_KEYS = ['search', 'assignee_id', 'created_by', 'priority', 'due', 'mine', 'all_done'];
+    public const FILTER_KEYS = ['search', 'assignee_id', 'created_by', 'priority', 'due', 'mine', 'delegated', 'all_done'];
 
     public function __construct(private TaskAuditLogger $audit) {}
 
     private function filtered(array $filters, User $me): Builder
     {
         return Task::query()
+            ->visibleTo($me)
             ->when($filters['search'] ?? null, function (Builder $q, $search) {
                 $search = trim((string) $search);
                 $term = '%'.mb_strtolower($search).'%';
@@ -41,6 +42,7 @@ class TaskService
             ->when($filters['created_by'] ?? null, fn (Builder $q, $v) => $q->where('created_by', $v))
             ->when($filters['priority'] ?? null, fn (Builder $q, $v) => $q->where('priority', $v))
             ->when(! empty($filters['mine']), fn (Builder $q) => $q->mine($me->id))
+            ->when(! empty($filters['delegated']), fn (Builder $q) => $q->delegatedBy($me->id))
             ->when($filters['due'] ?? null, fn (Builder $q, $v) => $this->applyDue($q, (string) $v));
     }
 
@@ -69,7 +71,7 @@ class TaskService
                 ->where('status', '!=', 'done')
                 ->orWhere('completed_at', '>=', now()->subDays(Task::DONE_VISIBLE_DAYS))
             ))
-            ->with(['assignee', 'property', 'media'])
+            ->with(['assignee', 'creator', 'property', 'media'])
             ->withCount('comments')
             ->orderBy('position')
             ->orderBy('id')
@@ -237,6 +239,14 @@ class TaskService
     public function canTouch(Task $task, User $user): bool
     {
         return $user->can('tasks.edit') || ($task->assignee_id !== null && (int) $task->assignee_id === (int) $user->id);
+    }
+
+    /** الرؤية: مدير النظام يرى الكل، وغيره المسندة له أو التي أسندها هو */
+    public function canSee(Task $task, User $user): bool
+    {
+        return $user->isAdmin()
+            || (int) $task->assignee_id === (int) $user->id
+            || (int) $task->created_by === (int) $user->id;
     }
 
     private function attributes(array $data): array

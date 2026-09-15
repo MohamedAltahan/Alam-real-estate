@@ -87,7 +87,8 @@ Route::middleware(['auth'])->group(function () {
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
             Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');
             Route::patch('viewings/{viewing}/outcome', [ViewingController::class, 'updateOutcome'])->name('viewings.outcome');
-            // إرسال تفاصيل المعاينة للمالك / المتابعة للعميل عبر واتساب
+            Route::patch('viewings/{viewing}/notes', [ViewingController::class, 'updateNotes'])->name('viewings.notes');
+            // إرسال تفاصيل المعاينة / نتيجتها لمسؤولي العقار عبر واتساب
             Route::post('viewings/{viewing}/whatsapp', [ViewingController::class, 'sendWhatsApp'])->name('viewings.whatsapp');
         });
 
@@ -108,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
         // ===== التقارير =====
         Route::middleware('can:reports.view')->group(function () {
             Route::get('reports/conversion', [ReportController::class, 'conversion'])->name('reports.conversion');
+            Route::get('reports/clients-conversion', [ReportController::class, 'clientsConversion'])->name('reports.clients-conversion');
             Route::get('reports/viewings', [ReportController::class, 'viewings'])->name('reports.viewings');
         });
 
@@ -169,6 +171,8 @@ Route::middleware(['auth'])->group(function () {
             Route::put('properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
             Route::delete('properties/{property}', [PropertyController::class, 'destroy'])->name('properties.destroy');
             Route::post('properties/{property}/reviews', [PropertyController::class, 'addReview'])->name('properties.reviews.store');
+            // تغيير الحالة من عمود الحالة في الجدول
+            Route::patch('properties/{property}/status', [PropertyController::class, 'updateStatus'])->name('properties.status');
             // قنوات النشر (مواقع/سوشال) التي نُشر عليها العقار
             Route::put('properties/{property}/channels', [PropertyController::class, 'updateChannels'])->name('properties.channels.update');
         });

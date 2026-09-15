@@ -30,7 +30,7 @@ class Property extends Model implements HasMedia
         'block', 'street', 'building', 'latitude', 'longitude',
         'video_url', 'is_featured', 'rating', 'reviews_count',
         'city_id', 'map_url', 'building_name', 'owner_commission_rate',
-        'guard_name', 'guard_phone', 'is_furnished',
+        'is_furnished',
     ];
 
     /** حقول قابلة للترجمة AR/EN */
@@ -115,10 +115,10 @@ class Property extends Model implements HasMedia
         return $this->hasMany(ClientViewing::class);
     }
 
-    /** المعاينات التي تشغل العقار الآن: اختاره عميل ولم يُخلِه بعد */
-    public function busyViewings(): HasMany
+    /** المسؤولون عن العقار (رقم + صفته + اسمه) — إليهم تُرسل رسائل المعاينة */
+    public function contacts(): HasMany
     {
-        return $this->viewings()->chosen();
+        return $this->hasMany(PropertyContact::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /** قنوات النشر التي نُشر عليها العقار (مع رابط الإعلان) */
@@ -169,22 +169,13 @@ class Property extends Model implements HasMedia
         return $this->video_id ? "https://img.youtube.com/vi/{$this->video_id}/hqdefault.jpg" : null;
     }
 
-    /** مشغول = اختاره عميل — يستخدم العلاقة المحمّلة إن وُجدت (بلا استعلام لكل كارت في الموقع) */
-    public function getIsBusyAttribute(): bool
-    {
-        return $this->relationLoaded('busyViewings')
-            ? $this->busyViewings->isNotEmpty()
-            : $this->busyViewings()->exists();
-    }
-
     public function isSold(): bool
     {
         return $this->status?->key === 'sold';
     }
 
     /**
-     * شارة الموقع العام: «مباع» تسبق «مشغول»، ولا تظهر إلا عندما يكون الإعداد العام مفعّلاً.
-     * لا تحمل أي بيانات عن العميل — الموقع لا يُظهر من اختار العقار.
+     * شارة الموقع العام: «مباع» — لا تظهر إلا عندما يكون الإعداد العام مفعّلاً.
      *
      * @return array{key:string, ar:string, en:string}|null
      */
@@ -194,11 +185,7 @@ class Property extends Model implements HasMedia
             return null;
         }
 
-        if ($this->isSold()) {
-            return ['key' => 'sold', 'ar' => 'مباع', 'en' => 'Sold'];
-        }
-
-        return $this->is_busy ? ['key' => 'busy', 'ar' => 'مشغول', 'en' => 'Busy'] : null;
+        return $this->isSold() ? ['key' => 'sold', 'ar' => 'مباع', 'en' => 'Sold'] : null;
     }
 
     /** العقارات التي لها فيديو يوتيوب صالح */

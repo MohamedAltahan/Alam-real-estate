@@ -10,6 +10,9 @@ namespace App\Support;
  */
 final class PhoneNumber
 {
+    /** علامة اتجاه من اليسار لليمين — تمنع انعكاس مفتاح الدولة مع الرقم داخل نص عربي (رسائل واتساب) */
+    public const LRM = "\u{200E}";
+
     /** @return array{code:string, national:string} */
     public static function split(?string $raw): array
     {
@@ -62,5 +65,28 @@ final class PhoneNumber
     public static function digits(?string $code, ?string $national): string
     {
         return preg_replace('/\D+/', '', ($code ?: PhoneCountries::DEFAULT).(string) $national) ?? '';
+    }
+
+    /**
+     * للرسائل النصية: المفتاح ملتصق بالرقم بلا مسافة مع علامة LRM حتى لا ينعكس في النص العربي،
+     * وآخر رقمين مخفيان — "‎+965551122xx".
+     */
+    public static function masked(?string $code, ?string $national): string
+    {
+        $digits = trim((string) $national) === '' ? '' : self::digits($code, $national);
+
+        if ($digits === '') {
+            return '';
+        }
+
+        return self::LRM.'+'.(strlen($digits) > 2 ? substr($digits, 0, -2).'xx' : 'xx');
+    }
+
+    /** رقم كما هو (بلا إخفاء) بلا مسافات ومع علامة LRM — لهاتف المندوب داخل الرسائل */
+    public static function ltr(?string $raw): string
+    {
+        $raw = preg_replace('/\s+/', '', (string) $raw) ?? '';
+
+        return $raw === '' ? '' : self::LRM.$raw;
     }
 }

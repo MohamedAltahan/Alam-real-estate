@@ -314,6 +314,7 @@ class FieldOwnerManagementTest extends TestCase
             'price' => 450,
             'price_period' => 'monthly',
             'status_id' => $lookups['status']->id,
+            'contacts' => [['phone_code' => '+965', 'phone' => '99887766', 'role' => 'الحارس', 'name' => 'أبو خالد']],
             'amenities' => [],
         ], $overrides);
     }

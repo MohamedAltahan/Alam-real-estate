@@ -3,6 +3,7 @@
 namespace Tests\Feature\Dashboard;
 
 use App\Models\Client;
+use App\Models\ClientAuditLog;
 use App\Models\ClientViewing;
 use App\Models\Property;
 use App\Models\User;
@@ -76,9 +77,9 @@ class WhatsAppMessageStatusTest extends TestCase
         $this->webhook(['event' => 'message.status', 'data' => ['message_id' => 123, 'status' => 'failed', 'error' => 'Number not on WhatsApp']])->assertOk();
 
         $this->assertNull($viewing->fresh()->owner_notified_at);
-        $log = \App\Models\ClientAuditLog::where('client_id', $viewing->client_id)->where('action', 'whatsapp_failed')->firstOrFail();
+        $log = ClientAuditLog::where('client_id', $viewing->client_id)->where('action', 'whatsapp_failed')->firstOrFail();
         $this->assertSame('Number not on WhatsApp', $log->changes['whatsapp_error']['new']);
-        $this->assertSame('تفاصيل المعاينة للمالك', $log->changes['whatsapp_kind']['new']);
+        $this->assertSame('تفاصيل المعاينة لمسؤول العقار', $log->changes['whatsapp_kind']['new']);
 
         // الاستطلاع الدوري يمرّ بالمسار نفسه
         $again = $this->viewing();

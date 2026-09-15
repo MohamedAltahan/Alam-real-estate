@@ -142,15 +142,26 @@
                 </div>
             @endif
 
-            @if ($property->guard_name || $property->guard_phone)
-                <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                    <h3 class="font-bold text-ink mb-3">حارس العقار</h3>
-                    <div class="space-y-3 text-sm">
-                        <div><p class="text-gray-400 text-xs">الاسم</p><p class="font-medium text-ink">{{ $property->guard_name ?: '—' }}</p></div>
-                        <div><p class="text-gray-400 text-xs">رقم الهاتف</p><p class="font-medium text-ink"><bdi dir="ltr">{{ $property->guard_phone ?: '—' }}</bdi></p></div>
-                    </div>
-                </div>
-            @endif
+            <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
+                <h3 class="font-bold text-ink mb-1">المسؤولون عن العقار</h3>
+                <p class="text-xs text-gray-400 mb-3">تُرسل إليهم رسائل واتساب الخاصة بالمعاينات</p>
+                <ul class="space-y-2.5 text-sm">
+                    @forelse ($property->contacts as $contact)
+                        <li class="flex items-center justify-between gap-3">
+                            <span class="min-w-0">
+                                <span class="block font-medium text-ink truncate">{{ $contact->label() }}</span>
+                                <bdi dir="ltr" class="block text-xs text-gray-500">{{ $contact->full_phone }}</bdi>
+                            </span>
+                            <a href="https://wa.me/{{ $contact->whatsapp_number }}" target="_blank" rel="noopener" title="واتساب"
+                               class="grid place-items-center w-8 h-8 shrink-0 rounded-full bg-success-soft text-success hover:bg-success hover:text-white transition">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                            </a>
+                        </li>
+                    @empty
+                        <li class="text-gray-400">لم يُضف مسؤول عن هذا العقار بعد — أضفه من شاشة التعديل.</li>
+                    @endforelse
+                </ul>
+            </div>
 
             @if ($property->channels->count())
                 <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">

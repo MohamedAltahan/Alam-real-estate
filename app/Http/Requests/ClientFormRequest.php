@@ -4,8 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Area;
 use App\Models\Client;
-use App\Models\ClientViewing;
-use App\Models\Property;
+use App\Models\UnitType;
 use App\Support\ClientFields;
 use App\Support\PhoneCountries;
 use Illuminate\Foundation\Http\FormRequest;
@@ -20,7 +19,7 @@ abstract class ClientFormRequest extends FormRequest
         $this->merge([
             'phone_code' => $this->input('phone_code') ?: PhoneCountries::DEFAULT,
             'phone' => ltrim(preg_replace('/\D+/', '', (string) $this->input('phone')) ?? '', '0'),
-            'needs' => $this->rows('needs', ['unit_type_id', 'city_id', 'area_id']),
+            'needs' => $this->rows('needs', ['unit_type_id', 'city_id', 'area_id', 'category', 'area_size', 'rooms']),
             'viewings' => $this->rows('viewings', ['property_id', 'scheduled_at', 'notes']),
         ]);
     }
@@ -70,9 +69,12 @@ abstract class ClientFormRequest extends FormRequest
 
             'needs' => ['nullable', 'array', 'max:20'],
             'needs.*.id' => ['nullable', 'integer', Rule::exists('client_property_needs', 'id')->where('client_id', $clientId)],
+            'needs.*.category' => ['nullable', Rule::in(array_keys(UnitType::CATEGORIES))],
             'needs.*.unit_type_id' => ['nullable', 'exists:unit_types,id'],
             'needs.*.city_id' => ['nullable', 'exists:cities,id'],
             'needs.*.area_id' => ['nullable', 'exists:areas,id'],
+            'needs.*.area_size' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'needs.*.rooms' => ['nullable', 'integer', 'min:0', 'max:200'],
 
             'viewings' => ['nullable', 'array', 'max:50'],
             'viewings.*.id' => ['nullable', 'integer', Rule::exists('client_viewings', 'id')->where('client_id', $clientId)],
@@ -80,7 +82,6 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.scheduled_at' => ['required', 'date_format:Y-m-d H:i'],
             'viewings.*.in_person' => ['nullable', 'boolean'],
             'viewings.*.outcome' => ['nullable', Rule::in(array_keys(ClientFields::OUTCOMES))],
-            'viewings.*.contract_ends_at' => ['nullable', 'date_format:Y-m-d'],
             'viewings.*.notes' => ['nullable', 'string', 'max:2000'],
 
             'files' => ['nullable', 'array', 'max:30'],
@@ -94,25 +95,21 @@ abstract class ClientFormRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             foreach ((array) $this->input('needs', []) as $index => $row) {
-                if (! filled($row['city_id'] ?? null) || ! filled($row['area_id'] ?? null)) {
-                    continue;
+                if (filled($row['city_id'] ?? null) && filled($row['area_id'] ?? null)) {
+                    $cityId = Area::whereKey($row['area_id'])->value('city_id');
+
+                    if ($cityId && (int) $cityId !== (int) $row['city_id']) {
+                        $validator->errors()->add("needs.{$index}.area_id", 'المنطقة المختارة لا تتبع هذه المحافظة.');
+                    }
                 }
 
-                $cityId = Area::whereKey($row['area_id'])->value('city_id');
+                // نوع الوحدة يتبع نوع العقار (سكني/تجاري) المختار في السطر نفسه
+                if (filled($row['category'] ?? null) && filled($row['unit_type_id'] ?? null)) {
+                    $category = UnitType::whereKey($row['unit_type_id'])->value('category');
 
-                if ($cityId && (int) $cityId !== (int) $row['city_id']) {
-                    $validator->errors()->add("needs.{$index}.area_id", 'المنطقة المختارة لا تتبع هذه المحافظة.');
-                }
-            }
-
-            // «تم اختيار العقار» لعقار إيجار يحتاج تاريخ انتهاء العقد (الفحص اليومي يعتمد عليه)
-            foreach ((array) $this->input('viewings', []) as $index => $row) {
-                if (($row['outcome'] ?? null) !== ClientViewing::OUTCOME_CHOSEN || filled($row['contract_ends_at'] ?? null)) {
-                    continue;
-                }
-
-                if (Property::whereKey($row['property_id'] ?? 0)->value('purpose') === 'rent') {
-                    $validator->errors()->add("viewings.{$index}.contract_ends_at", 'حدّد تاريخ انتهاء العقد للعقار المختار.');
+                    if ($category && $category !== $row['category']) {
+                        $validator->errors()->add("needs.{$index}.unit_type_id", 'نوع الوحدة لا يتبع نوع العقار المختار.');
+                    }
                 }
             }
         });
@@ -125,7 +122,6 @@ abstract class ClientFormRequest extends FormRequest
             'viewings.*.property_id.required' => 'اختر العقار لكل سطر معاينة.',
             'viewings.*.scheduled_at.required' => 'حدّد موعد المعاينة.',
             'viewings.*.scheduled_at.date_format' => 'صيغة موعد المعاينة غير صحيحة.',
-            'viewings.*.contract_ends_at.date_format' => 'صيغة تاريخ انتهاء العقد غير صحيحة.',
             'files.*.mimes' => 'الملفات المسموحة: صور، PDF، Word، Excel.',
             'files.*.max' => 'حجم الملف يجب ألا يتجاوز 15 ميجابايت.',
         ];
@@ -147,9 +143,12 @@ abstract class ClientFormRequest extends FormRequest
             'agent_id' => 'مندوب المبيعات',
             'notes' => 'الملاحظات',
             'is_featured' => 'طلب مميز',
+            'needs.*.category' => 'نوع العقار',
             'needs.*.unit_type_id' => 'نوع الوحدة',
             'needs.*.city_id' => 'المحافظة',
             'needs.*.area_id' => 'المنطقة',
+            'needs.*.area_size' => 'المساحة',
+            'needs.*.rooms' => 'عدد الغرف',
             'viewings.*.property_id' => 'العقار',
             'viewings.*.scheduled_at' => 'موعد المعاينة',
             'viewings.*.in_person' => 'حضوري',

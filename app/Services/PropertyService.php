@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Models\Property;
+use App\Models\PropertyContact;
 use App\Models\PublishingChannel;
+use App\Support\PhoneCountries;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +17,7 @@ class PropertyService
 {
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
-        'search', 'status_id', 'city_id', 'area_id', 'unit_type_id', 'purpose', 'website_id', 'social_id',
+        'search', 'status_id', 'city_id', 'area_id', 'unit_type_id', 'purpose', 'website_id', 'social_id', 'from', 'to',
     ];
 
     public function paginate(array $filters = [], int $perPage = 12): LengthAwarePaginator
@@ -36,6 +39,8 @@ class PropertyService
             ->when($filters['purpose'] ?? null, fn ($q, $v) => $q->where('purpose', $v))
             ->when($filters['website_id'] ?? null, fn ($q, $v) => $q->whereHas('channels', fn ($c) => $c->where('publishing_channels.id', $v)))
             ->when($filters['social_id'] ?? null, fn ($q, $v) => $q->whereHas('channels', fn ($c) => $c->where('publishing_channels.id', $v)))
+            ->when($filters['from'] ?? null, fn ($q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
+            ->when($filters['to'] ?? null, fn ($q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
@@ -65,6 +70,52 @@ class PropertyService
     public function delete(Property $property): void
     {
         $property->delete();
+    }
+
+    /** تغيير الحالة من الجدول — PropertyObserver يضبط/يمسح sold_at */
+    public function updateStatus(Property $property, int $statusId): Property
+    {
+        $property->update(['status_id' => $statusId]);
+
+        return $property->load('status');
+    }
+
+    /**
+     * مزامنة المسؤولين عن العقار: تعديل الموجود بالمعرّف، إضافة الجديد، حذف المحذوف.
+     *
+     * @param  array<int, array{id?:mixed, phone_code?:string, phone:string, role?:string, name?:string}>  $rows
+     */
+    public function syncContacts(Property $property, array $rows): void
+    {
+        $existing = $property->contacts()->get()->keyBy('id');
+        $kept = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            $attributes = [
+                'phone_code' => ($row['phone_code'] ?? null) ?: PhoneCountries::DEFAULT,
+                'phone' => (string) $row['phone'],
+                'role' => filled($row['role'] ?? null) ? trim($row['role']) : null,
+                'name' => filled($row['name'] ?? null) ? trim($row['name']) : null,
+                'sort_order' => $index,
+            ];
+
+            $contact = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
+
+            if ($contact) {
+                $contact->fill($attributes)->save();
+            } else {
+                $contact = $property->contacts()->create($attributes);
+            }
+
+            $kept[] = $contact->id;
+        }
+
+        foreach ($existing->except($kept) as $contact) {
+            /** @var PropertyContact $contact */
+            $contact->delete();
+        }
+
+        $property->unsetRelation('contacts');
     }
 
     /** توليد رقم مرجعي فريد — أرقام فقط، يكمل من آخر رقم مستخدم */

@@ -31,6 +31,16 @@ class PhoneNumberTest extends TestCase
         $this->assertSame('+965 123', PhoneNumber::format(null, '123'));
     }
 
+    public function test_masked_hides_the_last_two_digits_and_forces_ltr(): void
+    {
+        $this->assertSame("\u{200E}+965551122xx", PhoneNumber::masked('+965', '55112233'));
+        $this->assertSame("\u{200E}+9665012345xx", PhoneNumber::masked('+966', '501234567'));
+        $this->assertSame('', PhoneNumber::masked('+965', ''));
+        $this->assertSame('', PhoneNumber::masked(null, null));
+        $this->assertSame("\u{200E}+96599000005", PhoneNumber::ltr('+965 99 000 005'));
+        $this->assertSame('', PhoneNumber::ltr(null));
+    }
+
     public function test_country_list_has_kuwait_first_and_unique_codes_ordered_by_length(): void
     {
         $this->assertSame('KW', PhoneCountries::all()[0]['iso']);

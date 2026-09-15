@@ -8,14 +8,12 @@ use App\Models\User;
 use App\Notifications\TaskEvent;
 use App\Notifications\ViewingReminder;
 use App\Services\ViewingReminderService;
-use App\Services\ViewingService;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Support\NotificationFeed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class NotificationController extends Controller
 {
@@ -23,7 +21,7 @@ class NotificationController extends Controller
      * نقطة الاستطلاع (كل دقيقة من المتصفح): تُرسل تذكيرات المعاينات المستحقة
      * ثم تعيد العدّادات وآخر الإشعارات — بدون الحاجة إلى cron أو اتصال لحظي.
      */
-    public function poll(Request $request, ViewingReminderService $reminders, ViewingService $viewings, WhatsAppService $whatsapp): JsonResponse
+    public function poll(Request $request, ViewingReminderService $reminders, WhatsAppService $whatsapp): JsonResponse
     {
         $user = $request->user();
 
@@ -31,15 +29,6 @@ class NotificationController extends Controller
             $reminders->dispatchDue();
         } catch (\Throwable $e) {
             Log::warning('viewing reminders: '.$e->getMessage());
-        }
-
-        // عقود الإيجار المنتهية → «إخلاء العقار» — مرة واحدة كل يوم (بديل cron للأمر viewings:vacate-expired)
-        try {
-            if (Cache::add('viewings:vacate-expired:'.today()->toDateString(), true, now()->addDay())) {
-                $viewings->vacateExpired();
-            }
-        } catch (\Throwable $e) {
-            Log::warning('vacate expired viewings: '.$e->getMessage());
         }
 
         // حالات تسليم رسائل واتساب المعلّقة (بديل الويب هوك) — دورة واحدة كل ~45 ثانية على الأكثر
