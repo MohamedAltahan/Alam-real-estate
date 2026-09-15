@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\InteractsWithWebImages;
+use App\Observers\ActivityObserver;
 use App\Observers\PropertyObserver;
 use App\Support\SiteFlags;
 use App\Support\Video;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Translatable\HasTranslations;
 
-#[ObservedBy([PropertyObserver::class])]
+#[ObservedBy([PropertyObserver::class, ActivityObserver::class])]
 class Property extends Model implements HasMedia
 {
     use HasTranslations;

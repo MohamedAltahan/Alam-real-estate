@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -11,6 +12,8 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    public function __construct(private ActivityLogger $activity) {}
+
     public function index(): View
     {
         return view('dashboard.roles.index', [
@@ -27,12 +30,14 @@ class RoleController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ], [], ['description' => 'اسم الدور']);
 
-        Role::create([
+        $role = Role::create([
             'name' => $this->uniqueName($data['description']),
             'guard_name' => 'web',
             'description' => $data['description'],
             'status' => $data['status'],
         ]);
+
+        $this->activity->created($role);
 
         return back()->with('success', 'تم إضافة الدور بنجاح.');
     }
@@ -46,7 +51,11 @@ class RoleController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ], [], ['description' => 'اسم الدور']);
 
-        $role->update($data);
+        $role->fill($data);
+        $changes = $this->activity->changes($role, $role->getDirty());
+        $role->save();
+
+        $this->activity->updated($role, [], $changes);
 
         return back()->with('success', 'تم تحديث الدور.');
     }
@@ -56,6 +65,7 @@ class RoleController extends Controller
         abort_unless($request->user()->can('roles.delete'), 403);
         abort_if($role->name === 'super-admin', 403, 'لا يمكن حذف دور مدير النظام.');
 
+        $this->activity->deleted($role);
         $role->delete();
 
         return back()->with('success', 'تم حذف الدور.');

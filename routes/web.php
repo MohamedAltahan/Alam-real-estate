@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dashboard\ActivityLogController;
 use App\Http\Controllers\Dashboard\AreaController;
 use App\Http\Controllers\Dashboard\CityController;
 use App\Http\Controllers\Dashboard\ClientController;
@@ -111,6 +112,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('reports/conversion', [ReportController::class, 'conversion'])->name('reports.conversion');
             Route::get('reports/clients-conversion', [ReportController::class, 'clientsConversion'])->name('reports.clients-conversion');
             Route::get('reports/viewings', [ReportController::class, 'viewings'])->name('reports.viewings');
+        });
+
+        // ===== سجل النشاط =====
+        Route::middleware('can:activity.view')->group(function () {
+            Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
         });
 
         // ===== ملّاك العقارات =====

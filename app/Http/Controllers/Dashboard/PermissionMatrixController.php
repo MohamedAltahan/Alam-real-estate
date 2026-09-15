@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,6 +13,8 @@ use Spatie\Permission\PermissionRegistrar;
 
 class PermissionMatrixController extends Controller
 {
+    public function __construct(private ActivityLogger $activity) {}
+
     /** الوحدات (اللي لها شاشات فقط) وأفعالها */
     public const MODULES = [
         'dashboard' => 'لوحة التحكم',
@@ -32,6 +35,7 @@ class PermissionMatrixController extends Controller
         'permissions' => 'الصلاحيات',
         'supervisors' => 'المشرفين',
         'reports' => 'التقارير',
+        'activity' => 'سجل النشاط',
     ];
 
     public const ACTIONS = [
@@ -62,7 +66,18 @@ class PermissionMatrixController extends Controller
         'permissions' => ['view', 'edit'],
         'supervisors' => ['view', 'create', 'edit', 'delete'],
         'reports' => ['view'],
+        'activity' => ['view'],
     ];
+
+    /** «العقارات: تعديل · العملاء: حذف» — لسجل النشاط */
+    public static function describePermissions(array $names): string
+    {
+        return collect($names)->map(function (string $name) {
+            [$module, $action] = array_pad(explode('.', $name, 2), 2, '');
+
+            return (self::MODULES[$module] ?? $module).': '.(self::ACTIONS[$action] ?? $action);
+        })->implode(' · ');
+    }
 
     /** @return array<int, string> */
     public static function actionsFor(string $module): array
@@ -109,8 +124,18 @@ class PermissionMatrixController extends Controller
         foreach ($selected as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
+        $previous = $role->permissions->pluck('name')->all();
         $role->syncPermissions($selected);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // سجل النشاط: ما أُضيف وما أُزيل بأسمائه العربية «الوحدة: الفعل»
+        $added = array_values(array_diff($selected, $previous));
+        $removed = array_values(array_diff($previous, $selected));
+
+        $this->activity->updated($role, [], array_filter([
+            'permissions_added' => $added ? ['old' => null, 'new' => self::describePermissions($added)] : null,
+            'permissions_removed' => $removed ? ['old' => self::describePermissions($removed), 'new' => null] : null,
+        ]));
 
         return redirect()
             ->route('dashboard.permissions.index', ['role' => $role->id])

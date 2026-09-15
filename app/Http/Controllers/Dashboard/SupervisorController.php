@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,8 @@ use Spatie\Permission\Models\Role;
 
 class SupervisorController extends Controller
 {
+    public function __construct(private ActivityLogger $activity) {}
+
     public function index(Request $request): View
     {
         $users = User::query()
@@ -49,6 +52,8 @@ class SupervisorController extends Controller
         $this->syncAvatar($request, $user);
         $this->syncReviews($request, $user);
 
+        $this->activity->created($user, ['role' => ['old' => null, 'new' => $this->roleLabel($data['role'])]]);
+
         return back()->with('success', 'تم إضافة المشرف بنجاح.');
     }
 
@@ -63,16 +68,33 @@ class SupervisorController extends Controller
             ...$this->sharedRules(),
         ], self::MESSAGES);
 
-        $supervisor->update([
+        $previousRole = $supervisor->roles->first()?->name;
+
+        $supervisor->fill([
             ...collect($data)->except('role', 'password', 'bio_ar', 'bio_en', 'languages', 'avatar')->all(),
             'is_agent' => $request->boolean('is_agent'),
             ...$this->agentProfile($request),
             // الحقل قد يغيب كلياً عن الطلب (nullable) — لا نلمس كلمة المرور حينها
             ...(($data['password'] ?? null) ? ['password' => $data['password']] : []),
         ]);
+
+        // فرق الحقول قبل الحفظ — كلمة المرور تُسجَّل كحدث بلا قيمة، والدور من الجدول الوسيط
+        $changes = $this->activity->changes($supervisor, $supervisor->getDirty());
+
+        $supervisor->save();
         $supervisor->syncRoles([$data['role']]);
         $this->syncAvatar($request, $supervisor);
         $this->syncReviews($request, $supervisor);
+
+        if ($previousRole !== $data['role']) {
+            $changes['role'] = ['old' => $this->roleLabel($previousRole), 'new' => $this->roleLabel($data['role'])];
+        }
+
+        if ($data['password'] ?? null) {
+            $changes['password'] = ['old' => null, 'new' => 'تم التغيير'];
+        }
+
+        $this->activity->updated($supervisor, [], $changes);
 
         return back()->with('success', 'تم تحديث بيانات المشرف.');
     }
@@ -82,9 +104,22 @@ class SupervisorController extends Controller
         abort_unless($request->user()->can('supervisors.delete'), 403);
         abort_if($supervisor->id === $request->user()->id, 403, 'لا يمكنك حذف حسابك.');
 
+        $this->activity->deleted($supervisor, ['role' => ['old' => $this->roleLabel($supervisor->roles->first()?->name), 'new' => null]]);
         $supervisor->delete();
 
         return back()->with('success', 'تم حذف المشرف.');
+    }
+
+    /** الاسم المعروض للدور (الوصف العربي وإلا الاسم البرمجي) */
+    private function roleLabel(?string $name): ?string
+    {
+        if (! $name) {
+            return null;
+        }
+
+        $role = Role::where('name', $name)->where('guard_name', 'web')->first();
+
+        return $role ? (string) ($role->description ?: $role->name) : $name;
     }
 
     /** قواعد مشتركة بين الإضافة والتعديل — تشمل حقول ملف الوكيل العام */

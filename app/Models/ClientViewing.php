@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Observers\ActivityObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** معاينة عقار للعميل: عقار + موعد + حضوري + النتيجة */
+#[ObservedBy([ActivityObserver::class])]
 class ClientViewing extends Model
 {
     public const OUTCOME_PENDING = 'pending';

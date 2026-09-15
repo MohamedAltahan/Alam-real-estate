@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasAttachedFiles;
+use App\Observers\ActivityObserver;
 use App\Support\PhoneNumber;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\MediaLibrary\HasMedia;
 
+#[ObservedBy([ActivityObserver::class])]
 class PropertyOwner extends Model implements HasMedia
 {
     use HasAttachedFiles;

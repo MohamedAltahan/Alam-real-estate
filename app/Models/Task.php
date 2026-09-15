@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasAttachedFiles;
+use App\Observers\ActivityObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 
 /** مهمة على لوحة المهام — رقمها هو id (#12) */
+#[ObservedBy([ActivityObserver::class])]
 class Task extends Model implements HasMedia
 {
     use HasAttachedFiles;

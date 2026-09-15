@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasAttachedFiles;
+use App\Observers\ActivityObserver;
 use App\Observers\ClientObserver;
 use App\Support\ClientFields;
 use App\Support\PhoneNumber;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 
-#[ObservedBy([ClientObserver::class])]
+#[ObservedBy([ClientObserver::class, ActivityObserver::class])]
 class Client extends Model implements HasMedia
 {
     use HasAttachedFiles;
