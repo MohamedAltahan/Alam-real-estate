@@ -6,7 +6,7 @@
 @php
     use App\Support\FieldOwnerFields;
 
-    $filterSelect = 'w-full appearance-none rounded-field bg-white border border-gray-200 ps-3.5 pe-9 h-10 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
+    $filterSelect = 'w-full rounded-field bg-white border border-gray-200 ps-3.5 pe-9 h-10 text-sm text-ink cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
     $filterInput = 'w-full rounded-field bg-white border border-gray-200 px-3.5 h-10 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
     $filterLabel = 'block text-[11px] font-semibold text-gray-500 mb-1';
 
