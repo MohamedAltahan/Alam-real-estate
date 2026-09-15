@@ -18,6 +18,6 @@
         <input type="{{ $type }}" name="{{ $name }}" value="{{ $value }}" autocomplete="off"
                @if ($placeholder) placeholder="{{ $placeholder }}" @endif
                @if ($datepicker) data-datepicker @endif
-               {{ $attributes->merge(['class' => 'w-full rounded-field bg-white border border-gray-200 '.($search ? 'ps-10 pe-3.5' : 'px-3.5').' h-10 text-sm text-end focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15']) }}>
+               {{ $attributes->merge(['class' => 'w-full rounded-field bg-white border border-gray-200 '.($search ? 'ps-10 pe-3.5' : 'px-3.5').' h-10 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15']) }}>
     </div>
 </div>
