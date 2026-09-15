@@ -3,6 +3,7 @@
  *  - نافذة إرسال رسالة معاينة: تُفتح من أي زر يحمل data-wa-send (حمولة JSON من السيرفر)
  *    وتعرض أرقام المسؤولين عن العقار بصفاتهم ونص القالب معبّأً قابلاً للتعديل.
  *  - زر محجوب (data-wa-blocked): يعرض سبب الحجب فوراً عند التمرير (فقاعة ملتصقة بالزر) وعند النقر.
+ *  - أي عنصر يحمل data-hint: تلميح فوري عند التمرير بدل title الذي يتأخر نحو ثانية.
  *  - لوحة ربط الرقم بالـ QR (شاشة واتساب): استطلاع كل 3 ثوانٍ حتى «متصل».
  */
 import { withAlpine } from './alpine';
@@ -20,8 +21,12 @@ export function toast(message, tone = 'bg-primary-950') {
     setTimeout(() => el.remove(), TOAST_MS);
 }
 
-/** فقاعة تلميح فورية فوق الزر المحجوب — بلا تأخير الـ title الأصلي (~ثانية) */
+/** فقاعة تلميح فورية فوق العنصر — بلا تأخير الـ title الأصلي (~ثانية) */
 let hint = null;
+
+const HINT_SELECTOR = '[data-hint], [data-wa-blocked]';
+
+const hintText = (el) => el.dataset.hint || el.dataset.waBlocked || '';
 
 function showHint(target) {
     hideHint();
@@ -29,7 +34,8 @@ function showHint(target) {
     hint = document.createElement('div');
     hint.setAttribute('role', 'tooltip');
     hint.className = 'fixed z-[80] pointer-events-none rounded-lg bg-primary-950 text-white text-[11px] font-semibold px-2.5 py-1.5 shadow-lg whitespace-nowrap';
-    hint.textContent = target.dataset.waBlocked || 'يجب اختيار النتيجة أولاً';
+    hint.textContent = hintText(target);
+    hint._target = target;
     document.body.appendChild(hint);
     const top = rect.top - hint.offsetHeight - 6;
     hint.style.top = (top < 4 ? rect.bottom + 6 : top) + 'px';
@@ -42,14 +48,16 @@ function hideHint() {
 }
 
 document.addEventListener('mouseover', (event) => {
-    const blocked = event.target.closest('[data-wa-blocked]');
-    if (blocked && ! blocked.contains(event.relatedTarget)) {
-        showHint(blocked);
+    const target = event.target.closest(HINT_SELECTOR);
+
+    if (target && hintText(target) && target !== hint?._target) {
+        showHint(target);
     }
 });
 document.addEventListener('mouseout', (event) => {
-    const blocked = event.target.closest('[data-wa-blocked]');
-    if (blocked && ! blocked.contains(event.relatedTarget)) {
+    const target = event.target.closest(HINT_SELECTOR);
+
+    if (target && ! target.contains(event.relatedTarget)) {
         hideHint();
     }
 });

@@ -2,6 +2,7 @@
     علامتا واتساب للمعاينة: (1) أُبلغ مسؤول العقار ببيانات العميل · (2) أُرسلت نتيجة المعاينة للمسؤول.
     زر الإرسال يحمل الحمولة في data-wa-send وتفتحه نافذة _wa-modal (whatsapp.js).
     زر النتيجة قبل تسجيلها يحمل data-wa-blocked فيعرض «يجب اختيار النتيجة أولاً» فوراً عند التمرير وعند النقر.
+    كل التلميحات هنا بـ data-hint لا title: تظهر فور الاقتراب بلا تأخير المتصفح (whatsapp.js).
     يتوقع $viewing مع property.contacts و client.
 --}}
 @inject('whatsapp', 'App\Services\WhatsApp\WhatsAppService')
@@ -38,11 +39,12 @@
 <div class="flex gap-1.5 {{ ($wide ?? false) ? 'flex-wrap items-center' : 'flex-col items-start' }}">
     @foreach ($steps as $step)
         @if ($step['at'])
-            <span class="{{ $chip }} bg-success-soft text-success" title="أُرسلت {{ $step['at']->format('Y-m-d H:i') }}">
+            <span class="{{ $chip }} bg-success-soft text-success" data-hint="أُرسلت {{ $step['at']->format('Y-m-d H:i') }}">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 {{ $step['done'] }}
                 @if ($canSend)
-                    <button type="button" data-wa-send="{{ json_encode($whatsapp->sendPayload($viewing, $step['kind']), JSON_UNESCAPED_UNICODE) }}" title="إعادة الإرسال" class="ms-0.5 text-success/70 hover:text-success">
+                    <button type="button" data-wa-send="{{ json_encode($whatsapp->sendPayload($viewing, $step['kind']), JSON_UNESCAPED_UNICODE) }}"
+                            data-hint="إعادة الإرسال" aria-label="إعادة الإرسال" class="ms-0.5 text-success/70 hover:text-success cursor-pointer">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
                     </button>
                 @endif
@@ -54,8 +56,8 @@
             </button>
         @elseif ($canSend)
             <button type="button" data-wa-send="{{ json_encode($whatsapp->sendPayload($viewing, $step['kind']), JSON_UNESCAPED_UNICODE) }}"
-                    title="{{ $step['hint'] }}"
-                    class="{{ $chip }} border border-success/40 text-success bg-white hover:bg-success-soft transition">
+                    data-hint="{{ $step['hint'] }}"
+                    class="{{ $chip }} border border-success/40 text-success bg-white hover:bg-success-soft transition cursor-pointer">
                 {!! $waIcon !!}{{ $step['todo'] }}
             </button>
         @else

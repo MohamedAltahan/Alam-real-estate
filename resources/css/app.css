@@ -187,6 +187,13 @@
     | موضوع في طبقة base، فأي utility صريح على العنصر (w-*، rounded-*، bg-*) يتفوّق عليه
     | لو احتجت شكلاً مختلفاً في حالة خاصة.
     */
+    /* المؤشر يتحول إلى يد فوق أي زر فعّال — الأزرار المعطّلة تُبقي cursor-not-allowed الخاص بها */
+    button:not(:disabled):not([aria-disabled='true']),
+    [role='button']:not([aria-disabled='true']),
+    summary {
+        cursor: pointer;
+    }
+
     input[type='checkbox'] {
         appearance: none;
         -webkit-appearance: none;
