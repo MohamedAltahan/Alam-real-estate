@@ -115,7 +115,8 @@
 .flatpickr-time input:focus,
 .flatpickr-time .flatpickr-am-pm:focus { background: #f5f6fa; }
 .flatpickr-wrapper { display: block; width: 100%; }
-.datetime-alt { direction: rtl; }
+/* الحقل الظاهر لمنتقي التاريخ: عربي ومحاذاته لليمين مثل بقية الحقول */
+.datetime-alt { direction: rtl; text-align: right; }
 
 /* لوحة المهام: حالات السحب (SortableJS) */
 .task-ghost { opacity: 0.35; }

@@ -47,13 +47,13 @@
 
             <div>
                 <label class="{{ $label }}">المساحة (م²)</label>
-                <input type="number" min="0" step="0.5" inputmode="decimal" :name="name(i, 'area_size')" x-model="row.area_size" placeholder="مثال 120" class="{{ $field }}" dir="ltr">
+                <input type="number" min="0" step="0.5" inputmode="decimal" :name="name(i, 'area_size')" x-model="row.area_size" placeholder="مثال 120" class="{{ $field }} text-end" dir="ltr">
                 <p x-show="errorFor(i, 'area_size')" x-text="errorFor(i, 'area_size')" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <div>
                 <label class="{{ $label }}">عدد الغرف</label>
-                <input type="number" min="0" max="50" step="1" inputmode="numeric" :name="name(i, 'rooms')" x-model="row.rooms" placeholder="مثال 3" class="{{ $field }}" dir="ltr">
+                <input type="number" min="0" max="50" step="1" inputmode="numeric" :name="name(i, 'rooms')" x-model="row.rooms" placeholder="مثال 3" class="{{ $field }} text-end" dir="ltr">
                 <p x-show="errorFor(i, 'rooms')" x-text="errorFor(i, 'rooms')" class="mt-1 text-xs text-danger"></p>
             </div>
 
