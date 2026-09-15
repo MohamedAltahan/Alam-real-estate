@@ -62,7 +62,6 @@
         targetUrl: '',
         targetHtml: '',
         targetLoading: false,
-        copyDone: false,
         /** محتوى النافذة يُجلب عند الفتح فقط (بدل حمولة لكل عميل في الصفحة) */
         async openTargets(name, url) {
             this.targetName = name;
@@ -97,18 +96,6 @@
                 });
             } catch (e) { /* نعيد التحميل على أي حال فيظهر الوضع الحقيقي */ }
             await this.loadTargets();
-        },
-        async copyClient(text) {
-            try { await navigator.clipboard.writeText(text) } catch (e) {
-                const area = document.createElement('textarea');
-                area.value = text;
-                document.body.appendChild(area);
-                area.select();
-                document.execCommand('copy');
-                area.remove();
-            }
-            this.copyDone = true;
-            setTimeout(() => this.copyDone = false, 1800);
         }
     }">
         @if (session('success'))
@@ -123,10 +110,6 @@
         @if ($errors->any())
             <div class="mb-4 rounded-field bg-danger/10 text-danger text-sm px-4 py-3">{{ $errors->first() }}</div>
         @endif
-        <div x-show="copyDone" x-cloak x-transition
-            class="fixed top-20 start-1/2 -translate-x-1/2 z-[70] rounded-full bg-primary-950 text-white px-5 py-2.5 text-sm shadow-xl">
-            تم نسخ بيانات العميل</div>
-
         {{-- الترويسة + البحث + إضافة --}}
         <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div>
@@ -451,16 +434,6 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center gap-1">
-                                            <button type="button" @click.stop="copyClient(@js($c->shareText()))"
-                                                class="grid place-items-center w-8 h-8 rounded-full text-primary-700 hover:bg-primary-100 transition"
-                                                title="نسخ كل بيانات العميل">
-                                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-                                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round">
-                                                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                                </svg>
-                                            </button>
                                             @can('clients.delete')
                                                 <button
                                                     @click.stop="delOpen = true; delAction = '{{ route('dashboard.clients.destroy', $c) }}'; delName = @js($c->name)"
