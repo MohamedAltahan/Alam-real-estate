@@ -103,14 +103,14 @@
                 @endif
 
                 {{-- الحقول (قوائم منسدلة قابلة للبحث) --}}
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                     <x-site.combobox name="reference" :items="$refItems" :placeholder="$t('الرقم المرجعي', 'Reference no.')" />
                     <x-site.combobox name="unit_type" :items="$mk($searchUnitTypes)" :placeholder="$t('اختر نوع الوحدة', 'Unit type')" />
                     <x-site.combobox name="area" :items="$mk($searchAreas)" :placeholder="$t('اختر المناطق', 'Areas')" />
                     <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />
                     <x-site.combobox name="price" :items="$priceItems" :placeholder="$t('الأسعار', 'Price')" />
                     <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold px-6 py-3 text-sm shrink-0 shadow-lg shadow-accent-500/25 transition">
+                        class="inline-flex items-center justify-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold w-full sm:w-auto px-4 sm:px-6 py-3 text-sm shrink-0 shadow-lg shadow-accent-500/25 transition">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.4" stroke-linecap="round">
                             <circle cx="11" cy="11" r="8" />
