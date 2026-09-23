@@ -51,11 +51,11 @@
 
             {{-- يمين: لغة + زر --}}
             <div class="flex items-center gap-2 ms-auto md:ms-0">
-                <a href="{{ route('site.locale', $rtl ? 'en' : 'ar') }}" class="grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white/90 transition" title="{{ $t('English', 'عربي') }}">
+                <a href="{{ route('site.locale', $rtl ? 'en' : 'ar') }}" class="grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 active:scale-95 border border-white/10 text-white/90 transition" title="{{ $t('English', 'عربي') }}">
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/></svg>
                 </a>
                 <a href="{{ route('site.list-property') }}" class="hidden sm:inline-flex items-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold px-5 py-2.5 text-sm shadow-lg shadow-accent-500/20 transition">{{ $t('اعرض عقارك', 'List your property') }}</a>
-                <button @click="open = !open" class="md:hidden grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10" aria-label="menu">
+                <button @click="open = !open" class="md:hidden grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 active:scale-95 border border-white/10 transition" aria-label="menu">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg>
                 </button>
             </div>
@@ -64,9 +64,9 @@
         {{-- قائمة الموبايل --}}
         <div x-show="open" x-cloak class="md:hidden mt-2 rounded-3xl border border-white/10 bg-primary-900/95 backdrop-blur-xl shadow-xl text-white px-4 py-3 space-y-1">
             @foreach ([[route('site.home'), $t('الرئيسية', 'Home')], [route('site.about'), $t('من نحن', 'About')], [route('site.properties'), $t('العقارات', 'Properties')], [route('site.contact'), $t('تواصل معنا', 'Contact')]] as [$href, $label])
-                <a href="{{ $href }}" class="block px-3 py-2 rounded-full text-sm text-white/80 hover:bg-white/10">{{ $label }}</a>
+                <a href="{{ $href }}" class="block px-3 py-2 rounded-full text-sm text-white/80 transition hover:bg-white/10 active:bg-white/20 active:text-white">{{ $label }}</a>
             @endforeach
-            <a href="{{ route('site.list-property') }}" class="block px-3 py-2 rounded-full text-sm gold-gradient text-primary-900 font-semibold text-center">{{ $t('اعرض عقارك', 'List your property') }}</a>
+            <a href="{{ route('site.list-property') }}" class="block px-3 py-2 rounded-full text-sm gold-gradient text-primary-900 font-semibold text-center transition active:brightness-90 active:scale-[0.98]">{{ $t('اعرض عقارك', 'List your property') }}</a>
         </div>
       </div>
     </header>
@@ -99,13 +99,13 @@
                         @if ($set('contact', 'email'))
                             <li class="{{ $cRow }}">
                                 <span class="{{ $cIcon }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
-                                <a href="mailto:{{ $set('contact', 'email') }}" class="hover:text-primary-700" dir="ltr">{{ $set('contact', 'email') }}</a>
+                                <a href="mailto:{{ $set('contact', 'email') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70" dir="ltr">{{ $set('contact', 'email') }}</a>
                             </li>
                         @endif
                         @if ($set('contact', 'phone'))
                             <li class="{{ $cRow }}">
                                 <span class="{{ $cIcon }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-                                <a href="tel:{{ preg_replace('/\s/', '', $set('contact', 'phone')) }}" class="hover:text-primary-700" dir="ltr">{{ $set('contact', 'phone') }}</a>
+                                <a href="tel:{{ preg_replace('/\s/', '', $set('contact', 'phone')) }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70" dir="ltr">{{ $set('contact', 'phone') }}</a>
                             </li>
                         @endif
                         @if ($set('contact', 'address'))
@@ -121,11 +121,11 @@
                 <div>
                     <h4 class="font-bold text-ink mb-4 text-sm">{{ $t('روابط سريعة :', 'Quick Links') }}</h4>
                     <ul class="space-y-3 text-sm text-gray-500">
-                        <li><a href="{{ route('site.home') }}" class="hover:text-primary-700">{{ $t('الرئيسية', 'Home') }}</a></li>
-                        <li><a href="{{ route('site.about') }}" class="hover:text-primary-700">{{ $t('من نحن', 'About') }}</a></li>
-                        <li><a href="{{ route('site.home') }}#areas" class="hover:text-primary-700">{{ $t('أفضل المناطق', 'Top Areas') }}</a></li>
-                        <li><a href="{{ route('site.properties') }}" class="hover:text-primary-700">{{ $t('العقارات', 'Properties') }}</a></li>
-                        <li><a href="{{ route('site.list-property') }}" class="hover:text-primary-700">{{ $t('اعرض عقارك', 'List your property') }}</a></li>
+                        <li><a href="{{ route('site.home') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('الرئيسية', 'Home') }}</a></li>
+                        <li><a href="{{ route('site.about') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('من نحن', 'About') }}</a></li>
+                        <li><a href="{{ route('site.home') }}#areas" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('أفضل المناطق', 'Top Areas') }}</a></li>
+                        <li><a href="{{ route('site.properties') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('العقارات', 'Properties') }}</a></li>
+                        <li><a href="{{ route('site.list-property') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('اعرض عقارك', 'List your property') }}</a></li>
                     </ul>
                 </div>
 
@@ -133,10 +133,10 @@
                 <div>
                     <h4 class="font-bold text-ink mb-4 text-sm">{{ $t('روابط مهمة :', 'Important') }}</h4>
                     <ul class="space-y-3 text-sm text-gray-500">
-                        <li><a href="{{ route('site.terms') }}" class="hover:text-primary-700">{{ $t('الشروط والأحكام', 'Terms & Conditions') }}</a></li>
-                        <li><a href="{{ route('site.privacy') }}" class="hover:text-primary-700">{{ $t('سياسة الخصوصية', 'Privacy Policy') }}</a></li>
-                        <li><a href="{{ route('site.faq') }}" class="hover:text-primary-700">{{ $t('الأسئلة الشائعة', 'FAQ') }}</a></li>
-                        <li><a href="{{ route('site.contact') }}" class="hover:text-primary-700">{{ $t('تواصل معنا', 'Contact us') }}</a></li>
+                        <li><a href="{{ route('site.terms') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('الشروط والأحكام', 'Terms & Conditions') }}</a></li>
+                        <li><a href="{{ route('site.privacy') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('سياسة الخصوصية', 'Privacy Policy') }}</a></li>
+                        <li><a href="{{ route('site.faq') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('الأسئلة الشائعة', 'FAQ') }}</a></li>
+                        <li><a href="{{ route('site.contact') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('تواصل معنا', 'Contact us') }}</a></li>
                     </ul>
                 </div>
 
@@ -144,9 +144,9 @@
                 <div>
                     <h4 class="font-bold text-ink mb-4 text-sm">{{ $t('اتصال', 'Get in touch') }}</h4>
                     <ul class="space-y-3 text-sm text-gray-500">
-                        @if ($set('contact', 'phone'))<li><a href="tel:{{ preg_replace('/\s/', '', $set('contact', 'phone')) }}" class="hover:text-primary-700" dir="ltr">{{ $set('contact', 'phone') }}</a></li>@endif
-                        @if ($set('contact', 'whatsapp'))<li><a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $set('contact', 'whatsapp')) }}" target="_blank" class="hover:text-primary-700" dir="ltr">{{ $set('contact', 'whatsapp') }}</a></li>@endif
-                        @if ($set('contact', 'email'))<li><a href="mailto:{{ $set('contact', 'email') }}" class="hover:text-primary-700" dir="ltr">{{ $set('contact', 'email') }}</a></li>@endif
+                        @if ($set('contact', 'phone'))<li><a href="tel:{{ preg_replace('/\s/', '', $set('contact', 'phone')) }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70" dir="ltr">{{ $set('contact', 'phone') }}</a></li>@endif
+                        @if ($set('contact', 'whatsapp'))<li><a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $set('contact', 'whatsapp')) }}" target="_blank" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70" dir="ltr">{{ $set('contact', 'whatsapp') }}</a></li>@endif
+                        @if ($set('contact', 'email'))<li><a href="mailto:{{ $set('contact', 'email') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70" dir="ltr">{{ $set('contact', 'email') }}</a></li>@endif
                         @if ($set('contact', 'address'))<li>{{ $set('contact', 'address') }}</li>@endif
                     </ul>
                 </div>
@@ -162,7 +162,7 @@
                         <div class="flex items-center gap-2">
                             @foreach ($activeSocials as $soc)
                                 <a href="{{ $set('social', $soc) }}" target="_blank" rel="noopener" aria-label="{{ $soc }}"
-                                   class="grid place-items-center w-9 h-9 rounded-full navy-gradient hover:gold-gradient text-white hover:text-primary-900 transition">
+                                   class="grid place-items-center w-9 h-9 rounded-full navy-gradient hover:gold-gradient active:gold-gradient text-white hover:text-primary-900 active:text-primary-900 active:scale-95 transition">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">{!! $socialIcons[$soc] !!}</svg>
                                 </a>
                             @endforeach
