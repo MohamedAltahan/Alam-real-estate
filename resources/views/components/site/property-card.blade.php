@@ -30,7 +30,20 @@
      class="rounded-2xl bg-white border border-gray-100 overflow-hidden group flex flex-col cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 [.list-view_&]:sm:flex-row">
     {{-- الصورة --}}
     <div class="relative aspect-[4/3] bg-gray-100 shrink-0 overflow-hidden [.list-view_&]:sm:w-72 [.list-view_&]:sm:aspect-auto"
-         @if ($gallery->count() > 1) x-data="{ i: 0 }" @endif>
+         @if ($gallery->count() > 1)
+             {{-- سحب يمين/شمال بالإصبع للتنقل بين الصور (الاتجاه يتبع RTL/LTR) --}}
+             x-data="{ i: 0, n: {{ $gallery->count() }}, x0: null, y0: null, swiped: false }"
+             style="touch-action: pan-y"
+             @touchstart.passive="x0 = $event.touches[0].clientX; y0 = $event.touches[0].clientY; swiped = false"
+             @touchend="if (x0 === null) return;
+                 const dx = $event.changedTouches[0].clientX - x0, dy = $event.changedTouches[0].clientY - y0;
+                 x0 = null;
+                 if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                     swiped = true;
+                     i = ((dx < 0) !== {{ $rtl ? 'true' : 'false' }}) ? (i + 1) % n : (i - 1 + n) % n;
+                 }"
+             @click.capture="if (swiped) { $event.stopPropagation(); swiped = false }"
+         @endif>
         @if ($gallery->count())
             @foreach ($gallery as $idx => $imgPath)
                 <img src="{{ $imgPath }}"
