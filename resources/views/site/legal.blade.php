@@ -9,6 +9,17 @@
     ];
     $title = $titles[$slug] ?? $slug;
     $other = $slug === 'terms' ? 'privacy' : 'terms';
+    // المحتوى يُكتب من الداشبورد كنص عادي أو HTML بسيط: نسمح بوسوم التنسيق فقط ونشيل كل الخصائص (عدا href الآمن)
+    $isHtml = $body !== strip_tags($body);
+    if ($isHtml) {
+        $html = strip_tags($body, '<h2><h3><h4><p><br><strong><b><em><i><u><ul><ol><li><a><hr>');
+        $html = preg_replace_callback('/<(\w+)\b[^>]*>/', function ($m) {
+            if (strtolower($m[1]) === 'a' && preg_match('/href\s*=\s*["\']((?:https?:|mailto:|tel:|\/)[^"\']*)["\']/i', $m[0], $h)) {
+                return '<a href="'.e($h[1]).'">';
+            }
+            return '<'.$m[1].'>';
+        }, $html);
+    }
 @endphp
 
 @section('title', $title)
@@ -32,7 +43,14 @@
 
 <div class="max-w-3xl mx-auto px-4 sm:px-6 py-14">
     <article class="rounded-card bg-white border border-gray-100 shadow-sm p-6 sm:p-10">
-        @if (trim($body) !== '')
+        @if (trim($body) !== '' && $isHtml)
+            <div class="text-[15px] text-gray-600 leading-8
+                        [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-ink [&_h2]:mt-8 [&_h2]:mb-3
+                        [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-ink [&_h3]:mt-7 [&_h3]:mb-2
+                        [&_h4]:font-bold [&_h4]:text-ink [&_h4]:mt-5 [&_h4]:mb-2
+                        [&>:first-child]:mt-0 [&_p]:mb-4 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:ps-6 [&_ol]:ps-6 [&_ul]:mb-4 [&_ol]:mb-4
+                        [&_a]:text-primary-700 [&_a]:underline [&_strong]:text-ink [&_hr]:my-6 [&_hr]:border-gray-100">{!! $html !!}</div>
+        @elseif (trim($body) !== '')
             <div class="text-[15px] text-gray-600 leading-8 whitespace-pre-line">{!! nl2br(e($body)) !!}</div>
         @else
             <p class="text-center text-gray-400 py-10">{{ $t('لم تتم إضافة محتوى هذه الصفحة بعد.', 'This page has no content yet.') }}</p>
@@ -40,12 +58,25 @@
     </article>
 
     {{-- تذييل الصفحة القانونية --}}
-    <div class="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <a href="{{ route('site.' . $other) }}" class="inline-flex items-center gap-2 text-primary-700 hover:text-primary-900 font-medium">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-            {{ $slug === 'terms' ? $t('سياسة الخصوصية', 'Privacy Policy') : $t('الشروط والأحكام', 'Terms & Conditions') }}
+    <div class="mt-6 grid gap-3 sm:grid-cols-2 text-sm">
+        <a href="{{ route('site.' . $other) }}" class="flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4 hover:border-primary-200 transition">
+            <span class="grid place-items-center w-10 h-10 shrink-0 rounded-xl bg-primary-50 text-primary-700">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-xs text-gray-400">{{ $t('اقرأ أيضاً', 'Also read') }}</span>
+                <span class="block font-semibold text-primary-900">{{ $slug === 'terms' ? $t('سياسة الخصوصية', 'Privacy Policy') : $t('الشروط والأحكام', 'Terms & Conditions') }}</span>
+            </span>
         </a>
-        <span class="text-gray-400">{{ $t('أسئلة حول هذه السياسة؟', 'Questions about this policy?') }} <a href="{{ route('site.contact') }}" class="text-accent-600 hover:text-accent-700 font-medium">{{ $t('تواصل معنا', 'Contact us') }}</a></span>
+        <a href="{{ route('site.contact') }}" class="flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4 hover:border-accent-300 transition">
+            <span class="grid place-items-center w-10 h-10 shrink-0 rounded-xl bg-accent-50 text-accent-600">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-xs text-gray-400">{{ $slug === 'terms' ? $t('أسئلة حول هذه الشروط؟', 'Questions about these terms?') : $t('أسئلة حول هذه السياسة؟', 'Questions about this policy?') }}</span>
+                <span class="block font-semibold text-accent-600">{{ $t('تواصل معنا', 'Contact us') }}</span>
+            </span>
+        </a>
     </div>
 </div>
 @endsection
