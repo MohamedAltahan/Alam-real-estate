@@ -35,10 +35,11 @@
     </ul>
 
     {{-- الخريطة --}}
-    <div class="rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
+    {{-- الـ iframe أطول من الإطار بـ 32px ليُقصّ شريط الروابط أسفل الخريطة (لا يمكن إخفاؤه بـ CSS لأنه من نطاق آخر) --}}
+    <div class="h-[360px] rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
         <iframe
             title="{{ $t('موقعنا على الخريطة', 'Our location') }}"
             src="https://www.openstreetmap.org/export/embed.html?bbox={{ $lng - 0.012 }}%2C{{ $lat - 0.008 }}%2C{{ $lng + 0.012 }}%2C{{ $lat + 0.008 }}&amp;layer=mapnik&amp;marker={{ $lat }}%2C{{ $lng }}"
-            class="w-full h-[360px] border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            class="block w-full h-[392px] border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 </div>
