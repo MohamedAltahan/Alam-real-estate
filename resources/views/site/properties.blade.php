@@ -104,13 +104,27 @@
                     @endforeach
                 </div>
 
-                {{-- المنطقة --}}
-                <div class="py-3 border-t border-gray-100">
+                {{-- المنطقة: قائمة طويلة ← بحث + ارتفاع محدود بتمرير داخلي، والمنطقة المختارة أولاً --}}
+                @php $selArea = (string) ($filters['area'] ?? ''); @endphp
+                <div class="py-3 border-t border-gray-100"
+                     x-data="{ q: '', names: @js($areas->pluck('name')->map(fn ($n) => (string) $n)->values()),
+                               norm: s => s.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim(),
+                               has(n) { return ! this.q || this.norm(n).includes(this.norm(this.q)) } }">
                     <p class="{{ $groupTitle }}">{{ $t('المنطقة', 'Area') }}</p>
-                    @foreach ($areas as $a)
-                        <label class="{{ $optRow }}"><span>{{ $a->name }}</span>
-                            <input type="radio" name="area" value="{{ $a->id }}" @checked(($filters['area'] ?? '') == $a->id) onchange="this.form.submit()" class="{{ $radio }}"></label>
-                    @endforeach
+                    @if ($areas->count() > 8)
+                        <div class="relative my-2">
+                            <svg class="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            <input type="search" x-model="q" @keydown.enter.prevent placeholder="{{ $t('ابحث عن منطقة...', 'Search areas...') }}"
+                                   class="w-full rounded-full border border-gray-200 bg-gray-50 ps-9 pe-3 py-2 text-sm text-ink placeholder:text-gray-400 focus:outline-none focus:border-primary-300 focus:bg-white transition">
+                        </div>
+                    @endif
+                    <div class="max-h-64 overflow-y-auto overscroll-contain pe-1 -me-1">
+                        @foreach ($areas->sortByDesc(fn ($a) => (string) $a->id === $selArea) as $a)
+                            <label class="{{ $optRow }}" x-show="has(@js((string) $a->name))"><span>{{ $a->name }}</span>
+                                <input type="radio" name="area" value="{{ $a->id }}" @checked($selArea === (string) $a->id) onchange="this.form.submit()" class="{{ $radio }}"></label>
+                        @endforeach
+                    </div>
+                    <p x-show="! names.some(n => has(n))" x-cloak class="py-2 text-xs text-gray-400">{{ $t('لا توجد منطقة مطابقة', 'No matching area') }}</p>
                 </div>
 
                 {{-- نطاق السعر --}}
