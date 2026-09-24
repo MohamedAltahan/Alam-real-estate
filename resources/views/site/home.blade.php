@@ -84,7 +84,7 @@
             @endphp
             @php $defaultCat = (string) (request('category') ?: optional($searchCategories->first())->id); @endphp
             <form action="{{ route('site.properties') }}" method="GET" x-data="{ cat: '{{ $defaultCat }}' }"
-                class="glass rounded-[2rem] p-4 sm:p-5 max-w-5xl mx-auto shadow-2xl text-start">
+                class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-5xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
 
                 {{-- تبويب سكني/تجاري (الافتراضي: سكني) --}}
@@ -188,15 +188,17 @@
     @if (!empty($areasC['items']))
         <section id="areas" class="max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-10 scroll-mt-24" x-data="carousel">
             {{-- الترويسة + أسهم التنقل --}}
-            <div class="flex items-end justify-between gap-4 mb-7">
+            <div class="mb-7">
                 <div>
                     <span
                         class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('التغطية الجغرافية', 'Coverage') }}</span>
-                    <h2 class="text-2xl sm:text-3xl font-bold text-ink mb-1">
-                        {{ $it($areasC, 'title') ?: $t('أفضل المناطق', 'Best Areas') }}</h2>
+                    <div class="flex items-center justify-between gap-4 mb-1">
+                        <h2 class="text-2xl sm:text-3xl font-bold text-ink">
+                            {{ $it($areasC, 'title') ?: $t('أفضل المناطق', 'Best Areas') }}</h2>
+                        <x-site.carousel-nav class="flex" />
+                    </div>
                     <p class="text-gray-500 text-sm">{{ $it($areasC, 'description') }}</p>
                 </div>
-                <x-site.carousel-nav class="hidden sm:flex" />
             </div>
 
             {{-- شريط المناطق --}}
@@ -234,9 +236,6 @@
                     @endif
                 @endforeach
             </div>
-
-            {{-- على الموبايل: الأسهم أسفل الشريط لأن الترويسة لا تتّسع لها --}}
-            <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
         </section>
     @endif
 
@@ -244,17 +243,19 @@
     @if ($videoProperties->count())
         <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-20" x-data="carousel">
             {{-- الترويسة + أسهم التنقل --}}
-            <div class="flex items-end justify-between gap-4 mb-7">
+            <div class="mb-7">
                 <div>
                     <span
                         class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('فيديوهات تعريفية', 'Videos') }}</span>
-                    <h2 class="text-2xl sm:text-3xl font-bold text-ink mb-1">
-                        {{ $it($videos, 'title') ?: $t('تعريف الخدمات المقدمة', 'Our Services') }}</h2>
+                    <div class="flex items-center justify-between gap-4 mb-1">
+                        <h2 class="text-2xl sm:text-3xl font-bold text-ink">
+                            {{ $it($videos, 'title') ?: $t('تعريف الخدمات المقدمة', 'Our Services') }}</h2>
+                        <x-site.carousel-nav class="flex" />
+                    </div>
                     <p class="text-gray-500 text-sm">
                         {{ $it($videos, 'description') ?: $t('تعرّف على خدماتنا عبر مقاطع فيديو تعريفية مُصمّمة لتُوصّل كل المعلومات بسهولة ووضوح.', 'Get to know our services through short, clear intro videos.') }}
                     </p>
                 </div>
-                <x-site.carousel-nav class="hidden sm:flex" />
             </div>
 
             {{-- شريط الفيديوهات --}}
@@ -305,9 +306,6 @@
                 @endforeach
             </div>
 
-            {{-- على الموبايل: الأسهم أسفل الشريط --}}
-            <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
-
             {{-- زر المزيد --}}
             <div class="text-center mt-9">
                 <a href="{{ route('site.properties') }}"
@@ -357,6 +355,8 @@
 
                     {{-- من lg فقط: دون ذلك يضيق العرض فتتداخل الأسهم مع الوصف --}}
                     <x-site.carousel-nav class="hidden lg:flex absolute end-0 top-1/2 -translate-y-1/2" />
+                    {{-- دون lg: أسفل الوصف مباشرة وفوق البطاقات --}}
+                    <x-site.carousel-nav class="flex lg:hidden justify-center mt-4" />
                 </div>
 
                 <div x-ref="track"
@@ -378,9 +378,6 @@
                         </div>
                     @endforeach
                 </div>
-
-                {{-- دون lg: الأسهم أسفل الشريط بدل جانب الترويسة --}}
-                <x-site.carousel-nav class="flex lg:hidden justify-center mt-5" />
             </div>
         </section>
     @endif
@@ -390,14 +387,16 @@
         <section class="bg-white pt-16 pb-14" x-data="carousel">
             <div class="max-w-7xl mx-auto px-4 sm:px-6">
                 {{-- الترويسة + أسهم التنقّل --}}
-                <div class="flex items-end justify-between gap-4 mb-8">
+                <div class="mb-8">
                     <div>
                         <span
                             class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('آراء عملائنا', 'Testimonials') }}</span>
-                        <h2 class="text-2xl sm:text-3xl font-bold text-ink">
-                            {{ $it($tstH, 'title') ?: $t('ماذا يقولون عنا', 'What they say') }}</h2>
+                        <div class="flex items-center justify-between gap-4">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-ink">
+                                {{ $it($tstH, 'title') ?: $t('ماذا يقولون عنا', 'What they say') }}</h2>
+                            <x-site.carousel-nav class="flex" />
+                        </div>
                     </div>
-                    <x-site.carousel-nav class="hidden sm:flex" />
                 </div>
 
                 <div x-ref="track"
@@ -427,9 +426,6 @@
                         </div>
                     @endforeach
                 </div>
-
-                {{-- على الموبايل: الأسهم أسفل الشريط --}}
-                <x-site.carousel-nav class="flex sm:hidden justify-center mt-5" />
             </div>
         </section>
     @endif
