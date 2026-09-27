@@ -24,4 +24,12 @@ class PageSection extends Model implements HasMedia
     {
         return $this->belongsTo(Page::class);
     }
+
+    /** مفاتيح أقسام الصفحة التي أخفاها المدير من «إدارة الموقع» (القسم غير المحفوظ بعد يُعدّ ظاهراً) */
+    public static function hiddenKeys(string $page): array
+    {
+        return static::where('is_visible', false)
+            ->whereHas('page', fn ($q) => $q->where('slug', $page))
+            ->pluck('key')->all();
+    }
 }

@@ -103,6 +103,10 @@
     ];
 
     $initial = mb_substr($me->name ?? 'ع', 0, 1);
+
+    // الموقع العام متوقف (وضع الصيانة) — شارة دائمة في الشريط العلوي حتى لا يُنسى تشغيله
+    $siteDown = \App\Support\SiteFlags::maintenance();
+    $siteDownCls = 'inline-flex items-center gap-2 h-9 rounded-full bg-warning-soft text-warning border border-warning/30 px-2.5 sm:px-3.5 text-xs font-bold transition';
 @endphp
 
 <body class="dashboard-shell bg-gray-50 font-sans text-ink antialiased" x-data="{ logoutOpen: false, sidebarOpen: false }">
@@ -183,6 +187,20 @@
             <h1 class="text-lg font-bold text-ink">@yield('page-title', 'لوحة التحكم')</h1>
 
             <div class="ms-auto flex items-center gap-3">
+
+                @if ($siteDown)
+                    @can('website.edit')
+                        <a href="{{ route('dashboard.profile.edit', ['tab' => 'preferences']) }}#site-status" class="{{ $siteDownCls }} hover:bg-warning/15" title="الموقع العام متوقف للصيانة — اضغط للإدارة">
+                            <span class="w-2 h-2 shrink-0 rounded-full bg-warning animate-pulse"></span>
+                            <span class="hidden sm:inline">الموقع متوقف</span>
+                        </a>
+                    @else
+                        <span class="{{ $siteDownCls }}" title="الموقع العام متوقف للصيانة">
+                            <span class="w-2 h-2 shrink-0 rounded-full bg-warning animate-pulse"></span>
+                            <span class="hidden sm:inline">الموقع متوقف</span>
+                        </span>
+                    @endcan
+                @endif
 
                 {{-- ===== الإشعارات (استطلاع كل دقيقة + صوت لتذكيرات المعاينات) ===== --}}
                 @can('notifications.view')

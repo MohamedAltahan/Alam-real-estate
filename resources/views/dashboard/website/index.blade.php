@@ -13,12 +13,12 @@
     $areaItems = $s('areas', 'ar', 'items', []);
     $whyItems = $s('why_us', 'ar', 'items', []);
 
-    // بنود المناطق للمكرِّر — مع صورة كل بند من مجموعتها
+    // بنود المحافظات للمكرِّر — مع صورة كل بند من مجموعتها
     $areaRows = collect($areaItems)->values()->map(fn ($it, $i) => [
         'uid' => $it['collection'] ?? 'area-'.$i,
-        'area_id' => (string) ($it['area_id'] ?? ''),
+        'city_id' => (string) ($it['city_id'] ?? ''),
     ])->all();
-    $areaCounts = $areas->pluck('properties_count', 'id');
+    $cityCounts = $cities->pluck('properties_count', 'id');
 
     $whyRows = collect($whyItems)->values()->map(fn ($it) => [
         'uid' => 'w'.uniqid(),
@@ -83,40 +83,57 @@
                                 :media="$homeSecs['featured']->getFirstMedia('image')" />
             </div>
 
-            {{-- التغطية الجغرافية --}}
+            {{-- العقارات المميزة (المحتوى تلقائي من العقارات؛ هنا الترويسة والإظهار) --}}
             <div class="{{ $sectionCard }}">
-                <h3 class="font-bold text-ink">التغطية الجغرافية (أفضل المناطق)</h3>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-bold text-ink">العقارات المميزة</h3>
+                    <x-cms.visibility name="featured_properties[visible]" :visible="$homeSecs['featured_properties']->is_visible" />
+                </div>
+                <div class="rounded-field bg-primary-50 border border-primary-100 text-primary-800 text-xs p-3 leading-relaxed">
+                    تظهر هنا تلقائياً العقارات المعلَّم عليها «عقار مميّز» من شاشة إضافة/تعديل العقار (أحدث ١٢ عقاراً) —
+                    المميّز حالياً: <b>{{ $featuredCount }}</b> عقار.
+                </div>
+                <x-cms.pair label="العنوان" group="featured_properties" field="title" :ar="$s('featured_properties','ar','title')" :en="$s('featured_properties','en','title')" />
+                <x-cms.pair label="الوصف" group="featured_properties" field="description" :ar="$s('featured_properties','ar','description')" :en="$s('featured_properties','en','description')" />
+            </div>
+
+            {{-- المحافظات (مفتاح القسم areas) --}}
+            <div class="{{ $sectionCard }}">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-bold text-ink">المحافظات (التغطية الجغرافية)</h3>
+                    <x-cms.visibility name="areas[visible]" :visible="$homeSecs['areas']->is_visible" />
+                </div>
                 <x-cms.pair label="العنوان" group="areas" field="title" :ar="$s('areas','ar','title')" :en="$s('areas','en','title')" />
                 <x-cms.pair label="الوصف" group="areas" field="description" :ar="$s('areas','ar','description')" :en="$s('areas','en','description')" />
                 {{-- بنود ديناميكية بلا حد. المحفوظ يُرسَم من السيرفر (ومعه صورته)،
                      والجديد يُضاف بـ Alpine. حذف بند = إزالة حقوله من الفورم. --}}
                 <div class="space-y-3">
                     @foreach ($areaRows as $row)
-                        <div x-data="{ gone: false, selectedArea: @js($row['area_id']), areaCounts: @js($areaCounts) }" x-show="! gone" class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-3">
+                        <div x-data="{ gone: false, selectedCity: @js($row['city_id']), cityCounts: @js($cityCounts) }" x-show="! gone" class="rounded-field bg-gray-50/60 border border-gray-100 p-3 space-y-3">
                             <template x-if="! gone">
                                 <div class="space-y-3">
                                     <div class="flex items-center justify-between">
-                                        <span class="text-xs font-bold text-gray-500">{{ $loop->iteration }} — منطقة محفوظة</span>
-                                        <button type="button" @click="gone = true" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف المنطقة"><x-icon.trash /></button>
+                                        <span class="text-xs font-bold text-gray-500">{{ $loop->iteration }} — محافظة محفوظة</span>
+                                        <button type="button" @click="gone = true" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف المحافظة"><x-icon.trash /></button>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
-                                            <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
-                                            {{-- منطقة واحدة من جدول المناطق — الاسم AR/EN مخزَّن فيه بالفعل --}}
-                                            <select name="area_items[{{ $row['uid'] }}][area_id]" x-model="selectedArea" class="{{ $inputCls }}">
-                                                <option value="">— اختر المنطقة —</option>
-                                                @foreach ($areas as $a)<option value="{{ $a->id }}" @selected($row['area_id'] == $a->id)>{{ $a->name }}</option>@endforeach
+                                            <label class="block text-xs text-gray-500 mb-1">المحافظة</label>
+                                            {{-- محافظة واحدة من جدول المحافظات — الاسم AR/EN مخزَّن فيه بالفعل --}}
+                                            <select name="area_items[{{ $row['uid'] }}][city_id]" x-model="selectedCity" class="{{ $inputCls }}">
+                                                <option value="">— اختر المحافظة —</option>
+                                                @foreach ($cities as $city)<option value="{{ $city->id }}" @selected($row['city_id'] == $city->id)>{{ $city->name }}</option>@endforeach
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-xs text-gray-500 mb-1">عدد العقارات</label>
                                             <div class="flex items-center justify-between gap-3 rounded-field border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
-                                                <span><b class="text-primary-800" x-text="areaCounts[selectedArea] ?? 0"></b> عقار</span>
+                                                <span><b class="text-primary-800" x-text="cityCounts[selectedCity] ?? 0"></b> عقار</span>
                                                 <span class="text-[11px] text-success">يُحسب تلقائياً</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <x-cms.dropzone label="صورة المنطقة" :name="'area_items['.$row['uid'].'][image]'"
+                                    <x-cms.dropzone label="صورة المحافظة" :name="'area_items['.$row['uid'].'][image]'"
                                                     :media="$homeSecs['areas']->getFirstMedia($row['uid'])" />
                                 </div>
                             </template>
@@ -124,31 +141,31 @@
                     @endforeach
 
                     {{-- بنود جديدة --}}
-                    <div x-data="{ rows: [], n: 0, areaCounts: @js($areaCounts) }" class="space-y-3">
+                    <div x-data="{ rows: [], n: 0, cityCounts: @js($cityCounts) }" class="space-y-3">
                         <template x-for="(row, i) in rows" :key="row.uid">
                             <div class="rounded-field bg-primary-50/40 border border-primary-100 p-3 space-y-3">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs font-bold text-primary-700">منطقة جديدة</span>
+                                    <span class="text-xs font-bold text-primary-700">محافظة جديدة</span>
                                     <button type="button" @click="rows.splice(i, 1)" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="إزالة"><x-icon.trash /></button>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs text-gray-500 mb-1">المنطقة</label>
-                                        <select :name="`area_items[${row.uid}][area_id]`" x-model="row.area_id" class="{{ $inputCls }}">
-                                            <option value="">— اختر المنطقة —</option>
-                                            @foreach ($areas as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
+                                        <label class="block text-xs text-gray-500 mb-1">المحافظة</label>
+                                        <select :name="`area_items[${row.uid}][city_id]`" x-model="row.city_id" class="{{ $inputCls }}">
+                                            <option value="">— اختر المحافظة —</option>
+                                            @foreach ($cities as $city)<option value="{{ $city->id }}">{{ $city->name }}</option>@endforeach
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">عدد العقارات</label>
                                         <div class="flex items-center justify-between gap-3 rounded-field border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
-                                            <span><b class="text-primary-800" x-text="areaCounts[row.area_id] ?? 0"></b> عقار</span>
+                                            <span><b class="text-primary-800" x-text="cityCounts[row.city_id] ?? 0"></b> عقار</span>
                                             <span class="text-[11px] text-success">يُحسب تلقائياً</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-500 mb-1.5">صورة المنطقة</label>
+                                    <label class="block text-xs font-medium text-gray-500 mb-1.5">صورة المحافظة</label>
                                     <input type="file" :name="`area_items[${row.uid}][image]`" accept="image/jpeg,image/png,image/webp"
                                            class="w-full text-sm text-gray-500 file:me-3 file:rounded-full file:border-0 file:bg-primary-50 file:text-primary-700 file:px-4 file:py-2 file:text-sm file:font-bold">
                                     <p class="text-[11px] text-gray-400 mt-1">حد أقصى ٦ ميجابايت — تُصغَّر تلقائياً لارتفاع ١٠٨٠ بكسل.</p>
@@ -156,10 +173,11 @@
                             </div>
                         </template>
 
-                        <button type="button" @click="rows.push({ uid: 'area-new' + (n++), area_id: '' })"
+                        {{-- معرّف فريد عبر الزيارات: بند محفوظ سابقاً باسم area-new0 لا يتصادم مع بند جديد --}}
+                        <button type="button" @click="rows.push({ uid: 'area-' + Date.now().toString(36) + (n++), city_id: '' })"
                                 class="inline-flex items-center gap-2 rounded-full border-2 border-dashed border-gray-300 hover:border-primary-500 hover:text-primary-700 text-gray-500 font-bold px-4 py-2 text-sm transition">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                            إضافة منطقة
+                            إضافة محافظة
                         </button>
                     </div>
                 </div>

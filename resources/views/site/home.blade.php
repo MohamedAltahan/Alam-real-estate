@@ -5,7 +5,9 @@
     $t = fn($ar, $en) => $loc === 'ar' ? $ar : $en;
     $hero = $c['hero'] ?? [];
     $featured = $c['featured'] ?? [];
-    $areasC = $c['areas'] ?? [];
+    $featProps = $c['featured_properties'] ?? [];
+    // قسم «المحافظات» محفوظ في الـ CMS بمفتاحه القديم areas
+    $govC = $c['areas'] ?? [];
     $videos = $c['videos'] ?? [];
     $why = $c['why_us'] ?? [];
     $tstH = $c['testimonials'] ?? [];
@@ -184,9 +186,39 @@
         </section>
     @endif
 
-    {{-- ===================== أفضل المناطق ===================== --}}
-    @if (!empty($areasC['items']))
-        <section id="areas" class="max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-10 scroll-mt-24" x-data="carousel">
+    {{-- ===================== العقارات المميزة ===================== --}}
+    {{-- المعلَّم عليها «عقار مميّز» من لوحة التحكم، بكارت صفحة العقارات نفسه --}}
+    @if ($featuredProperties->count())
+        <section id="featured-properties" class="max-w-7xl mx-auto px-4 sm:px-6 pt-20 scroll-mt-24" x-data="carousel">
+            {{-- الترويسة + أسهم التنقل --}}
+            <div class="mb-7">
+                <span
+                    class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('عقارات مختارة', 'Hand-picked') }}</span>
+                <div class="flex items-center justify-between gap-4 mb-1">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-ink">
+                        {{ $it($featProps, 'title') ?: $t('العقارات المميزة', 'Featured Properties') }}</h2>
+                    <x-site.carousel-nav class="flex" />
+                </div>
+                <p class="text-gray-500 text-sm">
+                    {{ $it($featProps, 'description') ?: $t('مجموعة مختارة من أفضل العقارات المتاحة لدينا حالياً.', 'A hand-picked selection of our best available properties.') }}
+                </p>
+            </div>
+
+            <div x-ref="track"
+                class="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                @foreach ($featuredProperties as $property)
+                    {{-- على lg: أربع بطاقات كاملة في الصف — العرض = (100% ناقص 3 فواصل gap-5) ÷ 4 --}}
+                    <div class="snap-start shrink-0 w-[85%] sm:w-[46%] lg:w-[calc((100%-3.75rem)/4)]">
+                        <x-site.property-card :property="$property" />
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- ===================== المحافظات ===================== --}}
+    @if ($governorates->count())
+        <section id="governorates" class="max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-10 scroll-mt-24" x-data="carousel">
             {{-- الترويسة + أسهم التنقل --}}
             <div class="mb-7">
                 <div>
@@ -194,46 +226,43 @@
                         class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('التغطية الجغرافية', 'Coverage') }}</span>
                     <div class="flex items-center justify-between gap-4 mb-1">
                         <h2 class="text-2xl sm:text-3xl font-bold text-ink">
-                            {{ $it($areasC, 'title') ?: $t('أفضل المناطق', 'Best Areas') }}</h2>
+                            {{ $it($govC, 'title') ?: $t('المحافظات', 'Governorates') }}</h2>
                         <x-site.carousel-nav class="flex" />
                     </div>
-                    <p class="text-gray-500 text-sm">{{ $it($areasC, 'description') }}</p>
+                    <p class="text-gray-500 text-sm">{{ $it($govC, 'description') }}</p>
                 </div>
             </div>
 
-            {{-- شريط المناطق --}}
+            {{-- شريط المحافظات: كل بطاقة تفتح عقارات المحافظة كلها --}}
             <div x-ref="track"
                 class="flex gap-4 overflow-x-auto snap-x scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                @foreach ($areasC['items'] as $item)
-                    @php $area = $areas[$item['area_id']] ?? null; @endphp
-                    @if ($area)
-                        <a href="{{ route('site.properties', ['area' => $area->id]) }}" {{-- على lg: خمس بطاقات في الصف بالضبط — العرض = (100% ناقص 4 فواصل gap-4) ÷ 5 --}}
-                            class="relative snap-start shrink-0 w-[46%] sm:w-[31%] lg:w-[calc((100%-4rem)/5)] rounded-3xl overflow-hidden aspect-[3/2] group block bg-primary-900">
-                            @if ($img($item['image'] ?? null))
-                                <img src="{{ $img($item['image']) }}"
-                                    class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                                    alt="{{ $area->name }}">
-                            @endif
-                            <div
-                                class="absolute inset-0 bg-gradient-to-t from-primary-950/90 via-primary-950/25 to-transparent">
+                @foreach ($governorates as ['city' => $city, 'image' => $image])
+                    <a href="{{ route('site.properties', ['city' => $city->id]) }}" {{-- على lg: خمس بطاقات في الصف بالضبط — العرض = (100% ناقص 4 فواصل gap-4) ÷ 5 --}}
+                        class="relative snap-start shrink-0 w-[46%] sm:w-[31%] lg:w-[calc((100%-4rem)/5)] rounded-3xl overflow-hidden aspect-[3/2] group block bg-primary-900">
+                        @if ($img($image))
+                            <img src="{{ $img($image) }}"
+                                class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                alt="{{ $city->name }}">
+                        @endif
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-primary-950/90 via-primary-950/25 to-transparent">
+                        </div>
+                        <div class="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="font-bold text-white truncate">{{ $city->name }}</p>
+                                <p class="text-xs text-accent-400">{{ $city->properties_count }}
+                                    {{ $t('عقار', 'properties') }}</p>
                             </div>
-                            <div class="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-2">
-                                <div class="min-w-0">
-                                    <p class="font-bold text-white truncate">{{ $area->name }}</p>
-                                    <p class="text-xs text-accent-400">{{ $area->properties_count }}
-                                        {{ $t('عقار', 'properties') }}</p>
-                                </div>
-                                <span
-                                    class="grid place-items-center w-9 h-9 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 text-white shrink-0 group-hover:bg-accent-500 group-hover:text-primary-900 group-hover:border-accent-500 transition">
-                                    <svg class="{{ $loc === 'ar' ? '' : 'rotate-180' }}" width="15" height="15"
-                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                                        stroke-linecap="round">
-                                        <path d="m15 18-6-6 6-6" />
-                                    </svg>
-                                </span>
-                            </div>
-                        </a>
-                    @endif
+                            <span
+                                class="grid place-items-center w-9 h-9 rounded-full bg-white/15 backdrop-blur-sm border border-white/25 text-white shrink-0 group-hover:bg-accent-500 group-hover:text-primary-900 group-hover:border-accent-500 transition">
+                                <svg class="{{ $loc === 'ar' ? '' : 'rotate-180' }}" width="15" height="15"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                    stroke-linecap="round">
+                                    <path d="m15 18-6-6 6-6" />
+                                </svg>
+                            </span>
+                        </div>
+                    </a>
                 @endforeach
             </div>
         </section>

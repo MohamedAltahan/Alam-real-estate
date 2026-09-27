@@ -57,6 +57,7 @@ class ProfileSettingsController extends Controller
             // إعداد عام للموقع (شارة «مشغول / مباع») — يظهر فقط لمن يملك تعديل الموقع
             'canEditSite' => $user->can('website.edit'),
             'siteBusyBadge' => SiteFlags::busyBadgeEnabled(),
+            'siteMaintenance' => SiteFlags::maintenance(),
         ]);
     }
 
@@ -162,6 +163,38 @@ class ProfileSettingsController extends Controller
         }
 
         return $this->redirectTo('preferences', 'تم حفظ تفضيلات العرض.');
+    }
+
+    /** إيقاف الموقع العام مؤقتاً (وضع الصيانة) أو إعادة تشغيله — إعداد عام لمن يملك تعديل الموقع */
+    public function updateSiteMaintenance(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->can('website.edit'), 403);
+
+        $request->validate(['enabled' => ['required', 'boolean']]);
+
+        if (! $request->boolean('enabled')) {
+            Setting::set(SiteFlags::GROUP, SiteFlags::MAINTENANCE, null);
+
+            return $this->redirectTo('preferences', 'تم تشغيل الموقع — عاد ظاهراً للزوار ومحركات البحث.');
+        }
+
+        // ضغطة مكررة لا تُصفّر مدة الإيقاف (تنبيه التوقف الطويل يُحسب منها)
+        if (! SiteFlags::maintenance()) {
+            Setting::set(SiteFlags::GROUP, SiteFlags::MAINTENANCE, [
+                'since' => now()->toIso8601String(),
+                'by' => $request->user()->name,
+            ]);
+        }
+
+        return $this->redirectTo('preferences', 'تم إيقاف الموقع مؤقتاً — الزوار يرون الآن صفحة «نعود قريباً».');
+    }
+
+    /** صفحة الصيانة كما يراها الزائر — فريق العمل لا يراها على الموقع لأنه مسجَّل دخول */
+    public function previewSiteMaintenance(Request $request): View
+    {
+        abort_unless($request->user()->can('website.edit'), 403);
+
+        return view('site.maintenance', ['preview' => true]);
     }
 
     private function requestedTab(Request $request): string

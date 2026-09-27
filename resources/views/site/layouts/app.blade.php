@@ -123,7 +123,10 @@
                     <ul class="space-y-3 text-sm text-gray-500">
                         <li><a href="{{ route('site.home') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('الرئيسية', 'Home') }}</a></li>
                         <li><a href="{{ route('site.about') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('من نحن', 'About') }}</a></li>
-                        <li><a href="{{ route('site.home') }}#areas" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('أفضل المناطق', 'Top Areas') }}</a></li>
+                        {{-- قسم «المحافظات» يُخفيه المدير من «إدارة الموقع» فيختفي رابطه معه --}}
+                        @unless (in_array('areas', \App\Models\PageSection::hiddenKeys('home'), true))
+                            <li><a href="{{ route('site.home') }}#governorates" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('المحافظات', 'Governorates') }}</a></li>
+                        @endunless
                         <li><a href="{{ route('site.properties') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('العقارات', 'Properties') }}</a></li>
                         <li><a href="{{ route('site.list-property') }}" class="transition hover:text-primary-700 active:text-primary-800 active:opacity-70">{{ $t('اعرض عقارك', 'List your property') }}</a></li>
                     </ul>
@@ -172,6 +175,25 @@
             </div>
         </div>
     </footer>
+
+    {{-- ===== وضع الصيانة: الموقع ظاهر لفريق العمل المسجَّل دخوله فقط — تذكير بما يراه الزوار ===== --}}
+    @if (request()->attributes->get('site_maintenance'))
+        @php
+            $maintCls = 'fixed bottom-5 left-5 z-40 max-w-[calc(100vw-6.5rem)] inline-flex items-center gap-2 rounded-full bg-warning text-white shadow-lg shadow-warning/30 px-4 py-2.5 text-xs font-bold';
+            $maintText = $t('وضع الصيانة مفعّل · الزوار يرون صفحة «نعود قريباً»', 'Maintenance on · visitors see the “back soon” page');
+        @endphp
+        @can('website.edit')
+            <a href="{{ route('dashboard.profile.edit', ['tab' => 'preferences']) }}#site-status" class="{{ $maintCls }} hover:brightness-110 transition">
+                <span class="w-2 h-2 shrink-0 rounded-full bg-white animate-pulse"></span>
+                <span class="truncate">{{ $maintText }}</span>
+            </a>
+        @else
+            <div class="{{ $maintCls }}">
+                <span class="w-2 h-2 shrink-0 rounded-full bg-white animate-pulse"></span>
+                <span class="truncate">{{ $maintText }}</span>
+            </div>
+        @endcan
+    @endif
 
     {{-- ===== أزرار عائمة ===== --}}
     <div class="fixed bottom-5 right-5 z-40 flex flex-col gap-2">

@@ -239,6 +239,10 @@
                         </button>
                     </div>
                 </form>
+
+                @if ($canEditSite)
+                    @include('dashboard.profile._site-maintenance')
+                @endif
             @endif
         </div>
 

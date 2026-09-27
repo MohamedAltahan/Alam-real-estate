@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Area;
+use App\Models\City;
 use App\Models\Faq;
 use App\Models\Page;
 use App\Models\PageSection;
@@ -17,7 +17,8 @@ use Illuminate\View\View;
 
 class WebsiteController extends Controller
 {
-    private const HOME_SECTIONS = ['hero', 'featured', 'areas', 'videos', 'why_us', 'testimonials', 'cta'];
+    /** areas = قسم «المحافظات» (المفتاح القديم باقٍ حتى لا تنفصل عنه صوره) */
+    private const HOME_SECTIONS = ['hero', 'featured', 'areas', 'videos', 'why_us', 'testimonials', 'cta', 'featured_properties'];
 
     private const ABOUT_SECTIONS = ['hero', 'story', 'values', 'team'];
 
@@ -49,7 +50,8 @@ class WebsiteController extends Controller
             'privacy' => $this->legalBody('privacy'),
             'offersHeader' => $this->listingHeader('offers'),
             'propsHeader' => $this->listingHeader('properties'),
-            'areas' => Area::where('is_active', true)->withCount('properties')->orderBy('sort_order')->get(),
+            'cities' => City::where('is_active', true)->withCount('properties')->orderBy('sort_order')->get(),
+            'featuredCount' => Property::featured()->count(),
             // العقارات المرشَّحة لقسم الفيديوهات (لها رابط يوتيوب فقط)
             'videoPool' => Property::withVideo()->latest()->get(['id', 'reference_code', 'title', 'video_url']),
             'faqs' => Faq::orderBy('sort_order')->get(),
@@ -90,13 +92,25 @@ class WebsiteController extends Controller
             en: ['title' => $ft['title_en'] ?? '', 'description' => $ft['description_en'] ?? '']
         );
 
-        // --- Areas: بنود ديناميكية بلا حد، صورة كل بند في مجموعة مستقلة ---
+        // --- العقارات المميزة: تُعرض تلقائياً (المعلَّم عليها «عقار مميّز»)، وهنا الترويسة والإظهار فقط ---
+        $fp = $request->input('featured_properties', []);
+        $featuredProps = $this->section($home, 'featured_properties', 7);
+        $featuredProps->is_visible = $request->boolean('featured_properties.visible', true);
+
+        $this->fill($featuredProps, shared: [],
+            ar: ['title' => $fp['title_ar'] ?? '', 'description' => $fp['description_ar'] ?? ''],
+            en: ['title' => $fp['title_en'] ?? '', 'description' => $fp['description_en'] ?? '']
+        );
+
+        // --- المحافظات (مفتاح القسم areas): بنود ديناميكية بلا حد، صورة كل بند في مجموعة مستقلة ---
         $ar = $request->input('areas', []);
         $areas = $this->section($home, 'areas', 2);
+        $areas->is_visible = $request->boolean('areas.visible', true);
         $areaItems = [];
 
         foreach ((array) $request->input('area_items', []) as $uid => $it) {
-            if (empty($it['area_id'])) {
+            // بند بلا محافظة أو بمحافظة مكررة ⇒ يُتجاهل (وتُحذف صورته مع التنظيف)
+            if (empty($it['city_id']) || in_array((string) $it['city_id'], array_column($areaItems, 'city_id'), true)) {
                 continue;
             }
             // اسم المجموعة = المعرّف نفسه بعد التنقية (idempotent — لا تُضاف البادئة مرّتين)
@@ -105,7 +119,7 @@ class WebsiteController extends Controller
             $this->syncMedia($request, $areas, $collection, "area_items.$uid.image", (array) ($it['image_removed'] ?? []), single: true);
 
             $areaItems[] = [
-                'area_id' => $it['area_id'],
+                'city_id' => (string) $it['city_id'],
                 'collection' => $collection,
             ];
         }

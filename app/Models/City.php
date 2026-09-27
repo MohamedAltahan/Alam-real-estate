@@ -21,4 +21,10 @@ class City extends Model
     {
         return $this->hasMany(Area::class)->orderBy('sort_order')->orderBy('id');
     }
+
+    /** عقارات المحافظة (city_id على العقار نفسه — يُستنتج من منطقته عند الحفظ) */
+    public function properties(): HasMany
+    {
+        return $this->hasMany(Property::class);
+    }
 }

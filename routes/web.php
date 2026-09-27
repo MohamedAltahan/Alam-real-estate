@@ -24,22 +24,27 @@ use App\Http\Controllers\Dashboard\WebsiteController;
 use App\Http\Controllers\Dashboard\WhatsAppController;
 use App\Http\Controllers\Site\SiteController;
 use App\Http\Controllers\Webhooks\KhabeerSoftWebhookController;
+use App\Http\Middleware\SiteMaintenance;
 use Illuminate\Support\Facades\Route;
 
 // ===== الموقع العام =====
-Route::get('/', [SiteController::class, 'home'])->name('site.home');
+// تبديل اللغة خارج وضع الصيانة حتى تُقرأ صفحة «نعود قريباً» بالعربي والإنجليزي
 Route::get('/locale/{locale}', [SiteController::class, 'switchLocale'])->name('site.locale');
-Route::get('/properties', [SiteController::class, 'properties'])->name('site.properties');
-Route::get('/properties/{property}', [SiteController::class, 'property'])->name('site.property');
-Route::get('/agents/{agent}', [SiteController::class, 'agent'])->name('site.agent');
-Route::get('/about', [SiteController::class, 'about'])->name('site.about');
-Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
-Route::post('/contact', [SiteController::class, 'storeContact'])->middleware('throttle:5,1')->name('site.contact.store');
-Route::get('/list-property', [SiteController::class, 'listProperty'])->name('site.list-property');
-Route::post('/list-property', [SiteController::class, 'storeListProperty'])->middleware('throttle:5,1')->name('site.list-property.store');
-Route::get('/faq', [SiteController::class, 'faq'])->name('site.faq');
-Route::get('/terms', [SiteController::class, 'terms'])->name('site.terms');
-Route::get('/privacy', [SiteController::class, 'privacy'])->name('site.privacy');
+
+Route::middleware(SiteMaintenance::class)->group(function () {
+    Route::get('/', [SiteController::class, 'home'])->name('site.home');
+    Route::get('/properties', [SiteController::class, 'properties'])->name('site.properties');
+    Route::get('/properties/{property}', [SiteController::class, 'property'])->name('site.property');
+    Route::get('/agents/{agent}', [SiteController::class, 'agent'])->name('site.agent');
+    Route::get('/about', [SiteController::class, 'about'])->name('site.about');
+    Route::get('/contact', [SiteController::class, 'contact'])->name('site.contact');
+    Route::post('/contact', [SiteController::class, 'storeContact'])->middleware('throttle:5,1')->name('site.contact.store');
+    Route::get('/list-property', [SiteController::class, 'listProperty'])->name('site.list-property');
+    Route::post('/list-property', [SiteController::class, 'storeListProperty'])->middleware('throttle:5,1')->name('site.list-property.store');
+    Route::get('/faq', [SiteController::class, 'faq'])->name('site.faq');
+    Route::get('/terms', [SiteController::class, 'terms'])->name('site.terms');
+    Route::get('/privacy', [SiteController::class, 'privacy'])->name('site.privacy');
+});
 
 // ===== ويب هوك بوابة واتساب: حالة الرسائل (أُرسلت · وصلت · قُرئت) — بلا جلسة، موقَّع بـ HMAC =====
 Route::post('webhooks/khabeersoft', KhabeerSoftWebhookController::class)->name('webhooks.khabeersoft');
@@ -56,6 +61,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('profile/password', [ProfileSettingsController::class, 'updatePassword'])->name('profile.password');
         Route::put('profile/notifications', [ProfileSettingsController::class, 'updateNotifications'])->name('profile.notifications');
         Route::put('profile/preferences', [ProfileSettingsController::class, 'updatePreferences'])->name('profile.preferences');
+        // إيقاف/تشغيل الموقع العام (وضع الصيانة) + معاينة ما يراه الزوار
+        Route::put('profile/site-maintenance', [ProfileSettingsController::class, 'updateSiteMaintenance'])->name('profile.site-maintenance');
+        Route::get('profile/site-maintenance/preview', [ProfileSettingsController::class, 'previewSiteMaintenance'])->name('profile.site-maintenance.preview');
 
         // ===== الإشعارات =====
         Route::middleware('can:notifications.view')->group(function () {

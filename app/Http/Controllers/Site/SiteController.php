@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Site;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\City;
 use App\Models\ContactRequest;
 use App\Models\Faq;
 use App\Models\Page;
+use App\Models\PageSection;
 use App\Models\Property;
 use App\Models\PropertyCategory;
 use App\Models\RequestType;
@@ -16,6 +18,7 @@ use App\Models\User;
 use App\Support\Honeypot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -37,11 +40,13 @@ class SiteController extends Controller
     public function home(): View
     {
         $c = $this->pageSections('home');
-        $areaIds = collect($c['areas']['items'] ?? [])->pluck('area_id')->filter();
+        $hidden = PageSection::hiddenKeys('home');
 
         return view('site.home', [
             'c' => $c,
-            'areas' => Area::whereIn('id', $areaIds)->withCount('properties')->get()->keyBy('id'),
+            // القسمان يُخفيهما المدير من «إدارة الموقع» (قسم areas = المحافظات)
+            'featuredProperties' => in_array('featured_properties', $hidden, true) ? collect() : $this->homeFeatured(),
+            'governorates' => in_array('areas', $hidden, true) ? collect() : $this->homeGovernorates($c['areas'] ?? []),
             'testimonials' => Testimonial::where('is_active', true)->orderBy('sort_order')->get(),
             'searchAreas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
@@ -74,6 +79,36 @@ class SiteController extends Controller
         return Property::withVideo()->latest()->take(8)->get();
     }
 
+    /** العقارات المعلَّم عليها «عقار مميّز» من لوحة التحكم — الأحدث أولاً */
+    private function homeFeatured(): Collection
+    {
+        return Property::featured()
+            ->with(['area', 'agent', 'status', 'media'])
+            ->latest()->take(12)->get();
+    }
+
+    /**
+     * بطاقات المحافظات: ما اختاره المحرّر بترتيبه مع صورة كل بطاقة،
+     * وعدد عقارات المحافظة يُحسب الآن لا من رقم مخزَّن في المحتوى.
+     *
+     * @return Collection<int, array{city: City, image: ?string}>
+     */
+    private function homeGovernorates(array $section): Collection
+    {
+        $items = collect($section['items'] ?? [])->filter(fn ($it) => ! empty($it['city_id']));
+
+        $cities = City::where('is_active', true)
+            ->whereIn('id', $items->map(fn ($it) => (int) $it['city_id']))
+            ->withCount('properties')
+            ->get()
+            ->keyBy('id');
+
+        return $items
+            ->map(fn ($it) => ($city = $cities->get((int) $it['city_id'])) ? ['city' => $city, 'image' => $it['image'] ?? null] : null)
+            ->filter()
+            ->values();
+    }
+
     /** قائمة العقارات مع الفلاتر */
     public function properties(Request $request): View
     {
@@ -81,6 +116,7 @@ class SiteController extends Controller
             ->with(['area', 'agent', 'status', 'unitType', 'media'])
             ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
             ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
+            ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
             ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
             ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
             ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
@@ -104,8 +140,12 @@ class SiteController extends Controller
             'header' => $this->pageHeader('properties'),
             'categories' => PropertyCategory::where('is_active', true)->get(),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
-            'areas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
-            'filters' => $request->only('category', 'unit_type', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
+            'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
+            // اختيار محافظة يقصر قائمة المناطق على مناطقها
+            'areas' => Area::where('is_active', true)
+                ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
+                ->orderBy('sort_order')->get(),
+            'filters' => $request->only('category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
         ]);
     }
 

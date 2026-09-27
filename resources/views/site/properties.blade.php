@@ -38,7 +38,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 class="text-xl sm:text-2xl font-bold text-ink">{{ $t('أكثر من', 'More than') }} {{ number_format($properties->total()) }} {{ $t('بيت في عروض العقارات', 'properties available') }}</h2>
         <form method="GET" class="relative">
-            @foreach (['category', 'unit_type', 'area', 'bedrooms', 'purpose', 'reference', 'price'] as $f)
+            @foreach (['category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'] as $f)
                 @if (data_get($filters, $f))<input type="hidden" name="{{ $f }}" value="{{ data_get($filters, $f) }}">@endif
             @endforeach
             <select name="sort" onchange="this.form.submit()"
@@ -103,6 +103,18 @@
                             <input type="radio" name="unit_type" value="{{ $u->id }}" @checked(($filters['unit_type'] ?? '') == $u->id) onchange="this.form.submit()" class="{{ $radio }}"></label>
                     @endforeach
                 </div>
+
+                {{-- المحافظة: تقصر قائمة المناطق على مناطقها، فتغييرها يلغي المنطقة المختارة --}}
+                @if ($cities->count())
+                    <div class="py-3 border-t border-gray-100">
+                        <p class="{{ $groupTitle }}">{{ $t('المحافظة', 'Governorate') }}</p>
+                        @foreach ($cities as $city)
+                            <label class="{{ $optRow }}"><span>{{ $city->name }}</span>
+                                <input type="radio" name="city" value="{{ $city->id }}" @checked(($filters['city'] ?? '') == $city->id)
+                                       onchange="this.form.querySelectorAll('input[name=area]').forEach(r => r.checked = false); this.form.submit()" class="{{ $radio }}"></label>
+                        @endforeach
+                    </div>
+                @endif
 
                 {{-- المنطقة: قائمة طويلة ← بحث + ارتفاع محدود بتمرير داخلي، والمنطقة المختارة أولاً --}}
                 @php $selArea = (string) ($filters['area'] ?? ''); @endphp
