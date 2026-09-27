@@ -53,6 +53,9 @@ final class PropertyFields
         'is_featured' => 'مميز',
         'is_furnished' => 'مفروش',
         'owner_commission_rate' => 'عمولة المالك (%)',
+        'guard_name' => 'اسم الحارس',
+        'guard_phone_code' => 'مفتاح دولة الحارس',
+        'guard_phone' => 'رقم الحارس',
         'rating' => 'التقييم',
         'reviews_count' => 'عدد التقييمات',
     ];
@@ -77,5 +80,17 @@ final class PropertyFields
     public static function label(string $field): string
     {
         return self::LABELS[$field] ?? $field;
+    }
+
+    /** نسبة العمولة كما تُخزَّن (منزلتان): 2.5 · "2.5" · "2.50" ← "2.50" — مفتاح فلتر ثابت على كل قواعد البيانات */
+    public static function rateKey(mixed $rate): string
+    {
+        return number_format((float) $rate, 2, '.', '');
+    }
+
+    /** «2.5%» بلا أصفار زائدة */
+    public static function percent(mixed $rate): string
+    {
+        return rtrim(rtrim(self::rateKey($rate), '0'), '.').'%';
     }
 }

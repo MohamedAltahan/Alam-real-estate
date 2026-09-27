@@ -47,6 +47,7 @@ final class ClientFields
         'pending' => 'قيد الانتظار',
         'studying' => 'قيد الدراسة',
         'interested' => 'مهتم',
+        'won' => 'ربح',
         'not_interested' => 'غير مهتم',
         'cancelled' => 'إلغاء الموعد',
     ];
@@ -56,6 +57,7 @@ final class ClientFields
         'pending' => 'bg-warning-soft text-warning',
         'studying' => 'bg-info-soft text-info',
         'interested' => 'bg-success-soft text-success',
+        'won' => 'bg-success text-white',
         'not_interested' => 'bg-danger/10 text-danger',
         'cancelled' => 'bg-gray-100 text-gray-500',
     ];
@@ -79,6 +81,7 @@ final class ClientFields
         'notes' => 'الملاحظات',
         'recorded_by' => 'سجّل البيانات',
         'is_featured' => 'طلب مميز',
+        'featured_notes' => 'ملاحظات الطلب المميز',
         'category' => 'نوع العقار',
         'unit_type_id' => 'نوع الوحدة',
         'area_size' => 'المساحة (م²)',
@@ -172,6 +175,12 @@ final class ClientFields
     public static function outcomeTone(?string $outcome): string
     {
         return self::OUTCOME_TONES[$outcome] ?? 'bg-gray-100 text-gray-500';
+    }
+
+    /** خيارات قائمة النتيجة اليدوية: «ربح» لا يُختار يدوياً (يأتي من تغيير حالة الطلب) إلا إن كانت هي الحالية */
+    public static function manualOutcomes(?string $current): array
+    {
+        return $current === 'won' ? self::OUTCOMES : array_diff_key(self::OUTCOMES, ['won' => true]);
     }
 
     public static function actionLabel(string $action): string

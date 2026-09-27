@@ -9,6 +9,7 @@ use App\Models\PropertyOwner;
 use App\Models\User;
 use App\Models\WhatsappInstance;
 use App\Models\WhatsappMessage;
+use App\Models\WhatsappTemplate;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Support\WhatsAppTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,14 +38,19 @@ class WhatsAppViewingsTest extends TestCase
 
         $agent = User::factory()->create(['name' => 'دلال', 'phone' => '+96599000005', 'is_agent' => true]);
 
-        $this->owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55110000']);
-        $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55110000', 'role' => 'المالك', 'name' => 'أبو خالد', 'sort_order' => 0]);
-        $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55220000', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
+        // موبايل المالك نفسه للعرض في صفحته فقط — لا يُعرض كمستلم أبداً
+        $this->owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55110000', 'mobile_code' => '+965', 'mobile' => '55990000']);
+        $ownerSelf = $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55110000', 'role' => 'المالك', 'name' => 'أبو خالد', 'sort_order' => 0]);
+        $ownerAgent = $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55220000', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
+        // مسؤول لدى المالك لم يُختر لهذا العقار — لا تصله الرسائل
+        $this->owner->contacts()->create(['phone_code' => '+965', 'phone' => '55440000', 'role' => 'المدير', 'name' => 'ناصر', 'sort_order' => 2]);
 
-        $this->property = Property::create(['reference_code' => '12', 'title' => ['ar' => 'شقة السالمية', 'en' => 'Salmiya flat'], 'owner_id' => $this->owner->id]);
-        // المسؤولون عن العقار — إليهم تذهب الرسائل (لا المالك ولا العميل)
-        $this->property->contacts()->create(['phone_code' => '+965', 'phone' => '55110000', 'role' => 'الحارس', 'name' => 'أبو خالد', 'sort_order' => 0]);
-        $this->property->contacts()->create(['phone_code' => '+965', 'phone' => '55220000', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
+        // المسؤولون المختارون من مسؤولي المالك + حارس العقار — إليهم تذهب الرسائل (لا باقي أرقام المالك ولا العميل)
+        $this->property = Property::create([
+            'reference_code' => '12', 'title' => ['ar' => 'شقة السالمية', 'en' => 'Salmiya flat'], 'owner_id' => $this->owner->id,
+            'guard_name' => 'أبو فهد', 'guard_phone_code' => '+965', 'guard_phone' => '55330000',
+        ]);
+        $this->property->responsibles()->attach([$ownerAgent->id, $ownerSelf->id]);
         $this->client = Client::create(['name' => 'عميل المعاينة', 'phone_code' => '+965', 'phone' => '66000001', 'agent_id' => $agent->id]);
         $this->viewing = $this->client->viewings()->create(['property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->setTime(17, 0)]);
     }
@@ -149,10 +155,14 @@ class WhatsAppViewingsTest extends TestCase
         Http::fake(['*/messages/send' => Http::response(['id' => 123, 'status' => 'queued', 'delay_ms' => 2400], 202)]);
         $user = $this->userWith(['clients.view', 'clients.edit']);
 
-        // زر الإرسال يحمل كل أرقام المسؤولين عن العقار بصفاتها ونص القالب معبّأً
-        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->load('property.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER);
-        $this->assertSame(['96555110000', '96555220000'], array_column($payload['recipients'], 'phone'));
+        // زر الإرسال يحمل المسؤولين المختارين (بترتيب مسؤولي المالك) ثم الحارس بصفاتهم ونص القالب معبّأً
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->load('property.responsibles', 'client.agent'), WhatsAppTemplates::KIND_OWNER);
+        $this->assertSame(['96555110000', '96555220000', '96555330000'], array_column($payload['recipients'], 'phone'));
         $this->assertSame('الوكيل · سالم', $payload['recipients'][1]['label']);
+        $this->assertSame('حارس العقار · أبو فهد', $payload['recipients'][2]['label']);
+        $this->assertNotContains('96555990000', array_column($payload['recipients'], 'phone'));
+        $this->assertStringNotContainsString('55990000', json_encode($payload, JSON_UNESCAPED_UNICODE));
+        $this->assertStringContainsString('السلام عليكم أبو فهد', $payload['bodies']['96555330000']);
         $this->assertStringContainsString('السلام عليكم سالم', $payload['bodies']['96555220000']);
         $this->assertStringContainsString('عميل المعاينة', $payload['bodies']['96555220000']);
         // هاتف العميل: مفتاح ملتصق بالرقم مع LRM وآخر رقمين مخفيان
@@ -160,6 +170,10 @@ class WhatsAppViewingsTest extends TestCase
         $this->assertStringNotContainsString('66000001', $payload['bodies']['96555220000']);
         $this->assertStringContainsString("\u{200E}+96599000005", $payload['bodies']['96555220000']);
         $this->assertStringContainsString('12 — شقة السالمية', $payload['bodies']['96555220000']);
+        // رابط صفحة العقار على الموقع تحت سطر اسم العقار مباشرة
+        $lines = explode("\n", $payload['bodies']['96555220000']);
+        $titleLine = collect($lines)->search(fn ($line) => str_contains($line, '12 — شقة السالمية'));
+        $this->assertSame('رابط العقار: '.route('site.property', $this->property), $lines[$titleLine + 1]);
 
         $this->actingAs($user)->get(route('dashboard.clients.show', $this->client))
             ->assertOk()
@@ -286,9 +300,9 @@ class WhatsAppViewingsTest extends TestCase
 
         $this->viewing->forceFill(['outcome' => ClientViewing::OUTCOME_INTERESTED, 'outcome_at' => now()])->save();
 
-        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.contacts'), WhatsAppTemplates::KIND_CLIENT);
-        $this->assertSame(['96555110000', '96555220000'], array_column($payload['recipients'], 'phone'));
-        $this->assertSame('الحارس · أبو خالد', $payload['recipients'][0]['label']);
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.responsibles'), WhatsAppTemplates::KIND_CLIENT);
+        $this->assertSame(['96555110000', '96555220000', '96555330000'], array_column($payload['recipients'], 'phone'));
+        $this->assertSame('المالك · أبو خالد', $payload['recipients'][0]['label']);
         $this->assertStringContainsString('السلام عليكم أبو خالد', $payload['bodies']['96555110000']);
         $this->assertStringContainsString('نتيجة المعاينة: مهتم', $payload['bodies']['96555110000']);
         $this->assertStringContainsString('عميل المعاينة', $payload['bodies']['96555110000']);
@@ -307,12 +321,21 @@ class WhatsAppViewingsTest extends TestCase
         Http::assertNotSent(fn (ClientRequest $r) => $r['to'] === '96566000001');
     }
 
-    public function test_owner_numbers_are_never_offered_when_the_property_has_no_contacts(): void
+    public function test_owner_numbers_are_never_offered_when_the_property_has_no_responsibles(): void
     {
-        $this->property->contacts()->delete();
+        $this->property->responsibles()->detach();
+        $this->property->update(['guard_name' => null, 'guard_phone_code' => null, 'guard_phone' => null]);
 
-        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.contacts'), WhatsAppTemplates::KIND_OWNER);
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.responsibles'), WhatsAppTemplates::KIND_OWNER);
         $this->assertSame([], $payload['recipients']);
+    }
+
+    public function test_the_guard_is_offered_once_even_when_he_is_also_a_responsible(): void
+    {
+        $this->property->update(['guard_name' => 'سالم', 'guard_phone' => '55220000']);
+
+        $payload = app(WhatsAppService::class)->sendPayload($this->viewing->fresh()->load('client.agent', 'property.responsibles'), WhatsAppTemplates::KIND_OWNER);
+        $this->assertSame(['96555110000', '96555220000'], array_column($payload['recipients'], 'phone'));
     }
 
     public function test_templates_are_editable_and_used_for_new_messages(): void
@@ -320,18 +343,46 @@ class WhatsAppViewingsTest extends TestCase
         $admin = $this->userWith(['whatsapp.view', 'whatsapp.edit']);
 
         $this->actingAs($admin)->get(route('dashboard.whatsapp.index', ['tab' => 'templates']))
-            ->assertOk()->assertSee('{اسم_العميل}')->assertSee('حفظ القالب');
+            ->assertOk()->assertSee('{اسم_العميل}')->assertSee('{رابط_العقار}')->assertSee('حفظ القالب');
 
         $this->actingAs($admin)->put(route('dashboard.whatsapp.templates.update', WhatsAppTemplates::KIND_OWNER), [
             'body' => 'معاينة {رقم_العقار} للعميل {اسم_العميل} يوم {موعد_المعاينة} — {اسم_المستلم}',
         ])->assertRedirect(route('dashboard.whatsapp.index', ['tab' => 'templates']))->assertSessionHas('success');
 
         $body = app(WhatsAppService::class)
-            ->sendPayload($this->viewing->load('property.contacts', 'client.agent'), WhatsAppTemplates::KIND_OWNER)['bodies']['96555110000'];
+            ->sendPayload($this->viewing->load('property.responsibles', 'client.agent'), WhatsAppTemplates::KIND_OWNER)['bodies']['96555110000'];
 
         $this->assertSame('معاينة 12 للعميل عميل المعاينة يوم '.$this->viewing->scheduled_at->format('Y-m-d — h:i A').' — أبو خالد', $body);
 
         $this->actingAs($admin)->put(route('dashboard.whatsapp.templates.update', 'nope'), ['body' => 'x'])->assertNotFound();
+    }
+
+    public function test_migration_adds_the_property_link_under_the_title_line_of_stored_templates(): void
+    {
+        $old = implode("\n", ['السلام عليكم {اسم_المستلم}،', 'نود إبلاغكم بموعد معاينة للعقار {رقم_العقار} — {اسم_العقار}.', 'العميل: {اسم_العميل}', '', 'علم العقارية']);
+        // قالب معدّل يدوياً: اسم العقار في سطر مختلف
+        $custom = implode("\n", ['مرحباً {اسم_المستلم}', 'العقار: {اسم_العقار}', 'النتيجة: {نتيجة_المعاينة}']);
+        WhatsappTemplate::updateOrCreate(['key' => WhatsAppTemplates::KIND_OWNER], ['name' => 'x', 'body' => $old]);
+        WhatsappTemplate::updateOrCreate(['key' => WhatsAppTemplates::KIND_CLIENT], ['name' => 'y', 'body' => $custom]);
+        $plain = WhatsappTemplate::create(['key' => 'other', 'name' => 'z', 'body' => 'نص بلا متغيّرات']);
+
+        $migration = require database_path('migrations/2026_09_27_000005_add_property_link_to_whatsapp_templates.php');
+        $migration->up();
+        $migration->up();   // لا يتكرر السطر
+
+        $this->assertSame(
+            implode("\n", ['السلام عليكم {اسم_المستلم}،', 'نود إبلاغكم بموعد معاينة للعقار {رقم_العقار} — {اسم_العقار}.', 'رابط العقار: {رابط_العقار}', 'العميل: {اسم_العميل}', '', 'علم العقارية']),
+            WhatsAppTemplates::body(WhatsAppTemplates::KIND_OWNER),
+        );
+        $this->assertSame(
+            implode("\n", ['مرحباً {اسم_المستلم}', 'العقار: {اسم_العقار}', 'رابط العقار: {رابط_العقار}', 'النتيجة: {نتيجة_المعاينة}']),
+            WhatsAppTemplates::body(WhatsAppTemplates::KIND_CLIENT),
+        );
+        $this->assertSame('نص بلا متغيّرات', $plain->fresh()->body);
+
+        $migration->down();
+        $this->assertSame($old, WhatsAppTemplates::body(WhatsAppTemplates::KIND_OWNER));
+        $this->assertSame($custom, WhatsAppTemplates::body(WhatsAppTemplates::KIND_CLIENT));
     }
 
     public function test_viewings_whatsapp_report_counts_both_marks(): void

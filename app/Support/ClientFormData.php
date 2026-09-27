@@ -123,7 +123,7 @@ final class ClientFormData
     /** هل يجب فتح مودال التعديل تلقائياً بسبب أخطاء في الفورم؟ */
     public static function hasFormErrors(ViewErrorBag $errors): bool
     {
-        $fields = ['name', 'phone', 'phone_code', 'email', 'preferred_contact', 'nationality', 'social_status', 'household_size', 'workplace', 'stage_id', 'agent_id', 'notes'];
+        $fields = ['name', 'phone', 'phone_code', 'email', 'preferred_contact', 'nationality', 'social_status', 'household_size', 'workplace', 'stage_id', 'agent_id', 'notes', 'featured_notes'];
 
         if ($errors->hasAny($fields)) {
             return true;

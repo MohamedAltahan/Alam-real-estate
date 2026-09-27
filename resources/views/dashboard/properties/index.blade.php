@@ -39,8 +39,6 @@
                   :reset="array_filter($filters) ? route('dashboard.properties.index') : null">
         <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
                         placeholder="باسم أو رقم العقار..." span="col-span-2 md:col-span-1" />
-        <x-filter-select label="الغرض" name="purpose" placeholder="بيع وإيجار"
-                         :options="['sale' => 'بيع', 'rent' => 'إيجار']" :selected="$filters['purpose'] ?? null" />
         <x-filter-select label="الحالة" name="status_id" placeholder="كل الحالات"
                          :options="$statuses->pluck('name', 'id')" :selected="$filters['status_id'] ?? null" />
         <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
@@ -60,6 +58,12 @@
                 </template>
             </x-filter-select>
         </div>
+        <x-filter-select label="المالك" name="owner_id" placeholder="كل الملاك"
+                         :options="$owners->pluck('name', 'id')" :selected="$filters['owner_id'] ?? null" />
+        <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل المندوبين"
+                         :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
+        <x-filter-select label="نسبة العمولة" name="commission" placeholder="كل النسب"
+                         :options="$commissionOptions" :selected="$filters['commission'] ?? null" />
         <x-filter-select label="المواقع الإلكترونية" name="website_id" placeholder="كل المواقع"
                          :options="$channels[\App\Models\PublishingChannel::KIND_WEBSITE]->pluck('name', 'id')" :selected="$filters['website_id'] ?? null" />
         <x-filter-select label="السوشال ميديا" name="social_id" placeholder="كل القنوات"
@@ -78,6 +82,7 @@
                         <th class="text-start font-medium px-4 py-3">العقار</th>
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
+                        <th class="text-start font-medium px-4 py-3 whitespace-nowrap">نسبة العمولة</th>
                         <th class="text-start font-medium px-4 py-3">الحالة</th>
                         <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                         <th class="text-center font-medium px-3 py-3">المواقع</th>
@@ -118,6 +123,13 @@
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $p->unitType?->name }} · {{ $p->area?->name }}@if ($p->city) <span class="text-gray-400 text-xs">({{ $p->city->name }})</span>@endif</td>
                             <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ number_format($p->price, 3) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
+                            <td class="px-4 py-3 tabular-nums">
+                                @if ($p->owner_commission_rate !== null)
+                                    <span class="font-semibold text-ink" dir="ltr">{{ \App\Support\PropertyFields::percent($p->owner_commission_rate) }}</span>
+                                @else
+                                    <span class="text-gray-300">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">
                                 @can('properties.edit')
                                     {{-- تغيير الحالة من الجدول مباشرة (property-status.js) — النقر لا يفتح العقار --}}
@@ -155,7 +167,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
+                        <tr><td colspan="10" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>

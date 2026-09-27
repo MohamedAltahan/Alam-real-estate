@@ -53,7 +53,9 @@ class PropertyOwnerController extends Controller
     public function show(PropertyOwner $owner): View
     {
         $owner->load([
-            'area.city', 'contacts', 'media',
+            'area.city', 'media',
+            // لكل مسؤول: العقارات التي اختير مسؤولاً عنها
+            'contacts.properties' => fn ($q) => $q->select('properties.id', 'properties.reference_code')->orderBy('properties.id'),
             'properties.area.city', 'properties.status', 'properties.unitType',
             'properties.agent', 'properties.media',
         ]);

@@ -6,6 +6,7 @@ use App\Models\Area;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\PropertyCategory;
+use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\UnitType;
 use App\Models\User;
@@ -72,60 +73,152 @@ class PropertyFormDependenciesTest extends TestCase
         $this->assertSame('https://maps.app.goo.gl/abc', $created->map_url);
         $this->assertSame('برج السالمية', $created->building_name);
         $this->assertSame('2.50', $created->owner_commission_rate);
-        $contact = $created->contacts()->firstOrFail();
-        $this->assertSame('أبو خالد', $contact->name);
-        $this->assertSame('99887766', $contact->phone);
-        $this->assertSame('الحارس', $contact->role);
-        $this->assertSame('96599887766', $contact->whatsapp_number);
+        // حارس العقار: رقمه يُطبَّع (أرقام فقط بلا صفر بادئ)
+        $this->assertSame('أبو خالد', $created->guard_name);
+        $this->assertSame('+965', $created->guard_phone_code);
+        $this->assertSame('99887766', $created->guard_phone);
+        $this->assertSame('96599887766', $created->guard_whatsapp_number);
         $this->assertTrue($created->is_furnished);
         $this->assertSame(3, $created->bedrooms);
     }
 
-    public function test_property_requires_at_least_one_responsible_person_and_syncs_them_by_id(): void
+    public function test_responsibles_are_picked_from_the_selected_owners_contacts(): void
     {
-        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload(['contacts' => []]))
-            ->assertSessionHasErrors('contacts');
+        $owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55112233']);
+        $self = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '55112233', 'role' => 'المالك', 'name' => 'أبو خالد', 'sort_order' => 0]);
+        $agent = $owner->contacts()->create(['phone_code' => '+966', 'phone' => '501234567', 'role' => 'الوكيل', 'name' => 'سالم', 'sort_order' => 1]);
+        $other = PropertyOwner::create(['name' => 'مالك آخر', 'phone_code' => '+965', 'phone' => '66000000']);
+        $foreign = $other->contacts()->create(['phone_code' => '+965', 'phone' => '66000000', 'role' => 'المالك', 'name' => 'فهد']);
 
-        // سطر فارغ بالكامل يُهمل ⇒ لا مسؤول ⇒ خطأ
+        // المالك له مسؤولون ⇒ يُختار واحد على الأقل
+        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload(['owner_id' => $owner->id]))
+            ->assertSessionHasErrors('responsibles');
+
+        // مسؤول من مالك آخر مرفوض
         $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload([
-            'contacts' => [['phone_code' => '+965', 'phone' => '', 'role' => '', 'name' => '']],
-        ]))->assertSessionHasErrors('contacts');
+            'owner_id' => $owner->id, 'responsibles' => [$foreign->id],
+        ]))->assertSessionHasErrors('responsibles.0');
 
         $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload([
-            'contacts' => [
-                ['phone_code' => '+965', 'phone' => '0 5511-2233', 'role' => 'الحارس', 'name' => 'أبو خالد'],
-                ['phone_code' => '+966', 'phone' => '501234567', 'role' => '', 'name' => 'الوكيل سالم'],
-            ],
+            'owner_id' => $owner->id, 'responsibles' => [$agent->id, $self->id],
         ]))->assertSessionHasNoErrors();
 
         $property = Property::latest('id')->firstOrFail();
-        $this->assertSame(['55112233', '501234567'], $property->contacts->pluck('phone')->all());
-        $this->assertSame('مسؤول العقار · الوكيل سالم', $property->contacts->last()->label());
-
-        [$guard, $agent] = $property->contacts;
-
-        // تعديل: الأول يُحدَّث بمعرّفه، الثاني يُحذف، وثالث يُضاف
-        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
-            'contacts' => [
-                ['id' => $guard->id, 'phone_code' => '+965', 'phone' => '55112233', 'role' => 'المدير', 'name' => 'أبو خالد'],
-                ['phone_code' => '+965', 'phone' => '66000000', 'role' => 'الوكيل', 'name' => ''],
-            ],
-        ]))->assertSessionHasNoErrors();
-
-        $property->refresh();
-        $this->assertSame(['المدير', 'الوكيل'], $property->contacts->pluck('role')->all());
-        $this->assertDatabaseMissing('property_contacts', ['id' => $agent->id]);
-        $this->assertSame($guard->id, $property->contacts->first()->id);
-
-        // معرّف يخص عقاراً آخر يُرفض
-        $other = Property::create(['reference_code' => '77', 'title' => ['ar' => 'آخر', 'en' => 'Other']]);
-        $foreign = $other->contacts()->create(['phone_code' => '+965', 'phone' => '11111111']);
-        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
-            'contacts' => [['id' => $foreign->id, 'phone_code' => '+965', 'phone' => '11111111']],
-        ]))->assertSessionHasErrors('contacts.0.id');
+        // بترتيب مسؤولي المالك لا بترتيب الاختيار
+        $this->assertSame([$self->id, $agent->id], $property->responsibles->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame('الوكيل · سالم', $property->responsibles->last()->label());
 
         $this->actingAs($this->user)->get(route('dashboard.properties.show', $property))
-            ->assertOk()->assertSee('المسؤولون عن العقار')->assertSee('المدير · أبو خالد')->assertSee('wa.me/96566000000');
+            ->assertOk()
+            ->assertSee('المسؤولون عن العقار')
+            ->assertSee('الوكيل · سالم')
+            ->assertSee('wa.me/966501234567')
+            ->assertSee('حارس العقار')
+            ->assertSee('wa.me/96599887766');
+
+        // تعديل: إلغاء أحدهما
+        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
+            'owner_id' => $owner->id, 'responsibles' => [$agent->id],
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame([$agent->id], $property->fresh()->responsibles->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        // تغيير المالك يستبدل المسؤولين بمسؤولي المالك الجديد
+        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
+            'owner_id' => $other->id, 'responsibles' => [$foreign->id],
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame([$foreign->id], $property->fresh()->responsibles->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        // حذف المسؤول من المالك يفكّ ربطه بالعقار
+        $foreign->delete();
+        $this->assertCount(0, $property->fresh()->responsibles);
+
+        // المالك بلا مسؤولين مسجّلين لا يمنع الحفظ، والحارس اختياري
+        $this->actingAs($this->user)->put(route('dashboard.properties.update', $property), $this->payload([
+            'owner_id' => $other->id, 'guard_name' => '', 'guard_phone' => '',
+        ]))->assertSessionHasNoErrors();
+        $property->refresh();
+        $this->assertNull($property->guard_phone);
+        $this->assertNull($property->guard_phone_code);
+        $this->assertFalse($property->hasGuard());
+        $this->actingAs($this->user)->get(route('dashboard.properties.show', $property))
+            ->assertOk()->assertSee('رقم الحارس:');
+    }
+
+    public function test_the_owners_own_number_is_labelled_with_the_owner_name(): void
+    {
+        // رقم المالك الأساسي بلا اسم ولا صفة (كما يُنشأ للملاك القدامى)
+        $owner = PropertyOwner::create(['name' => 'هيا السالم', 'phone_code' => '+965', 'phone' => '99667788']);
+        $own = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '99667788']);
+        $other = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '66000000']);
+        $property = Property::create(['reference_code' => '41', 'title' => ['ar' => 'شقة', 'en' => 'Flat'], 'owner_id' => $owner->id]);
+        $property->responsibles()->attach([$own->id, $other->id]);
+
+        $this->assertSame('المالك · هيا السالم', $own->label($owner));
+        $this->assertSame('مسؤول العقار', $other->label($owner));
+        $this->assertSame('مسؤول العقار', $own->label());
+
+        $this->actingAs($this->user)->get(route('dashboard.properties.show', $property))
+            ->assertOk()->assertSee('المالك · هيا السالم');
+    }
+
+    public function test_commission_location_guard_and_responsibles_always_show_for_any_viewer(): void
+    {
+        // مستخدم بصلاحية عرض العقارات فقط (مثل مندوب المبيعات) — بلا صلاحية الملاك
+        $viewer = User::factory()->create();
+        $viewer->givePermissionTo(Permission::firstOrCreate(['name' => 'properties.view', 'guard_name' => 'web']));
+
+        $owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55112233']);
+        $agent = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '66000000', 'role' => 'الوكيل', 'name' => 'سالم']);
+        $full = Property::create([
+            'reference_code' => '51', 'title' => ['ar' => 'شقة كاملة', 'en' => 'Full'], 'owner_id' => $owner->id,
+            'area_id' => $this->area->id, 'city_id' => $this->city->id, 'block' => '4', 'street' => '12',
+            'map_url' => 'https://maps.app.goo.gl/xyz', 'owner_commission_rate' => 2.5,
+            'guard_name' => 'أبو فهد', 'guard_phone_code' => '+965', 'guard_phone' => '99001122',
+        ]);
+        $full->responsibles()->attach($agent->id);
+
+        $this->actingAs($viewer)->get(route('dashboard.properties.show', $full))
+            ->assertOk()
+            ->assertSee('نسبة العمولة من المالك')->assertSee('2.5%')
+            ->assertSee('الموقع')->assertSee('قطعة 4 · شارع 12')->assertSee('https://maps.app.goo.gl/xyz')
+            ->assertSee('رقم الحارس:')->assertSee('+965 99001122')->assertSee('أبو فهد')
+            ->assertSee('المسؤولون عن العقار')->assertSee('الوكيل · سالم')->assertSee('+965 66000000');
+
+        // عقار بلا أي من هذه البيانات: الأقسام نفسها تظهر بقيم فارغة
+        $empty = Property::create(['reference_code' => '52', 'title' => ['ar' => 'شقة فارغة', 'en' => 'Empty']]);
+
+        $this->actingAs($viewer)->get(route('dashboard.properties.show', $empty))
+            ->assertOk()
+            ->assertSee('نسبة العمولة من المالك')
+            ->assertSee('الموقع')->assertSee('لا يوجد رابط موقع على خرائط جوجل')
+            ->assertSee('حارس العقار')->assertSee('رقم الحارس:')
+            ->assertSee('المسؤولون عن العقار')->assertSee('لم يُختر مسؤول عن هذا العقار بعد');
+    }
+
+    public function test_guard_phone_must_be_digits(): void
+    {
+        $this->actingAs($this->user)->post(route('dashboard.properties.store'), $this->payload(['guard_phone' => '12']))
+            ->assertSessionHasErrors('guard_phone');
+    }
+
+    public function test_edit_form_shows_the_owner_responsibles_picker_and_the_guard(): void
+    {
+        $owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55112233']);
+        $contact = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '55112233', 'role' => 'المالك', 'name' => 'أبو خالد']);
+        $property = Property::create([
+            'reference_code' => '31', 'title' => ['ar' => 'شقة', 'en' => 'Flat'], 'owner_id' => $owner->id,
+            'guard_name' => 'أبو فهد', 'guard_phone_code' => '+965', 'guard_phone' => '99001122',
+        ]);
+        $property->responsibles()->attach($contact->id);
+
+        $this->actingAs($this->user)->get(route('dashboard.properties.edit', $property))
+            ->assertOk()
+            ->assertSee('المالك والمسؤولون')
+            ->assertSee('propertyPeople(', false)
+            ->assertSee('name="guard_name"', false)
+            ->assertSee('value="أبو فهد"', false)
+            ->assertSee('99001122')
+            ->assertSee('<option value="'.$owner->id.'" selected', false);
     }
 
     public function test_area_must_belong_to_the_selected_governorate(): void
@@ -193,7 +286,9 @@ class PropertyFormDependenciesTest extends TestCase
             'building_name' => 'برج السالمية',
             'map_url' => 'https://maps.app.goo.gl/abc',
             'owner_commission_rate' => 2.5,
-            'contacts' => [['phone_code' => '+965', 'phone' => '99887766', 'role' => 'الحارس', 'name' => 'أبو خالد']],
+            'guard_name' => 'أبو خالد',
+            'guard_phone_code' => '+965',
+            'guard_phone' => '0 9988-7766',
             'amenities' => [],
         ], $overrides);
     }

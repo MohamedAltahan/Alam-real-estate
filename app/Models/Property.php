@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\InteractsWithWebImages;
 use App\Observers\ActivityObserver;
 use App\Observers\PropertyObserver;
+use App\Support\PhoneNumber;
 use App\Support\SiteFlags;
 use App\Support\Video;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -31,8 +32,11 @@ class Property extends Model implements HasMedia
         'block', 'street', 'building', 'latitude', 'longitude',
         'video_url', 'is_featured', 'rating', 'reviews_count',
         'city_id', 'map_url', 'building_name', 'owner_commission_rate',
-        'is_furnished',
+        'is_furnished', 'guard_name', 'guard_phone_code', 'guard_phone',
     ];
+
+    /** صفات تعني «حارس العقار» في أرقام الزيارات الميدانية */
+    public const GUARD_ROLES = ['الحارس', 'حارس', 'حارس العقار'];
 
     /** حقول قابلة للترجمة AR/EN */
     public array $translatable = ['title', 'short_description', 'description', 'specifications'];
@@ -116,10 +120,12 @@ class Property extends Model implements HasMedia
         return $this->hasMany(ClientViewing::class);
     }
 
-    /** المسؤولون عن العقار (رقم + صفته + اسمه) — إليهم تُرسل رسائل المعاينة */
-    public function contacts(): HasMany
+    /** المسؤولون عن العقار: مختارون من مسؤولي المالك — إليهم (ومعهم الحارس) تُرسل رسائل المعاينة */
+    public function responsibles(): BelongsToMany
     {
-        return $this->hasMany(PropertyContact::class)->orderBy('sort_order')->orderBy('id');
+        return $this->belongsToMany(PropertyOwnerContact::class, 'property_responsibles', 'property_id', 'contact_id')
+            ->orderBy('property_owner_contacts.sort_order')
+            ->orderBy('property_owner_contacts.id');
     }
 
     /** قنوات النشر التي نُشر عليها العقار (مع رابط الإعلان) */
@@ -180,6 +186,34 @@ class Property extends Model implements HasMedia
     public function codeLabel(): string
     {
         return trim(($this->reference_code ?: '#'.$this->id).($this->buildingLabel() ? ' — '.$this->buildingLabel() : ''));
+    }
+
+    // ===== حارس العقار (اسم + رقم خاصان بالعقار) =====
+
+    public function hasGuard(): bool
+    {
+        return filled($this->guard_phone);
+    }
+
+    public function getGuardFullPhoneAttribute(): string
+    {
+        return PhoneNumber::format($this->guard_phone_code, $this->guard_phone);
+    }
+
+    public function getGuardWhatsappNumberAttribute(): string
+    {
+        return PhoneNumber::digits($this->guard_phone_code, $this->guard_phone);
+    }
+
+    /** «حارس العقار · أبو خالد» */
+    public function guardLabel(): string
+    {
+        return collect(['حارس العقار', $this->guard_name])->filter()->implode(' · ');
+    }
+
+    public static function isGuardRole(?string $role): bool
+    {
+        return in_array(trim((string) $role), self::GUARD_ROLES, true);
     }
 
     public function isSold(): bool

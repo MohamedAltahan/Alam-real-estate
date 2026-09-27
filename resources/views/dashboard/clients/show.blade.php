@@ -53,13 +53,22 @@
                                     <span class="inline-flex items-center gap-1 rounded-full bg-accent-500/15 text-accent-600 px-2.5 py-0.5 text-xs font-bold shrink-0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>طلب مميز</span>
                                 @endif
                             </h2>
+                            @if ($client->is_featured && filled($client->featured_notes))
+                                <p class="mt-1 text-xs text-gray-500 whitespace-pre-line"><span class="font-semibold text-accent-600">ملاحظات الطلب المميز:</span> {{ $client->featured_notes }}</p>
+                            @endif
                             <div class="flex flex-wrap items-center gap-2 mt-1.5">
-                                @if ($client->stage)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $client->stage->color }}; background-color: {{ $client->stage->color }}1a"><span class="w-1.5 h-1.5 rounded-full" style="background: {{ $client->stage->color }}"></span>{{ $client->stage->name }}</span>@endif
+                                {{-- من يملك التعديل يرى الحالة في قائمتها بجوار «ملفات العميل» --}}
+                                @cannot('clients.edit')
+                                    @if ($client->stage)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $client->stage->color }}; background-color: {{ $client->stage->color }}1a"><span class="w-1.5 h-1.5 rounded-full" style="background: {{ $client->stage->color }}"></span>{{ $client->stage->name }}</span>@endif
+                                @endcannot
                                 @if ($client->type)<span class="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">{{ $client->type->name }}</span>@endif
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        @can('clients.edit')
+                            @include('dashboard.clients._stage', ['client' => $client, 'stages' => $stages])
+                        @endcan
                         <button type="button" @click="$dispatch('open-modal', 'client-files')" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-4 py-2">
                             ملفات العميل
                             <span class="grid place-items-center min-w-5 h-5 px-1.5 rounded-full bg-primary-900 text-white text-[11px] font-bold">{{ count($files) }}</span>
@@ -69,7 +78,7 @@
                     </div>
                 </div>
 
-                <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-5 mt-6 pt-5 border-t border-gray-100 text-sm">
+                <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-5 mt-6 pt-5 border-t border-gray-100 text-sm">
                     @foreach ([
                         ['الهاتف', $client->full_phone, true], ['البريد', $client->email, true],
                         ['طريقة التواصل', ClientFields::enumLabel('preferred_contact', $client->preferred_contact), false],

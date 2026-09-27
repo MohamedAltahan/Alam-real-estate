@@ -7,6 +7,7 @@ use App\Models\FieldOwner;
 use App\Models\FieldOwnerContact;
 use App\Models\Property;
 use App\Models\PropertyOwner;
+use App\Models\PropertyOwnerContact;
 use App\Models\User;
 use App\Support\PhoneCountries;
 use App\Support\PhoneNumber;
@@ -279,10 +280,31 @@ class FieldOwnerService
         return $owner;
     }
 
-    /** القيم الجاهزة لفورم إضافة عقار من الزيارة (تُهيَّأ على Property غير محفوظ) */
+    /**
+     * مسؤولو المالك المحوَّل الذين أرقامهم من أرقام الزيارة (عدا الحارس) — يُختارون مسبقاً في فورم العقار.
+     *
+     * @return array<int, int>
+     */
+    public function suggestedResponsibles(FieldOwner $record): array
+    {
+        if (! $record->converted_owner_id) {
+            return [];
+        }
+
+        $phones = $record->contacts
+            ->reject(fn (FieldOwnerContact $c) => Property::isGuardRole($c->role))
+            ->pluck('phone')->filter()->values()->all();
+
+        return PropertyOwnerContact::query()
+            ->where('owner_id', $record->converted_owner_id)
+            ->whereIn('phone', $phones)
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /** القيم الجاهزة لفورم إضافة عقار من الزيارة (تُهيَّأ على Property غير محفوظ) — ورقم «الحارس» إن وُجد */
     public function propertyPrefill(FieldOwner $record): array
     {
-        $record->loadMissing('creator');
+        $record->loadMissing(['creator', 'contacts']);
 
         $prefill = [
             'owner_id' => $record->converted_owner_id,
@@ -299,20 +321,31 @@ class FieldOwnerService
             $prefill['title'] = ['ar' => 'عقار '.$record->property_number];
         }
 
+        $guard = $record->contacts->first(fn (FieldOwnerContact $c) => Property::isGuardRole($c->role));
+
+        if ($guard) {
+            $prefill += [
+                'guard_name' => $guard->name,
+                'guard_phone_code' => $guard->phone_code ?: PhoneCountries::DEFAULT,
+                'guard_phone' => $guard->phone,
+            ];
+        }
+
         return $prefill;
     }
 
     /**
      * إنشاء عقار حقيقي من الزيارة: المالك (تلقائيًا إن لم يُحوَّل بعد، أو المختار يدويًا)
      * ثم العقار، ثم نسخ صور الزيارة إلى معرض العقار، ثم ربط الزيارة بالعقار.
+     * المالك المُنشأ من الزيارة: كل مسؤوليه (مسؤولو الزيارة) يصبحون مسؤولين عن العقار.
      */
-    public function createProperty(FieldOwner $record, array $data, array $amenityIds = []): Property
+    public function createProperty(FieldOwner $record, array $data, array $amenityIds = [], array $responsibleIds = []): Property
     {
         if ($record->isPropertyConverted()) {
             throw ValidationException::withMessages(['field_owner_id' => 'هذه الزيارة محوَّلة بالفعل إلى عقار.']);
         }
 
-        return DB::transaction(function () use ($record, $data, $amenityIds) {
+        return DB::transaction(function () use ($record, $data, $amenityIds, $responsibleIds) {
             $ownerId = (int) ($data['owner_id'] ?? 0);
 
             if ($ownerId > 0) {
@@ -320,10 +353,15 @@ class FieldOwnerService
                     $record->forceFill(['converted_owner_id' => $ownerId])->save();
                 }
             } else {
-                $ownerId = (int) $this->convertToOwner($record)->id;
+                $owner = $this->convertToOwner($record);
+                $ownerId = (int) $owner->id;
+                $responsibleIds = $owner->contacts()->get()
+                    ->reject(fn (PropertyOwnerContact $c) => Property::isGuardRole($c->role))
+                    ->map(fn (PropertyOwnerContact $c) => (int) $c->id)
+                    ->values()->all();
             }
 
-            $property = $this->properties->create(['owner_id' => $ownerId] + $data, $amenityIds);
+            $property = $this->properties->create(['owner_id' => $ownerId] + $data, $amenityIds, $responsibleIds);
 
             foreach ($record->getMedia(FieldOwner::PHOTOS) as $media) {
                 $media->copy($property, 'gallery');

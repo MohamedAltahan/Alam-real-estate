@@ -19,7 +19,6 @@
         'unitTypes' => $unitTypes->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'category' => $u->category])->values(),
         'areas' => $areas->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'city_id' => $a->city_id])->values(),
     ];
-    $contactRows = $contactRows ?: [['id' => '', 'phone_code' => '+965', 'phone' => '', 'role' => '', 'name' => '']];
 @endphp
 
 @section('content')
@@ -141,10 +140,6 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-[1fr_140px] gap-2">
-                    <x-select label="المالك" name="owner_id" :options="$owners->pluck('name', 'id')" :selected="$property->owner_id" />
-                    <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="100" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
-                </div>
                 <x-select label="مندوب المبيعات" name="agent_id" :options="$agents->pluck('name', 'id')" :selected="$property->agent_id" />
 
                 <div class="grid grid-cols-3 gap-2 sm:col-span-2">
@@ -184,53 +179,76 @@
             </div>
         </div>
 
-        {{-- ===== المسؤولون عن العقار (أكثر من رقم) — إليهم تُرسل رسائل المعاينة ===== --}}
-        <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6"
-             x-data="propertyContacts({ rows: @js($contactRows), countries: @js($countries), errors: @js($contactErrors) })">
-            <div class="flex items-center justify-between gap-3 mb-1">
-                <h3 class="font-bold text-ink">المسؤولون عن العقار <span class="text-danger">*</span></h3>
-                <p class="text-xs text-gray-400">رقم الهاتف · صفته (الحارس / الوكيل / المدير…) · اسمه</p>
+        {{-- ===== المالك ← المسؤولون عن العقار (من مسؤولي المالك) ← حارس العقار ===== --}}
+        <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6" x-data="propertyPeople(@js($peopleState))">
+            <h3 class="font-bold text-ink mb-4">المالك والمسؤولون</h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-4">
+                <div>
+                    <label class="{{ $labelCls }}">المالك</label>
+                    <select name="owner_id" x-model="owner" @change="onOwnerChange()" class="{{ $inputCls }}">
+                        <option value="">— اختر —</option>
+                        @foreach ($owners as $o)<option value="{{ $o->id }}" @selected((string) old('owner_id', $property->owner_id) === (string) $o->id)>{{ $o->name }}</option>@endforeach
+                    </select>
+                    @error('owner_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                </div>
+                <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="100" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
             </div>
-            <p class="text-xs text-gray-400 mb-4">تُرسل إليهم رسائل واتساب الخاصة بمواعيد المعاينات ونتائجها (لا تُرسل للمالك).</p>
-            @error('contacts')<p class="mb-2 text-xs text-danger">{{ $message }}</p>@enderror
-            <div class="space-y-3">
-                <template x-for="(row, i) in rows" :key="row._key">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto] gap-3 items-start rounded-2xl border p-3"
-                         :class="hasErrors(i) ? 'border-danger/40 bg-danger/5' : 'border-gray-100 bg-gray-50/60'">
-                        <input type="hidden" :name="name(i, 'id')" :value="row.id">
-                        <div>
-                            <label class="{{ $labelCls }}">رقم الهاتف <span class="text-danger">*</span></label>
-                            <x-phone-field dynamic countries="countries" code="row.phone_code" national="row.phone"
-                                           code-name="name(i, 'phone_code')" phone-name="name(i, 'phone')" :show-errors="false"
-                                           x-init="$watch('code', v => row.phone_code = v); $watch('national', v => row.phone = v)" />
-                            <p x-show="errorFor(i, 'phone')" x-text="errorFor(i, 'phone')" class="mt-1 text-xs text-danger"></p>
-                        </div>
-                        <div>
-                            <label class="{{ $labelCls }}">صفته</label>
-                            <input :name="name(i, 'role')" x-model="row.role" placeholder="الحارس · الوكيل · المدير" list="property-contact-roles" class="{{ $inputCls }}">
-                            <p x-show="errorFor(i, 'role')" x-text="errorFor(i, 'role')" class="mt-1 text-xs text-danger"></p>
-                        </div>
-                        <div>
-                            <label class="{{ $labelCls }}">اسمه</label>
-                            <input :name="name(i, 'name')" x-model="row.name" class="{{ $inputCls }}">
-                            <p x-show="errorFor(i, 'name')" x-text="errorFor(i, 'name')" class="mt-1 text-xs text-danger"></p>
-                        </div>
-                        <button type="button" @click="removeContact(i)" :disabled="rows.length <= 1" title="حذف السطر"
-                                class="lg:mt-8 grid place-items-center w-9 h-9 rounded-full text-danger hover:bg-danger/10 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition justify-self-end">
-                            <x-icon.trash />
-                        </button>
+
+            {{-- المسؤولون: تظهر قائمة مسؤولي المالك بمجرد اختياره — أكثر من مسؤول --}}
+            <div class="mt-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <p class="text-sm font-bold text-ink">المسؤولون عن العقار <span x-show="contacts().length" x-cloak class="text-danger">*</span></p>
+                    <a x-show="owner && ownerUrl" x-cloak :href="ownerUrl + '/' + owner" target="_blank" rel="noopener"
+                       class="text-xs font-semibold text-primary-700 hover:underline">إضافة/تعديل مسؤولي المالك ↗</a>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">اختر واحداً أو أكثر من مسؤولي المالك — تُرسل إليهم رسائل واتساب الخاصة بمواعيد المعاينات ونتائجها.</p>
+                @error('responsibles')<p class="mb-2 text-xs text-danger">{{ $message }}</p>@enderror
+                @foreach ($errors->get('responsibles.*') as $messages)<p class="mb-2 text-xs text-danger">{{ $messages[0] }}</p>@endforeach
+
+                <div x-show="contacts().length" x-cloak class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <template x-for="c in contacts()" :key="c.id">
+                        <label class="flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 cursor-pointer transition"
+                               :class="picked.includes(c.id) ? 'border-primary-300 bg-primary-50/70' : 'border-gray-100 bg-gray-50/60 hover:bg-gray-50'">
+                            <input type="checkbox" name="responsibles[]" :value="c.id" x-model="picked" class="w-4 h-4 accent-primary-800 shrink-0">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold text-ink truncate" x-text="c.name || c.role || 'بدون اسم'"></span>
+                                <span class="block text-xs text-gray-500 truncate">
+                                    <span x-show="c.name && c.role" x-text="c.role + ' · '"></span><bdi dir="ltr" x-text="c.phone"></bdi>
+                                </span>
+                            </span>
+                        </label>
+                    </template>
+                </div>
+
+                <div x-show="! contacts().length" x-cloak class="rounded-2xl border border-dashed border-gray-200 px-4 py-4 text-center text-sm text-gray-400">
+                    <p x-show="! owner">
+                        @isset($fieldOwner)
+                            بدون اختيار مالك سيُنشأ المالك من الزيارة ويصبح مسؤولوها مسؤولين عن العقار:
+                            <span class="font-semibold text-gray-600">{{ $fieldOwner->contacts->reject(fn ($c) => \App\Models\Property::isGuardRole($c->role))->map(fn ($c) => $c->name ?: $c->full_phone)->implode(' · ') ?: '—' }}</span>
+                        @else
+                            اختر المالك أولاً لتظهر قائمة مسؤوليه.
+                        @endisset
+                    </p>
+                    <p x-show="owner" x-cloak>لا يوجد مسؤولون مسجّلون لهذا المالك — أضفهم من شاشة ملاك العقارات.</p>
+                </div>
+            </div>
+
+            {{-- حارس العقار: خاص بهذا العقار --}}
+            <div class="mt-5 pt-5 border-t border-gray-100">
+                <p class="text-sm font-bold text-ink mb-1">حارس العقار</p>
+                <p class="text-xs text-gray-400 mb-3">اسم ورقم حارس هذا العقار — تصله أيضاً رسائل المعاينات.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <x-input label="اسم الحارس" name="guard_name" :value="$property->guard_name" />
+                    <div>
+                        <label class="{{ $labelCls }}">رقم الحارس</label>
+                        <x-phone-field :countries="$countries" :code="old('guard_phone_code', $property->guard_phone_code ?: '+965')" :national="old('guard_phone', $property->guard_phone)"
+                                       code-name="guard_phone_code" phone-name="guard_phone" :required="false" :show-errors="false" />
+                        @error('guard_phone')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                        @error('guard_phone_code')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                     </div>
-                </template>
+                </div>
             </div>
-            <datalist id="property-contact-roles">
-                <option value="الحارس"></option><option value="الوكيل"></option><option value="المدير"></option>
-                <option value="المالك"></option><option value="قريب المالك"></option><option value="المحامي"></option>
-            </datalist>
-            <button type="button" @click="add()"
-                    class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary-300 text-primary-700 hover:bg-primary-50 px-4 py-2 text-sm font-semibold transition">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                إضافة مسؤول
-            </button>
         </div>
 
         {{-- ===== الوصف والمواصفات ===== --}}

@@ -34,6 +34,7 @@
                             <th class="text-start font-medium px-4 py-3">العميل</th>
                             <th class="text-start font-medium px-4 py-3">الهاتف</th>
                             <th class="text-start font-medium px-4 py-3">احتياج العقار</th>
+                            <th class="text-start font-medium px-4 py-3">ملاحظات</th>
                             <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                             <th class="text-start font-medium px-4 py-3">الحالة</th>
                             <th class="text-start font-medium px-4 py-3">تاريخ الإضافة</th>
@@ -69,6 +70,13 @@
                                         <span class="text-gray-300">—</span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 min-w-[180px] max-w-[260px]">
+                                    @if (filled($c->featured_notes))
+                                        <span class="block text-xs text-gray-600 line-clamp-2 whitespace-pre-line" title="{{ $c->featured_notes }}">{{ $c->featured_notes }}</span>
+                                    @else
+                                        <span class="text-gray-300">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-gray-600">{{ $c->agent?->name ?: '—' }}</td>
                                 <td class="px-4 py-3">
                                     @if ($c->stage)
@@ -97,7 +105,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-4 py-16 text-center text-gray-400">
+                                <td colspan="9" class="px-4 py-16 text-center text-gray-400">
                                     لا توجد طلبات مميزة — علّم «طلب مميز» عند إضافة العميل ليظهر هنا.
                                 </td>
                             </tr>

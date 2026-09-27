@@ -1,6 +1,6 @@
 /**
- * شاشة ملّاك العقارات: فورم الإضافة/التعديل (أرقام تواصل متعددة + ملفات)،
- * مودال الحذف، ومودال عقارات المالك.
+ * شاشة ملّاك العقارات: فورم الإضافة/التعديل (مسؤولون متعددون + ملفات)،
+ * مودال الحذف، ومودالا عقارات المالك وملفاته.
  *
  * الاستخدام: <div x-data="ownerForm({ storeUrl, updateBase, reopen })">
  * reopen: بيانات old() بعد فشل التحقق لإعادة فتح المودال بنفس القيم.
@@ -9,7 +9,7 @@ import { withAlpine } from './alpine';
 import { rowRepeater } from './repeater';
 
 const BLANK_CONTACT = { id: '', phone_code: '+965', phone: '', role: '', name: '' };
-const BLANK_FORM = { name: '', email: '', area_id: '', registered_address: '', notes: '' };
+const BLANK_FORM = { name: '', mobile_code: '+965', mobile: '', email: '', area_id: '', registered_address: '', notes: '' };
 
 withAlpine((Alpine) => {
     Alpine.data('ownerForm', (opts = {}) => ({
@@ -21,11 +21,14 @@ withAlpine((Alpine) => {
         action: '',
         ownerId: null,
         form: { ...BLANK_FORM },
+        formKey: 0,          // يتغيّر مع كل فتح للمودال فيُعاد بناء حقل الموبايل بقيمه الجديدة
         files: [],
         delAction: '',
         delName: '',
         propertiesOwner: '',
         ownerProperties: [],
+        filesOwner: '',
+        ownerFiles: [],
 
         init() {
             const reopen = opts.reopen;
@@ -38,6 +41,7 @@ withAlpine((Alpine) => {
             this.ownerId = reopen.id ?? null;
             this.action = this.mode === 'edit' ? `${opts.updateBase}/${reopen.id}` : opts.storeUrl;
             this.form = { ...BLANK_FORM, ...(reopen.form ?? {}) };
+            this.formKey++;
             this.setRows(reopen.contacts ?? []);
             this.files = reopen.files ?? [];
             this.$nextTick(() => {
@@ -58,6 +62,7 @@ withAlpine((Alpine) => {
             this.ownerId = null;
             this.action = opts.storeUrl;
             this.form = { ...BLANK_FORM };
+            this.formKey++;
             this.errors = {};
             this.setRows([]);
             this.files = [];
@@ -71,11 +76,14 @@ withAlpine((Alpine) => {
             this.action = `${opts.updateBase}/${owner.id}`;
             this.form = {
                 name: owner.name ?? '',
+                mobile_code: owner.mobile_code || '+965',
+                mobile: owner.mobile ?? '',
                 email: owner.email ?? '',
                 area_id: owner.area_id ? String(owner.area_id) : '',
                 registered_address: owner.registered_address ?? '',
                 notes: owner.notes ?? '',
             };
+            this.formKey++;
             this.errors = {};
             this.setRows((owner.contacts ?? []).map((c) => ({
                 id: c.id ?? '',
@@ -89,7 +97,7 @@ withAlpine((Alpine) => {
             this.$dispatch('open-modal', 'owner-form');
         },
 
-        /** السطر الأخير لا يُحذف — رقم واحد على الأقل */
+        /** السطر الأخير لا يُحذف — مسؤول واحد على الأقل */
         removeContact(index) {
             if (this.rows.length > 1) {
                 this.remove(index);
@@ -106,6 +114,13 @@ withAlpine((Alpine) => {
             this.propertiesOwner = name;
             this.ownerProperties = properties;
             this.$dispatch('open-modal', 'owner-properties');
+        },
+
+        /** ملفات المالك من القائمة أو صفحة المالك بلا انتقال */
+        openFiles(name, files) {
+            this.filesOwner = name;
+            this.ownerFiles = files;
+            this.$dispatch('open-modal', 'owner-files');
         },
     }));
 });

@@ -81,7 +81,7 @@ class ViewingController extends Controller
             'body' => ['required', 'string', 'max:4000'],
         ], [], ['kind' => 'نوع الرسالة', 'to' => 'المستلم', 'body' => 'نص الرسالة']);
 
-        $viewing->load(['client.agent', 'property.contacts', 'property.agent', 'property.area']);
+        $viewing->load(['client.agent', 'property.responsibles', 'property.agent', 'property.area']);
 
         $message = $whatsapp->send($viewing, $data['kind'], $data['to'], str_replace("\r\n", "\n", $data['body']), $request->user());
 

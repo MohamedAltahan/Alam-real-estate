@@ -18,6 +18,8 @@ final class OwnerFormData
         return [
             'id' => $owner->id,
             'name' => $owner->name,
+            'mobile_code' => $owner->mobile_code ?: PhoneCountries::DEFAULT,
+            'mobile' => $owner->mobile,
             'email' => $owner->email,
             'area_id' => $owner->area_id,
             'registered_address' => $owner->registered_address,
@@ -31,6 +33,30 @@ final class OwnerFormData
             ])->values()->all(),
             'files' => $owner->filePayload(),
         ];
+    }
+
+    /** ألوان شارة نوع الملف */
+    private const FILE_TONES = [
+        'image' => 'bg-info-soft text-info', 'pdf' => 'bg-danger/10 text-danger',
+        'word' => 'bg-primary-50 text-primary-700', 'excel' => 'bg-success-soft text-success', 'file' => 'bg-gray-100 text-gray-500',
+    ];
+
+    /** ملفات المالك لنافذة «الملفات» (القائمة وصفحة المالك): الرابط + لون النوع + الحجم المقروء */
+    public static function filesPayload(PropertyOwner $owner): array
+    {
+        return array_map(function (array $file) {
+            $kind = match ($file['ext']) {
+                'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg' => 'image',
+                'pdf' => 'pdf', 'doc', 'docx' => 'word', 'xls', 'xlsx', 'csv' => 'excel', default => 'file',
+            };
+
+            return $file + [
+                'tone' => self::FILE_TONES[$kind],
+                'size_label' => $file['size'] > 1048576
+                    ? number_format($file['size'] / 1048576, 1).' MB'
+                    : max(1, (int) round($file['size'] / 1024)).' KB',
+            ];
+        }, $owner->filePayload());
     }
 
     /** ملخص عقار المالك للمودال (صورة + بيانات أساسية) */
@@ -83,6 +109,8 @@ final class OwnerFormData
             'id' => $owner?->id,
             'form' => [
                 'name' => (string) old('name', ''),
+                'mobile_code' => (string) old('mobile_code', PhoneCountries::DEFAULT),
+                'mobile' => (string) old('mobile', ''),
                 'email' => (string) old('email', ''),
                 'area_id' => (string) old('area_id', ''),
                 'registered_address' => (string) old('registered_address', ''),

@@ -10,6 +10,7 @@ use App\Models\ContactRequest;
 use App\Models\MarketingSource;
 use App\Models\Property;
 use App\Models\PropertyOwner;
+use App\Models\PropertyOwnerContact;
 use App\Models\PropertyStatus;
 use App\Models\RequestType;
 use App\Models\UnitType;
@@ -187,6 +188,11 @@ class DemoDashboardSeeder extends Seeder
             foreach (Property::orderBy('id')->get() as $index => $property) {
                 $property->owner_id = $ownerIds[$index % count($ownerIds)];
                 $property->saveQuietly();
+
+                // أول مسؤول لدى المالك مسؤولٌ عن العقار (تصله رسائل المعاينات)
+                $property->responsibles()->sync(
+                    PropertyOwnerContact::where('owner_id', $property->owner_id)->orderBy('sort_order')->orderBy('id')->limit(1)->pluck('id')
+                );
             }
         }
 

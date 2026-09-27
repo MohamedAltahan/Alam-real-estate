@@ -3,7 +3,7 @@
 namespace App\Services\WhatsApp;
 
 use App\Models\ClientViewing;
-use App\Models\PropertyContact;
+use App\Models\PropertyOwnerContact;
 use App\Models\User;
 use App\Models\WhatsappInstance;
 use App\Models\WhatsappMessage;
@@ -205,8 +205,8 @@ class WhatsAppService
     // ===== رسائل المعاينات =====
 
     /**
-     * المستلمون المتاحون: المسؤولون عن العقار بصفاتهم — لكلا النوعين (تفاصيل المعاينة · نتيجتها).
-     * لا يُعرض المالك ولا العميل.
+     * المستلمون المتاحون: المسؤولون المختارون للعقار (من مسؤولي المالك) بصفاتهم ثم حارس العقار —
+     * لكلا النوعين (تفاصيل المعاينة · نتيجتها). لا يُعرض باقي أرقام المالك ولا العميل.
      *
      * @return array<int, array{phone:string, name:string, label:string, display:string}>
      */
@@ -214,16 +214,35 @@ class WhatsAppService
     {
         abort_unless(isset(WhatsAppTemplates::KINDS[$kind]), 404);
 
-        $contacts = $viewing->property?->contacts ?? collect();
+        $property = $viewing->property;
 
-        return $contacts
-            ->map(fn (PropertyContact $contact) => [
-                'phone' => $contact->whatsapp_number,
-                'name' => (string) ($contact->name ?: ($contact->role ?: PropertyContact::DEFAULT_ROLE)),
-                'label' => $contact->label(),
-                'display' => $contact->full_phone,
-            ])
+        if (! $property) {
+            return [];
+        }
+
+        $owner = $property->owner;
+
+        $rows = $property->responsibles->map(fn (PropertyOwnerContact $contact) => [
+            'phone' => $contact->whatsapp_number,
+            'name' => $contact->isOwnerSelf($owner)
+                ? (string) $owner->name
+                : (string) ($contact->name ?: ($contact->role ?: PropertyOwnerContact::DEFAULT_ROLE)),
+            'label' => $contact->label($owner),
+            'display' => $contact->full_phone,
+        ]);
+
+        if ($property->hasGuard()) {
+            $rows->push([
+                'phone' => $property->guard_whatsapp_number,
+                'name' => (string) ($property->guard_name ?: 'حارس العقار'),
+                'label' => $property->guardLabel(),
+                'display' => $property->guard_full_phone,
+            ]);
+        }
+
+        return $rows
             ->filter(fn (array $row) => $row['phone'] !== '')
+            ->unique('phone')
             ->values()
             ->all();
     }

@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateClientRequest;
 use App\Models\Area;
 use App\Models\City;
 use App\Models\Client;
+use App\Models\ClientStage;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\ClientService;
@@ -19,6 +20,7 @@ use App\Support\PropertyLookup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ClientController extends Controller
@@ -69,7 +71,7 @@ class ClientController extends Controller
         $client->load([
             'needs.city', 'needs.area', 'needs.unitType', 'agent',
             'viewings.property.area', 'viewings.property.media',
-            'viewings.property.contacts', 'viewings.property.agent',
+            'viewings.property.responsibles', 'viewings.property.agent',
         ]);
 
         // العميل نفسه هو صاحب كل معاينة — نضبط العلاقة بدل استعلام لكل سطر
@@ -101,6 +103,28 @@ class ClientController extends Controller
         $this->clients->logInteraction($client, $request->validated());
 
         return back()->with('success', 'تم تسجيل التواصل وتحديث الحالة.');
+    }
+
+    /** قائمة «حالة الطلب» في صفحة العميل — «ربح» يحمل العقار المختار من المعاينات */
+    public function updateStage(Request $request, Client $client): RedirectResponse
+    {
+        abort_unless($request->user()->can('clients.edit'), 403);
+
+        $data = $request->validate([
+            'stage_id' => ['required', Rule::exists('client_stages', 'id')->where('is_active', true)],
+            'won_property_id' => ['nullable', 'integer'],
+        ], [], ['stage_id' => 'حالة الطلب', 'won_property_id' => 'العقار']);
+
+        $stage = ClientStage::findOrFail($data['stage_id']);
+        $this->clients->changeStage($client, $stage, isset($data['won_property_id']) ? (int) $data['won_property_id'] : null);
+
+        $message = match ($stage->key) {
+            ClientStage::KEY_WON => ' — العقار المختار «ربح» وباقي العقارات «غير مهتم».',
+            ClientStage::KEY_LOST => ' — كل العقارات «غير مهتم».',
+            default => '.',
+        };
+
+        return back()->with('success', 'تم تغيير حالة الطلب إلى «'.$stage->name.'»'.$message);
     }
 
     /** بحث العقارات لحقل المعاينة (بالرقم المرجعي أو العنوان) — JSON لأعلى 20 نتيجة */

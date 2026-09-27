@@ -111,9 +111,8 @@
                             <p class="font-medium text-ink">{{ $property->owner?->name ?? '—' }}</p>
                         @endif
                     </div>
-                    @if ($property->owner_commission_rate !== null)
-                        <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums">{{ rtrim(rtrim(number_format((float) $property->owner_commission_rate, 2), '0'), '.') }}%</p></div>
-                    @endif
+                    {{-- نسبة العمولة والموقع والحارس والمسؤولون ظاهرة دائماً لكل من يفتح العقار («—» عند عدم التحديد) --}}
+                    <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->owner_commission_rate !== null ? \App\Support\PropertyFields::percent($property->owner_commission_rate) : '—' }}</bdi></p></div>
                     <div><p class="text-gray-400 text-xs">مندوب المبيعات</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">التصنيف / النوع</p><p class="font-medium text-ink">{{ $property->category?->name }} · {{ $property->unitType?->name }}</p></div>
                 </div>
@@ -129,38 +128,49 @@
                     $property->building ? 'عمارة '.$property->building : null,
                 ])->filter()->implode(' · ');
             @endphp
-            @if ($addr || $property->map_url)
-                <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                    <h3 class="font-bold text-ink mb-3">الموقع</h3>
-                    @if ($addr)<p class="text-sm text-gray-600">{{ $addr }}</p>@endif
-                    @if ($property->map_url)
-                        <a href="{{ $property->map_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-50 text-primary-800 hover:bg-primary-100 px-4 py-2 text-sm font-semibold transition">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                            فتح على خرائط جوجل
-                        </a>
-                    @endif
-                </div>
-            @endif
+            <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
+                <h3 class="font-bold text-ink mb-3">الموقع</h3>
+                <p class="text-sm {{ $addr ? 'text-gray-600' : 'text-gray-400' }}">{{ $addr ?: '—' }}</p>
+                @if ($property->map_url)
+                    <a href="{{ $property->map_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-2 rounded-full bg-primary-50 text-primary-800 hover:bg-primary-100 px-4 py-2 text-sm font-semibold transition">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                        فتح على خرائط جوجل
+                    </a>
+                @else
+                    <p class="mt-2 text-xs text-gray-400">لا يوجد رابط موقع على خرائط جوجل.</p>
+                @endif
+            </div>
 
+            @php
+                $waLink = fn (string $number) => '<a href="https://wa.me/'.e($number).'" target="_blank" rel="noopener" title="واتساب" class="grid place-items-center w-8 h-8 shrink-0 rounded-full bg-success-soft text-success hover:bg-success hover:text-white transition"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>';
+            @endphp
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                 <h3 class="font-bold text-ink mb-1">المسؤولون عن العقار</h3>
-                <p class="text-xs text-gray-400 mb-3">تُرسل إليهم رسائل واتساب الخاصة بالمعاينات</p>
+                <p class="text-xs text-gray-400 mb-3">من مسؤولي المالك — تُرسل إليهم (ومعهم الحارس) رسائل واتساب الخاصة بالمعاينات</p>
                 <ul class="space-y-2.5 text-sm">
-                    @forelse ($property->contacts as $contact)
+                    @forelse ($property->responsibles as $contact)
                         <li class="flex items-center justify-between gap-3">
                             <span class="min-w-0">
-                                <span class="block font-medium text-ink truncate">{{ $contact->label() }}</span>
+                                <span class="block font-medium text-ink truncate">{{ $contact->label($property->owner) }}</span>
                                 <bdi dir="ltr" class="block text-xs text-gray-500">{{ $contact->full_phone }}</bdi>
                             </span>
-                            <a href="https://wa.me/{{ $contact->whatsapp_number }}" target="_blank" rel="noopener" title="واتساب"
-                               class="grid place-items-center w-8 h-8 shrink-0 rounded-full bg-success-soft text-success hover:bg-success hover:text-white transition">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                            </a>
+                            {!! $waLink($contact->whatsapp_number) !!}
                         </li>
                     @empty
-                        <li class="text-gray-400">لم يُضف مسؤول عن هذا العقار بعد — أضفه من شاشة التعديل.</li>
+                        <li class="text-gray-400">لم يُختر مسؤول عن هذا العقار بعد — اختره من مسؤولي المالك في شاشة التعديل.</li>
                     @endforelse
                 </ul>
+
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <p class="text-xs text-gray-400 mb-2">حارس العقار</p>
+                    <div class="flex items-center justify-between gap-3 text-sm">
+                        <dl class="min-w-0 space-y-1">
+                            <div class="flex items-baseline gap-2"><dt class="text-xs text-gray-400 shrink-0">الاسم:</dt><dd class="font-medium text-ink truncate">{{ $property->guard_name ?: '—' }}</dd></div>
+                            <div class="flex items-baseline gap-2"><dt class="text-xs text-gray-400 shrink-0">رقم الحارس:</dt><dd class="font-medium text-ink"><bdi dir="ltr">{{ $property->hasGuard() ? $property->guard_full_phone : '—' }}</bdi></dd></div>
+                        </dl>
+                        @if ($property->hasGuard()){!! $waLink($property->guard_whatsapp_number) !!}@endif
+                    </div>
+                </div>
             </div>
 
             @if ($property->channels->count())

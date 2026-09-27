@@ -4,6 +4,7 @@ namespace Tests\Feature\Dashboard;
 
 use App\Models\Area;
 use App\Models\Property;
+use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\UnitType;
 use App\Models\User;
@@ -79,6 +80,39 @@ class PropertyFiltersTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard.properties.index', ['from' => now()->subDays(40)->toDateString(), 'to' => now()->toDateString()]))
             ->assertOk()->assertSee('721')->assertSee('722');
+    }
+
+    public function test_properties_can_be_filtered_by_owner_agent_and_commission_rate(): void
+    {
+        $user = $this->propertyViewer();
+        [$firstArea, $secondArea, $apartment, $villa, $status] = $this->lookups();
+        $owner = PropertyOwner::create(['name' => 'مالك أول', 'phone_code' => '+965', 'phone' => '11111111']);
+        $otherOwner = PropertyOwner::create(['name' => 'مالك ثانٍ', 'phone_code' => '+965', 'phone' => '22222222']);
+        $agent = User::factory()->create(['name' => 'مندوب أول', 'is_agent' => true]);
+
+        $this->property('741', 'عقار العمولة', $firstArea, $apartment, $status)
+            ->update(['owner_id' => $owner->id, 'agent_id' => $agent->id, 'owner_commission_rate' => 2.5]);
+        $this->property('742', 'عقار آخر', $secondArea, $villa, $status)
+            ->update(['owner_id' => $otherOwner->id, 'owner_commission_rate' => 1]);
+        $this->property('743', 'عقار بلا عمولة', $secondArea, $villa, $status);
+
+        $index = fn (array $filters = []) => $this->actingAs($user)->get(route('dashboard.properties.index', $filters))->assertOk();
+
+        // عمود النسبة + خيارات الفلاتر (النسب المستخدمة فعلاً)
+        $index()
+            ->assertSee('نسبة العمولة')
+            ->assertSee('2.5%')
+            ->assertSee('<option value="2.50"', false)
+            ->assertSee('<option value="1.00"', false)
+            ->assertSee('<option value="none"', false)
+            ->assertSee('name="owner_id"', false)
+            ->assertSee('name="agent_id"', false);
+
+        $index(['owner_id' => $owner->id])->assertSee('عقار العمولة')->assertDontSee('عقار آخر')->assertDontSee('عقار بلا عمولة');
+        $index(['agent_id' => $agent->id])->assertSee('عقار العمولة')->assertDontSee('عقار آخر');
+        $index(['commission' => '2.50'])->assertSee('عقار العمولة')->assertDontSee('عقار آخر')->assertDontSee('عقار بلا عمولة');
+        $index(['commission' => '1.00'])->assertSee('عقار آخر')->assertDontSee('عقار العمولة');
+        $index(['commission' => 'none'])->assertSee('عقار بلا عمولة')->assertDontSee('عقار العمولة')->assertDontSee('عقار آخر');
     }
 
     public function test_status_can_be_changed_inline_from_the_list_and_sets_sold_at(): void

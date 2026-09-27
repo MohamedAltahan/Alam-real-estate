@@ -11,6 +11,7 @@ use App\Models\PropertyOwner;
 use App\Models\PropertyStatus;
 use App\Models\UnitType;
 use App\Models\User;
+use App\Services\FieldOwnerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -168,6 +169,8 @@ class FieldOwnerManagementTest extends TestCase
         $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.create']);
         $this->propertyLookups();
         $record = $this->record(['property_number' => 'PACI-777', 'address' => 'قطعة 4 شارع 12', 'latitude' => 29.3375, 'longitude' => 48.0758]);
+        $record->contacts()->create(['name' => 'سعد المطيري', 'role' => 'المالك', 'phone_code' => '+965', 'phone' => '99001122']);
+        $record->contacts()->create(['name' => 'أبو فهد', 'role' => 'الحارس', 'phone_code' => '+965', 'phone' => '99887766']);
 
         $this->actingAs($user)->get(route('dashboard.properties.create', ['field_owner' => $record->id]))
             ->assertOk()
@@ -175,7 +178,28 @@ class FieldOwnerManagementTest extends TestCase
             ->assertSee('من الزيارة الميدانية #'.$record->id)
             ->assertSee('https://www.google.com/maps?q=29.3375,48.0758')
             ->assertSee('عقار PACI-777')
-            ->assertSee('قطعة 4 شارع 12');
+            ->assertSee('قطعة 4 شارع 12')
+            // رقم «الحارس» في الزيارة يملأ حقلي حارس العقار، والباقون يصبحون مسؤولين عند إنشاء المالك
+            ->assertSee('value="أبو فهد"', false)
+            ->assertSee('99887766')
+            ->assertSee('ويصبح مسؤولوها مسؤولين عن العقار')
+            ->assertSee('سعد المطيري');
+    }
+
+    public function test_converted_owner_numbers_from_the_visit_are_suggested_as_responsibles(): void
+    {
+        $record = $this->record();
+        $record->contacts()->create(['name' => 'سعد المطيري', 'role' => 'المالك', 'phone_code' => '+965', 'phone' => '99001122']);
+        $record->contacts()->create(['name' => 'أبو فهد', 'role' => 'الحارس', 'phone_code' => '+965', 'phone' => '99887766']);
+
+        $service = app(FieldOwnerService::class);
+        $this->assertSame([], $service->suggestedResponsibles($record));
+
+        $owner = $service->convertToOwner($record->fresh());
+        $owner->contacts()->create(['phone_code' => '+965', 'phone' => '55555555', 'role' => 'المدير']);
+        $self = $owner->contacts()->where('phone', '99001122')->firstOrFail();
+
+        $this->assertSame([(int) $self->id], $service->suggestedResponsibles($record->fresh()));
     }
 
     public function test_property_store_from_field_record_copies_photos_and_converts_the_owner(): void
@@ -185,12 +209,15 @@ class FieldOwnerManagementTest extends TestCase
         $lookups = $this->propertyLookups();
         $record = $this->record(['latitude' => 29.3375, 'longitude' => 48.0758]);
         $record->contacts()->create(['name' => 'سعد المطيري', 'role' => 'المالك', 'phone_code' => '+965', 'phone' => '99001122']);
+        $record->contacts()->create(['name' => 'أبو فهد', 'role' => 'الحارس', 'phone_code' => '+965', 'phone' => '99887766']);
         $record->addMedia(UploadedFile::fake()->image('front.jpg', 800, 600))->toMediaCollection('photos');
 
         $this->actingAs($user)->post(route('dashboard.properties.store'), $this->propertyPayload($lookups, [
             'field_owner_id' => $record->id,
             'latitude' => '29.3375',
             'longitude' => '48.0758',
+            'guard_name' => 'أبو فهد',
+            'guard_phone' => '99887766',
         ]))->assertSessionHasNoErrors();
 
         $property = Property::firstOrFail();
@@ -198,7 +225,10 @@ class FieldOwnerManagementTest extends TestCase
 
         $this->assertNotNull($property->owner_id);
         $this->assertSame('سعد المطيري', $property->owner->name);
-        $this->assertCount(1, $property->owner->contacts);
+        $this->assertCount(2, $property->owner->contacts);
+        // مسؤولو الزيارة (عدا الحارس) صاروا مسؤولين عن العقار، والحارس في حقليه
+        $this->assertSame(['99001122'], $property->responsibles->pluck('phone')->all());
+        $this->assertSame('أبو فهد', $property->guard_name);
         $this->assertSame((int) $property->owner_id, (int) $record->converted_owner_id);
         $this->assertSame((int) $property->id, (int) $record->converted_property_id);
         $this->assertCount(1, $property->getMedia('gallery'));
@@ -314,7 +344,6 @@ class FieldOwnerManagementTest extends TestCase
             'price' => 450,
             'price_period' => 'monthly',
             'status_id' => $lookups['status']->id,
-            'contacts' => [['phone_code' => '+965', 'phone' => '99887766', 'role' => 'الحارس', 'name' => 'أبو خالد']],
             'amenities' => [],
         ], $overrides);
     }

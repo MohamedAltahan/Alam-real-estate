@@ -144,6 +144,13 @@ class PropertyOwnerService
         $contacts = array_values((array) ($data['contacts'] ?? []));
         unset($data['contacts'], $data['files'], $data['files_removed']);
 
+        // مفتاح دولة الموبايل يُحفظ مع الرقم فقط، ولا يُمسّ الموبايل إن لم يُرسَل
+        if (array_key_exists('mobile', $data)) {
+            $data['mobile_code'] = filled($data['mobile']) ? (($data['mobile_code'] ?? null) ?: PhoneCountries::DEFAULT) : null;
+        } else {
+            unset($data['mobile_code']);
+        }
+
         return [$contacts, $data];
     }
 

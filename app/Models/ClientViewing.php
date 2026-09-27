@@ -16,15 +16,18 @@ class ClientViewing extends Model
 
     public const OUTCOME_STUDYING = 'studying';
 
-    /** العميل مهتم بالعقار — يحوّل العميل إلى مرحلة «ربح»؛ حالة العقار تُغيَّر يدوياً */
+    /** العميل مهتم بالعقار — لا يغيّر حالة الطلب (تُغيَّر من قائمتها في صفحة العميل) */
     public const OUTCOME_INTERESTED = 'interested';
+
+    /** العقار الذي أُغلقت عليه الصفقة — يُضبط فقط عند تغيير حالة الطلب إلى «ربح» واختياره */
+    public const OUTCOME_WON = 'won';
 
     public const OUTCOME_NOT_INTERESTED = 'not_interested';
 
     public const OUTCOME_CANCELLED = 'cancelled';
 
     public const OUTCOMES = [
-        self::OUTCOME_PENDING, self::OUTCOME_STUDYING, self::OUTCOME_INTERESTED,
+        self::OUTCOME_PENDING, self::OUTCOME_STUDYING, self::OUTCOME_INTERESTED, self::OUTCOME_WON,
         self::OUTCOME_NOT_INTERESTED, self::OUTCOME_CANCELLED,
     ];
 

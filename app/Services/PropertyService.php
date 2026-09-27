@@ -3,9 +3,8 @@
 namespace App\Services;
 
 use App\Models\Property;
-use App\Models\PropertyContact;
 use App\Models\PublishingChannel;
-use App\Support\PhoneCountries;
+use App\Support\PropertyFields;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +17,11 @@ class PropertyService
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
         'search', 'status_id', 'city_id', 'area_id', 'unit_type_id', 'purpose', 'website_id', 'social_id', 'from', 'to',
+        'owner_id', 'agent_id', 'commission',
     ];
+
+    /** قيمة فلتر النسبة للعقارات التي لم تُحدَّد لها عمولة */
+    public const NO_COMMISSION = 'none';
 
     public function paginate(array $filters = [], int $perPage = 12): LengthAwarePaginator
     {
@@ -41,27 +44,55 @@ class PropertyService
             ->when($filters['social_id'] ?? null, fn ($q, $v) => $q->whereHas('channels', fn ($c) => $c->where('publishing_channels.id', $v)))
             ->when($filters['from'] ?? null, fn ($q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn ($q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
+            ->when($filters['owner_id'] ?? null, fn ($q, $v) => $q->where('owner_id', $v))
+            ->when($filters['agent_id'] ?? null, fn ($q, $v) => $q->where('agent_id', $v))
+            ->when($filters['commission'] ?? null, fn ($q, $v) => $v === self::NO_COMMISSION
+                ? $q->whereNull('owner_commission_rate')
+                : $q->where('owner_commission_rate', PropertyFields::rateKey($v)))
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
     }
 
-    public function create(array $data, array $amenityIds = []): Property
+    /**
+     * خيارات فلتر نسبة العمولة: النسب المستخدمة فعلاً (مرتبة) + «بدون نسبة».
+     *
+     * @return array<string, string>
+     */
+    public function commissionOptions(): array
     {
-        return DB::transaction(function () use ($data, $amenityIds) {
+        $rates = Property::query()
+            ->whereNotNull('owner_commission_rate')
+            ->distinct()
+            ->orderBy('owner_commission_rate')
+            ->pluck('owner_commission_rate')
+            ->mapWithKeys(fn ($rate) => [PropertyFields::rateKey($rate) => PropertyFields::percent($rate)])
+            ->all();
+
+        return $rates + [self::NO_COMMISSION => 'بدون نسبة'];
+    }
+
+    /** @param  array<int, int>  $responsibleIds  مسؤولو المالك المختارون للعقار */
+    public function create(array $data, array $amenityIds = [], array $responsibleIds = []): Property
+    {
+        return DB::transaction(function () use ($data, $amenityIds, $responsibleIds) {
             $data['reference_code'] = $this->generateReferenceCode();
             $property = Property::create($data);
             $property->amenities()->sync($amenityIds);
+            $property->responsibles()->sync($responsibleIds);
 
             return $property;
         });
     }
 
-    public function update(Property $property, array $data, array $amenityIds = []): Property
+    /** @param  array<int, int>  $responsibleIds  مسؤولو المالك المختارون للعقار */
+    public function update(Property $property, array $data, array $amenityIds = [], array $responsibleIds = []): Property
     {
-        return DB::transaction(function () use ($property, $data, $amenityIds) {
+        return DB::transaction(function () use ($property, $data, $amenityIds, $responsibleIds) {
             $property->update($data);
             $property->amenities()->sync($amenityIds);
+            $property->responsibles()->sync($responsibleIds);
+            $property->unsetRelation('responsibles');
 
             return $property;
         });
@@ -78,44 +109,6 @@ class PropertyService
         $property->update(['status_id' => $statusId]);
 
         return $property->load('status');
-    }
-
-    /**
-     * مزامنة المسؤولين عن العقار: تعديل الموجود بالمعرّف، إضافة الجديد، حذف المحذوف.
-     *
-     * @param  array<int, array{id?:mixed, phone_code?:string, phone:string, role?:string, name?:string}>  $rows
-     */
-    public function syncContacts(Property $property, array $rows): void
-    {
-        $existing = $property->contacts()->get()->keyBy('id');
-        $kept = [];
-
-        foreach (array_values($rows) as $index => $row) {
-            $attributes = [
-                'phone_code' => ($row['phone_code'] ?? null) ?: PhoneCountries::DEFAULT,
-                'phone' => (string) $row['phone'],
-                'role' => filled($row['role'] ?? null) ? trim($row['role']) : null,
-                'name' => filled($row['name'] ?? null) ? trim($row['name']) : null,
-                'sort_order' => $index,
-            ];
-
-            $contact = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
-
-            if ($contact) {
-                $contact->fill($attributes)->save();
-            } else {
-                $contact = $property->contacts()->create($attributes);
-            }
-
-            $kept[] = $contact->id;
-        }
-
-        foreach ($existing->except($kept) as $contact) {
-            /** @var PropertyContact $contact */
-            $contact->delete();
-        }
-
-        $property->unsetRelation('contacts');
     }
 
     /** توليد رقم مرجعي فريد — أرقام فقط، يكمل من آخر رقم مستخدم */

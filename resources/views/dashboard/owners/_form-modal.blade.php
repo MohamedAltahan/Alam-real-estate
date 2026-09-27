@@ -24,10 +24,23 @@
             <section>
                 <h4 class="font-bold text-sm text-ink mb-3">بيانات المالك</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="sm:col-span-2">
+                    <div>
                         <label class="{{ $label }}">الاسم الكامل <span class="text-danger">*</span></label>
                         <input name="name" x-model="form.name" required class="{{ $field }}">
                         @error('name')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                    </div>
+                    {{-- موبايل المالك نفسه: للعرض في صفحة المالك فقط (يُعاد بناؤه مع كل فتح للمودال) --}}
+                    <div>
+                        <label class="{{ $label }}">رقم موبايل المالك</label>
+                        <template x-for="k in [formKey]" :key="k">
+                            <div>
+                                <x-phone-field dynamic countries="countries" code="form.mobile_code" national="form.mobile"
+                                               code-name="'mobile_code'" phone-name="'mobile'" :required="false" :show-errors="false"
+                                               x-init="$watch('code', v => form.mobile_code = v); $watch('national', v => form.mobile = v)" />
+                            </div>
+                        </template>
+                        <p class="mt-1 text-[11px] text-gray-400">يظهر في صفحة المالك فقط — لا تُرسل عليه رسائل واتساب.</p>
+                        @error('mobile')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="{{ $label }}">البريد الإلكتروني</label>
@@ -54,12 +67,13 @@
                 </div>
             </section>
 
-            {{-- ===== أرقام التواصل (أكثر من سطر) ===== --}}
+            {{-- ===== المسؤولون (أكثر من سطر) — يُختار منهم مسؤولو كل عقار للمالك ===== --}}
             <section>
-                <div class="flex items-center justify-between gap-3 mb-3">
-                    <h4 class="font-bold text-sm text-ink">أرقام التواصل <span class="text-danger">*</span></h4>
-                    <p class="text-xs text-gray-400">رقم الهاتف · صفة صاحب الرقم · اسمه</p>
+                <div class="flex items-center justify-between gap-3 mb-1">
+                    <h4 class="font-bold text-sm text-ink">المسؤولون <span class="text-danger">*</span></h4>
+                    <p class="text-xs text-gray-400">رقم الهاتف · صفته · اسمه</p>
                 </div>
+                <p class="text-xs text-gray-400 mb-3">عند إضافة عقار لهذا المالك تختار منهم المسؤولين عن العقار (تصلهم رسائل المعاينات).</p>
                 @error('contacts')<p class="mb-2 text-xs text-danger">{{ $message }}</p>@enderror
                 <div class="space-y-3">
                     <template x-for="(row, i) in rows" :key="row._key">
@@ -92,12 +106,12 @@
                 </div>
                 <datalist id="owner-contact-roles">
                     <option value="المالك"></option><option value="الوكيل"></option><option value="المدير"></option>
-                    <option value="الحارس"></option><option value="قريب المالك"></option><option value="المحامي"></option>
+                    <option value="قريب المالك"></option><option value="المحامي"></option>
                 </datalist>
                 <button type="button" @click="add()"
                         class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary-300 text-primary-700 hover:bg-primary-50 px-4 py-2 text-sm font-semibold transition">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                    إضافة رقم
+                    إضافة مسؤول
                 </button>
             </section>
 

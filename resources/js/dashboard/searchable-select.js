@@ -90,14 +90,16 @@ function open(target) {
     }
 
     select = target;
+    // الخيار المخفي (hidden) لا يظهر في اللوحة — مثل «ربح» في قوائم النتيجة اليدوية
     options = Array.from(select.options).map((option, index) => ({
         index,
         label: option.textContent.trim() || '—',
         group: option.parentElement?.tagName === 'OPTGROUP' ? option.parentElement.label : null,
         disabled: option.disabled,
+        hidden: option.hidden,
         selected: option.selected,
         haystack: normalize(option.textContent + ' ' + (option.parentElement?.label ?? '')),
-    }));
+    })).filter((option) => ! option.hidden);
 
     const min = Number(select.dataset.searchMin ?? MIN_FOR_SEARCH);
     searchBox.hidden = options.length < min;

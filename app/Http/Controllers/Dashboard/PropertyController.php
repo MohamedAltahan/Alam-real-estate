@@ -9,8 +9,8 @@ use App\Models\City;
 use App\Models\FieldOwner;
 use App\Models\Property;
 use App\Models\PropertyCategory;
-use App\Models\PropertyContact;
 use App\Models\PropertyOwner;
+use App\Models\PropertyOwnerContact;
 use App\Models\PropertyStatus;
 use App\Models\PublishingChannel;
 use App\Models\UnitType;
@@ -41,6 +41,9 @@ class PropertyController extends Controller
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'channels' => $this->channelsByKind(),
+            'owners' => PropertyOwner::orderBy('name')->get(['id', 'name']),
+            'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
+            'commissionOptions' => $this->properties->commissionOptions(),
             'filters' => $filters,
         ]);
     }
@@ -64,13 +67,10 @@ class PropertyController extends Controller
 
         $property = new Property($fieldOwner ? $this->fieldOwners->propertyPrefill($fieldOwner) : []);
 
-        // أرقام الزيارة الميدانية تُقترح كمسؤولين عن العقار
-        $prefillContacts = $fieldOwner?->contacts->map(fn ($c) => [
-            'id' => '', 'phone_code' => (string) ($c->phone_code ?: PhoneCountries::DEFAULT), 'phone' => (string) $c->phone,
-            'role' => (string) ($c->role ?? ''), 'name' => (string) ($c->name ?? ''),
-        ])->values()->all();
+        // أرقام الزيارة الميدانية تُختار مسبقاً من مسؤولي مالكها (إن حُوِّلت لمالك)
+        $suggested = $fieldOwner ? $this->fieldOwners->suggestedResponsibles($fieldOwner) : [];
 
-        return view('dashboard.properties.form', $this->formData($property, $prefillContacts ?: null) + [
+        return view('dashboard.properties.form', $this->formData($property, $suggested) + [
             'nextCode' => $this->generateNextCode(),
             'fieldOwner' => $fieldOwner,
         ]);
@@ -80,15 +80,14 @@ class PropertyController extends Controller
     {
         abort_unless(auth()->user()->can('properties.create'), 403);
 
-        $data = $this->validated($request);
+        [$data, $responsibles] = $this->validated($request);
 
         // عقار قادم من زيارة ميدانية: يُربط بالزيارة وتُنسخ صورها ويُنشأ المالك إن لزم
         $fieldOwner = $request->filled('field_owner_id') ? FieldOwner::findOrFail($request->integer('field_owner_id')) : null;
 
         $property = $fieldOwner
-            ? $this->fieldOwners->createProperty($fieldOwner, $data, $request->input('amenities', []))
-            : $this->properties->create($data, $request->input('amenities', []));
-        $this->properties->syncContacts($property, $request->input('contacts', []));
+            ? $this->fieldOwners->createProperty($fieldOwner, $data, $request->input('amenities', []), $responsibles)
+            : $this->properties->create($data, $request->input('amenities', []), $responsibles);
         $this->syncImages($request, $property);
 
         return redirect()
@@ -98,7 +97,7 @@ class PropertyController extends Controller
 
     public function show(Property $property): View
     {
-        $property->load(['area', 'city', 'category', 'unitType', 'status', 'owner', 'agent', 'contacts', 'amenities', 'media', 'reviews.createdBy', 'channels.media']);
+        $property->load(['area', 'city', 'category', 'unitType', 'status', 'owner', 'agent', 'responsibles', 'amenities', 'media', 'reviews.createdBy', 'channels.media']);
 
         return view('dashboard.properties.show', ['property' => $property]);
     }
@@ -106,7 +105,7 @@ class PropertyController extends Controller
     public function edit(Property $property): View
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
-        $property->load('amenities', 'media', 'contacts');
+        $property->load('amenities', 'media', 'responsibles');
 
         return view('dashboard.properties.form', $this->formData($property));
     }
@@ -115,9 +114,8 @@ class PropertyController extends Controller
     {
         abort_unless(auth()->user()->can('properties.edit'), 403);
 
-        $data = $this->validated($request);
-        $this->properties->update($property, $data, $request->input('amenities', []));
-        $this->properties->syncContacts($property, $request->input('contacts', []));
+        [$data, $responsibles] = $this->validated($request);
+        $this->properties->update($property, $data, $request->input('amenities', []), $responsibles);
         $this->syncImages($request, $property);
 
         return redirect()
@@ -206,80 +204,59 @@ class PropertyController extends Controller
         return $this->properties->generateReferenceCode();
     }
 
-    /** @param  array<int, array<string, string>>|null  $contactRows  صفوف مقترحة (من زيارة ميدانية) عند عدم وجود old() */
-    private function formData(Property $property, ?array $contactRows = null): array
+    /** @param  array<int, int>  $suggested  مسؤولون يُختارون مسبقاً لعقار جديد (من زيارة ميدانية) */
+    private function formData(Property $property, array $suggested = []): array
     {
-        $old = old('contacts');
+        $owners = PropertyOwner::with('contacts')->orderBy('name')->get(['id', 'name', 'phone']);
 
-        if (is_array($old)) {
-            $contactRows = array_values(array_map(fn ($row) => [
-                'id' => (string) ($row['id'] ?? ''), 'phone_code' => (string) ($row['phone_code'] ?? PhoneCountries::DEFAULT),
-                'phone' => (string) ($row['phone'] ?? ''), 'role' => (string) ($row['role'] ?? ''), 'name' => (string) ($row['name'] ?? ''),
-            ], $old));
-        } elseif ($contactRows === null && $property->exists) {
-            $contactRows = $property->contacts->map(fn (PropertyContact $c) => [
-                'id' => (string) $c->id, 'phone_code' => (string) ($c->phone_code ?: PhoneCountries::DEFAULT),
-                'phone' => (string) $c->phone, 'role' => (string) ($c->role ?? ''), 'name' => (string) ($c->name ?? ''),
-            ])->values()->all();
-        }
-
-        $rowErrors = [];
-        foreach (session('errors')?->getBag('default')->toArray() ?? [] as $key => $messages) {
-            if (str_starts_with($key, 'contacts.')) {
-                $rowErrors[$key] = $messages[0] ?? '';
-            }
-        }
+        // بعد فشل التحقق نعيد ما أُرسل (حتى لو أُلغي اختيار الكل)، وإلا المحفوظ أو المقترح
+        $picked = session()->hasOldInput()
+            ? (array) old('responsibles', [])
+            : ($property->exists ? $property->responsibles->pluck('id')->all() : $suggested);
 
         return [
             'property' => $property,
-            'contactRows' => $contactRows ?: [],
-            'contactErrors' => $rowErrors,
+            'owners' => $owners,
+            'peopleState' => [
+                'owner' => (string) old('owner_id', $property->owner_id ?? ''),
+                'picked' => array_values(array_map('strval', $picked)),
+                'owners' => $owners->map(fn (PropertyOwner $owner) => [
+                    'id' => (string) $owner->id,
+                    'contacts' => $owner->contacts->map(fn (PropertyOwnerContact $c) => [
+                        'id' => (string) $c->id,
+                        'name' => $c->isOwnerSelf($owner) ? (string) $owner->name : (string) ($c->name ?? ''),
+                        'role' => $c->isOwnerSelf($owner) ? 'المالك' : (string) ($c->role ?? ''),
+                        'phone' => $c->full_phone,
+                    ])->values()->all(),
+                ])->values()->all(),
+                'ownerUrl' => auth()->user()->can('property_owners.edit') ? url('dashboard/owners') : null,
+            ],
             'countries' => PhoneCountries::all(),
             'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
             'categories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
             'statuses' => PropertyStatus::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
-            'owners' => PropertyOwner::orderBy('name')->get(['id', 'name']),
             'agents' => User::where('is_agent', true)->orderBy('name')->get(['id', 'name']),
             'amenities' => Amenity::where('is_active', true)->orderBy('sort_order')->get(),
         ];
     }
 
-    /** تطبيع صفوف المسؤولين قبل التحقق: أرقام فقط، بلا صفر بادئ، والسطر الفارغ يُهمل */
-    private function normalizeContacts(Request $request): void
+    /** رقم الحارس قبل التحقق: أرقام فقط وبلا صفر بادئ */
+    private function normalizeGuard(Request $request): void
     {
-        $contacts = [];
+        $phone = ltrim(preg_replace('/\D+/', '', (string) $request->input('guard_phone', '')) ?? '', '0');
 
-        foreach ((array) $request->input('contacts', []) as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
-            $phone = preg_replace('/\D+/', '', (string) ($row['phone'] ?? '')) ?? '';
-            $role = trim((string) ($row['role'] ?? ''));
-            $name = trim((string) ($row['name'] ?? ''));
-
-            if ($phone === '' && $role === '' && $name === '') {
-                continue;
-            }
-
-            $contacts[] = [
-                'id' => $row['id'] ?? null,
-                'phone_code' => filled($row['phone_code'] ?? null) ? $row['phone_code'] : PhoneCountries::DEFAULT,
-                'phone' => ltrim($phone, '0'),
-                'role' => $role,
-                'name' => $name,
-            ];
-        }
-
-        $request->merge(['contacts' => $contacts]);
+        $request->merge([
+            'guard_phone' => $phone !== '' ? $phone : null,
+            'guard_phone_code' => $request->input('guard_phone_code') ?: PhoneCountries::DEFAULT,
+        ]);
     }
 
+    /** @return array{0: array<string, mixed>, 1: array<int, int>} بيانات العقار + معرّفات المسؤولين المختارين */
     private function validated(Request $request): array
     {
-        $this->normalizeContacts($request);
-        $propertyId = $request->route('property')?->id ?? 0;
+        $this->normalizeGuard($request);
 
         $v = $request->validate([
             'title.ar' => ['required', 'string', 'max:255'],
@@ -319,27 +296,25 @@ class PropertyController extends Controller
             'amenities' => ['array'],
             'amenities.*' => ['exists:amenities,id'],
             'field_owner_id' => ['nullable', 'integer', 'exists:field_owners,id'],
-            'contacts' => ['required', 'array', 'min:1', 'max:20'],
-            'contacts.*.id' => ['nullable', 'integer', Rule::exists('property_contacts', 'id')->where('property_id', $propertyId)],
-            'contacts.*.phone_code' => ['required', 'string', Rule::in(PhoneCountries::codes())],
-            'contacts.*.phone' => ['required', 'string', 'regex:/^[0-9]{4,15}$/'],
-            'contacts.*.role' => ['nullable', 'string', 'max:60'],
-            'contacts.*.name' => ['nullable', 'string', 'max:150'],
+            // المسؤولون يُختارون من مسؤولي المالك المختار فقط
+            'responsibles' => ['nullable', 'array', 'max:20'],
+            'responsibles.*' => ['integer', 'distinct', Rule::exists('property_owner_contacts', 'id')->where('owner_id', $request->integer('owner_id'))],
+            'guard_name' => ['nullable', 'string', 'max:150'],
+            'guard_phone_code' => ['required', 'string', Rule::in(PhoneCountries::codes())],
+            'guard_phone' => ['nullable', 'string', 'regex:/^[0-9]{4,15}$/'],
         ], [
             'map_url.url' => 'رابط الموقع يجب أن يكون رابط خرائط جوجل صالحًا (يبدأ بـ https://).',
-            'contacts.required' => 'أضف مسؤولاً واحداً عن العقار على الأقل (رقم هاتف).',
-            'contacts.min' => 'أضف مسؤولاً واحداً عن العقار على الأقل (رقم هاتف).',
-            'contacts.*.phone.required' => 'رقم هاتف المسؤول مطلوب.',
-            'contacts.*.phone.regex' => 'رقم الهاتف يجب أن يكون أرقاماً فقط (من 4 إلى 15 رقماً).',
+            'responsibles.*.exists' => 'المسؤول المختار ليس من مسؤولي المالك المختار.',
+            'guard_phone.regex' => 'رقم الحارس يجب أن يكون أرقاماً فقط (من 4 إلى 15 رقماً).',
         ], [
             'title.ar' => 'العنوان (عربي)', 'city_id' => 'المحافظة', 'area_id' => 'المنطقة', 'category_id' => 'التصنيف',
             'unit_type_id' => 'نوع الوحدة', 'purpose' => 'الغرض', 'price' => 'السعر', 'status_id' => 'الحالة',
             'owner_commission_rate' => 'نسبة العمولة من المالك', 'building_name' => 'إسم المبنى',
-            'map_url' => 'رابط موقع العقار', 'contacts' => 'المسؤولون عن العقار',
-            'contacts.*.phone' => 'رقم الهاتف', 'contacts.*.phone_code' => 'مفتاح الدولة', 'contacts.*.role' => 'صفته', 'contacts.*.name' => 'اسمه',
+            'map_url' => 'رابط موقع العقار', 'responsibles' => 'المسؤولون عن العقار',
+            'guard_name' => 'اسم الحارس', 'guard_phone' => 'رقم الحارس', 'guard_phone_code' => 'مفتاح دولة الحارس',
         ]);
 
-        // المنطقة تتبع المحافظة، ونوع الوحدة يتبع التصنيف
+        // المنطقة تتبع المحافظة، ونوع الوحدة يتبع التصنيف، والمالك الذي له مسؤولون يُختار منهم واحد على الأقل
         $area = Area::find($v['area_id']);
         $category = PropertyCategory::find($v['category_id']);
         $unitType = UnitType::find($v['unit_type_id']);
@@ -347,8 +322,9 @@ class PropertyController extends Controller
 
         $cityId = ($v['city_id'] ?? null) ?: $area?->city_id;
         $isResidential = $category?->key !== PropertyCategory::COMMERCIAL;
+        $hasGuardPhone = filled($v['guard_phone'] ?? null);
 
-        return [
+        return [[
             'title' => array_filter($request->input('title', []), fn ($x) => $x !== null),
             'short_description' => array_filter($request->input('short_description', []), fn ($x) => $x !== null),
             'description' => array_filter($request->input('description', []), fn ($x) => $x !== null),
@@ -377,10 +353,13 @@ class PropertyController extends Controller
             'longitude' => $v['longitude'] ?? null,
             'video_url' => $v['video_url'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
-        ];
+            'guard_name' => $v['guard_name'] ?? null,
+            'guard_phone_code' => $hasGuardPhone ? $v['guard_phone_code'] : null,
+            'guard_phone' => $hasGuardPhone ? $v['guard_phone'] : null,
+        ], array_map('intval', $v['responsibles'] ?? [])];
     }
 
-    /** تحقق مترابط: المنطقة داخل المحافظة المختارة، ونوع الوحدة من تصنيف العقار */
+    /** تحقق مترابط: المنطقة داخل المحافظة المختارة، نوع الوحدة من تصنيف العقار، ومسؤول واحد على الأقل */
     private function crossChecks(array $v, ?Area $area, ?PropertyCategory $category, ?UnitType $unitType): void
     {
         $errors = [];
@@ -391,6 +370,12 @@ class PropertyController extends Controller
 
         if ($category && $unitType && $category->key && $unitType->category && $unitType->category !== $category->key) {
             $errors['unit_type_id'] = 'نوع الوحدة لا يتبع التصنيف المختار.';
+        }
+
+        $ownerId = (int) ($v['owner_id'] ?? 0);
+
+        if ($ownerId && empty($v['responsibles']) && PropertyOwnerContact::where('owner_id', $ownerId)->exists()) {
+            $errors['responsibles'] = 'اختر مسؤولاً واحداً على الأقل من مسؤولي المالك.';
         }
 
         if ($errors) {

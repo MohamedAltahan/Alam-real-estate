@@ -10,6 +10,12 @@ class ClientStage extends Model
 {
     use HasTranslations;
 
+    /** «ربح»: يُختار معه العقار الذي أُغلقت عليه الصفقة */
+    public const KEY_WON = 'closed_won';
+
+    /** «خسارة»: كل معاينات العميل تصبح «غير مهتم» */
+    public const KEY_LOST = 'closed_lost';
+
     protected $fillable = ['name', 'key', 'color', 'sort_order', 'is_final', 'is_active'];
 
     public array $translatable = ['name'];

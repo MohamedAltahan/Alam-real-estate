@@ -65,8 +65,15 @@
                 {{-- النتيجة --}}
                 <div class="lg:col-span-2">
                     <label class="{{ $label }}">النتيجة</label>
+                    {{-- «ربح» لا يُختار يدوياً: يظهر فقط للمعاينة التي نتيجتها ربح (من تغيير حالة الطلب) --}}
                     <select :name="name(i, 'outcome')" x-model="row.outcome" class="{{ $field }}">
-                        @foreach (\App\Support\ClientFields::OUTCOMES as $value => $text)<option value="{{ $value }}">{{ $text }}</option>@endforeach
+                        @foreach (\App\Support\ClientFields::OUTCOMES as $value => $text)
+                            @if ($value === 'won')
+                                <option value="won" :hidden="row.outcome !== 'won'" :disabled="row.outcome !== 'won'">{{ $text }}</option>
+                            @else
+                                <option value="{{ $value }}">{{ $text }}</option>
+                            @endif
+                        @endforeach
                     </select>
                     <p x-show="errorFor(i, 'outcome')" x-text="errorFor(i, 'outcome')" class="mt-1 text-xs text-danger"></p>
                 </div>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Models\ActivityLog;
 use App\Models\Area;
 use App\Models\City;
 use App\Models\Property;
@@ -9,6 +10,7 @@ use App\Models\PropertyOwner;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -53,6 +55,64 @@ class PropertyOwnerManagementTest extends TestCase
         $this->assertCount(1, $owner->contacts);
         $this->assertSame('+966', $owner->phone_code);
         $this->assertSame('501234567', $owner->phone);
+    }
+
+    public function test_owner_mobile_is_stored_and_shown_on_the_owner_page_only(): void
+    {
+        $user = $this->userWith(['property_owners.view', 'property_owners.create', 'property_owners.edit', 'properties.view']);
+        $viewer = $this->userWith(['property_owners.view']);
+
+        $this->actingAs($user)->post(route('dashboard.owners.store'), [
+            'name' => 'مالك بموبايل',
+            'mobile_code' => '+965',
+            'mobile' => '12',
+            'contacts' => [['phone_code' => '+965', 'phone' => '55110000', 'role' => 'الوكيل', 'name' => 'سالم']],
+        ])->assertSessionHasErrors('mobile');
+
+        $this->actingAs($user)->post(route('dashboard.owners.store'), [
+            'name' => 'مالك بموبايل',
+            'mobile_code' => '+965',
+            'mobile' => '0 9911-2233',
+            'contacts' => [['phone_code' => '+965', 'phone' => '55110000', 'role' => 'الوكيل', 'name' => 'سالم']],
+        ])->assertSessionHasNoErrors();
+
+        $owner = PropertyOwner::where('name', 'مالك بموبايل')->firstOrFail();
+        $this->assertSame('99112233', $owner->mobile);
+        $this->assertSame('+965', $owner->mobile_code);
+        // الرقم الرئيسي (للقائمة والبحث) يبقى أول مسؤول لا الموبايل، ولا يدخل الموبايل في أي JSON
+        $this->assertSame('55110000', $owner->phone);
+        $this->assertArrayNotHasKey('mobile', $owner->toArray());
+
+        $contact = $owner->contacts()->firstOrFail();
+        $property = Property::create(['reference_code' => '5', 'title' => ['ar' => 'عقار', 'en' => 'P'], 'owner_id' => $owner->id]);
+        $property->responsibles()->attach($contact->id);
+
+        // صفحة المالك فقط
+        $this->actingAs($viewer)->get(route('dashboard.owners.show', $owner))->assertOk()->assertSee('موبايل المالك')->assertSee('+965 99112233');
+        $this->actingAs($viewer)->get(route('dashboard.owners.index'))->assertOk()->assertSee('مالك بموبايل')->assertDontSee('99112233');
+        $this->actingAs($user)->get(route('dashboard.properties.show', $property))->assertOk()->assertDontSee('99112233');
+
+        // تعديل الموبايل وحده لا يُكتب في سجل النشاط، وتفريغه يمسح المفتاح أيضاً
+        $this->actingAs($user)->put(route('dashboard.owners.update', $owner), [
+            'name' => 'مالك بموبايل',
+            'mobile_code' => '+966',
+            'mobile' => '',
+            'contacts' => [['id' => $contact->id, 'phone_code' => '+965', 'phone' => '55110000', 'role' => 'الوكيل', 'name' => 'سالم']],
+        ])->assertSessionHasNoErrors();
+
+        $owner->refresh();
+        $this->assertNull($owner->mobile);
+        $this->assertNull($owner->mobile_code);
+        $this->assertSame(0, ActivityLog::where('event', 'updated')->count());
+        $this->assertStringNotContainsString('99112233', ActivityLog::all()->pluck('changes')->toJson());
+
+        // طلب لا يحمل حقل الموبايل لا يمسّه
+        $owner->update(['mobile_code' => '+965', 'mobile' => '99112233']);
+        $this->actingAs($user)->put(route('dashboard.owners.update', $owner), [
+            'name' => 'مالك بموبايل',
+            'contacts' => [['id' => $contact->id, 'phone_code' => '+965', 'phone' => '55110000', 'role' => 'الوكيل', 'name' => 'سالم']],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('99112233', $owner->fresh()->mobile);
     }
 
     public function test_owner_filters_search_contacts_notes_city_agent_and_properties(): void
@@ -114,6 +174,36 @@ class PropertyOwnerManagementTest extends TestCase
 
         $this->assertCount(1, $owner->fresh()->getMedia('files'));
         $this->assertDatabaseMissing('media', ['id' => $removeId]);
+    }
+
+    public function test_owner_files_open_from_the_list_without_visiting_the_owner(): void
+    {
+        Storage::fake('public');
+        $editor = $this->userWith(['property_owners.view', 'property_owners.create']);
+        $viewer = $this->userWith(['property_owners.view']);
+
+        $this->actingAs($editor)->post(route('dashboard.owners.store'), [
+            'name' => 'مالك الملفات',
+            'contacts' => [['phone_code' => '+965', 'phone' => '55556666']],
+            'files' => [
+                UploadedFile::fake()->image('photo.png'),
+                UploadedFile::fake()->create('contract.docx', 20, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+            ],
+        ])->assertSessionHasNoErrors();
+        PropertyOwner::create(['name' => 'مالك بلا ملفات', 'phone_code' => '+965', 'phone' => '55557777']);
+
+        // مستخدم عرض فقط (بلا بيانات التعديل في الصفحة): عمود الملفات وحده يحمل الملفات
+        $this->actingAs($viewer)->get(route('dashboard.owners.index'))
+            ->assertOk()
+            ->assertSee('الملفات')
+            ->assertSee('openFiles(', false)
+            ->assertSee('contract.docx')
+            ->assertSee('photo.png')
+            ->assertSee('لا توجد ملفات مرفوعة لهذا المالك');
+
+        $owner = PropertyOwner::where('name', 'مالك الملفات')->firstOrFail();
+        $this->actingAs($viewer)->get(route('dashboard.owners.show', $owner))
+            ->assertOk()->assertSee('openFiles(', false)->assertSee('contract.docx');
     }
 
     public function test_owner_index_uses_sales_agent_label_and_no_contract_status(): void

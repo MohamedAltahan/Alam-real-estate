@@ -26,7 +26,7 @@ class Client extends Model implements HasMedia
         'name', 'phone_code', 'phone', 'email', 'type_id',
         'stage_id', 'agent_id', 'source_id', 'rating', 'notes',
         'social_status', 'nationality', 'household_size',
-        'workplace', 'preferred_contact', 'recorded_by', 'is_featured',
+        'workplace', 'preferred_contact', 'recorded_by', 'is_featured', 'featured_notes',
     ];
 
     protected $casts = [

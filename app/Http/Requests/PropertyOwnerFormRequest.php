@@ -7,7 +7,7 @@ use App\Support\PhoneCountries;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** فورم مالك العقار: بيانات أساسية + أرقام تواصل متعددة + ملفات */
+/** فورم مالك العقار: بيانات أساسية + المسؤولون (رقم + صفته + اسمه) + ملفات */
 class PropertyOwnerFormRequest extends FormRequest
 {
     public function authorize(): bool
@@ -44,7 +44,15 @@ class PropertyOwnerFormRequest extends FormRequest
             ];
         }
 
-        $this->merge(['contacts' => $contacts]);
+        $merge = ['contacts' => $contacts];
+
+        // موبايل المالك نفسه (للعرض فقط): أرقام بلا صفر بادئ، والفارغ null — ولا يُمسّ إن لم يُرسَل
+        if ($this->has('mobile')) {
+            $mobile = ltrim(preg_replace('/\D+/', '', (string) $this->input('mobile')) ?? '', '0');
+            $merge['mobile'] = $mobile !== '' ? $mobile : null;
+        }
+
+        $this->merge($merge);
     }
 
     public function rules(): array
@@ -53,6 +61,8 @@ class PropertyOwnerFormRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
+            'mobile_code' => ['nullable', 'string', Rule::in(PhoneCountries::codes())],
+            'mobile' => ['nullable', 'string', 'regex:/^[0-9]{4,15}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'area_id' => ['nullable', 'exists:areas,id'],
             'registered_address' => ['nullable', 'string', 'max:500'],
@@ -75,9 +85,10 @@ class PropertyOwnerFormRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'contacts.required' => 'أضف رقم تواصل واحدًا على الأقل.',
-            'contacts.min' => 'أضف رقم تواصل واحدًا على الأقل.',
+            'contacts.required' => 'أضف مسؤولًا واحدًا على الأقل (رقم هاتف).',
+            'contacts.min' => 'أضف مسؤولًا واحدًا على الأقل (رقم هاتف).',
             'contacts.*.phone.regex' => 'رقم الهاتف يجب أن يكون أرقامًا فقط (4 إلى 15 رقمًا).',
+            'mobile.regex' => 'رقم موبايل المالك يجب أن يكون أرقامًا فقط (4 إلى 15 رقمًا).',
             'files.*.mimes' => 'الملفات المسموحة: صور، PDF، Word، Excel.',
             'files.*.max' => 'حجم الملف يجب ألا يتجاوز 15 ميجابايت.',
         ];
@@ -87,11 +98,13 @@ class PropertyOwnerFormRequest extends FormRequest
     {
         return [
             'name' => 'الاسم الكامل',
+            'mobile' => 'رقم موبايل المالك',
+            'mobile_code' => 'مفتاح دولة الموبايل',
             'email' => 'البريد الإلكتروني',
             'area_id' => 'المنطقة',
             'registered_address' => 'العنوان المسجّل',
             'notes' => 'الملاحظات',
-            'contacts' => 'أرقام التواصل',
+            'contacts' => 'المسؤولون',
             'contacts.*.phone_code' => 'مفتاح الدولة',
             'contacts.*.phone' => 'رقم الهاتف',
             'contacts.*.role' => 'صفته',

@@ -22,15 +22,18 @@ class PropertyOwner extends Model implements HasMedia
 
     protected $fillable = [
         'name', 'phone_code', 'phone', 'email', 'area_id',
-        'registered_address', 'notes',
+        'registered_address', 'notes', 'mobile_code', 'mobile',
     ];
+
+    /** رقم موبايل المالك للعرض في صفحته فقط — لا يدخل في أي تحويل JSON/مصفوفة */
+    protected $hidden = ['mobile_code', 'mobile'];
 
     public function area(): BelongsTo
     {
         return $this->belongsTo(Area::class);
     }
 
-    /** أرقام التواصل (رقم + صفته + اسمه) — أكثر من سطر */
+    /** المسؤولون (رقم + صفته + اسمه) — أولهم رقم المالك الأساسي، ومنهم يُختار مسؤولو كل عقار */
     public function contacts(): HasMany
     {
         return $this->hasMany(PropertyOwnerContact::class, 'owner_id')->orderBy('sort_order')->orderBy('id');
@@ -59,5 +62,11 @@ class PropertyOwner extends Model implements HasMedia
     public function getWhatsappNumberAttribute(): string
     {
         return PhoneNumber::digits($this->phone_code, $this->phone);
+    }
+
+    /** موبايل المالك نفسه «+965 99112233» — للعرض في صفحة المالك فقط */
+    public function getFullMobileAttribute(): string
+    {
+        return filled($this->mobile) ? PhoneNumber::format($this->mobile_code, $this->mobile) : '';
     }
 }

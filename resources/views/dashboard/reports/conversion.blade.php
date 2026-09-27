@@ -7,7 +7,7 @@
     $kpis = $report['kpis'];
     $cards = [
         ['label' => 'إجمالي المعاينات', 'value' => $kpis['total'], 'tone' => 'bg-info-soft text-info', 'icon' => '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'],
-        ['label' => 'مهتم', 'value' => $kpis['interested'], 'tone' => 'bg-success-soft text-success', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>'],
+        ['label' => 'مهتم / ربح', 'value' => $kpis['interested'], 'tone' => 'bg-success-soft text-success', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>'],
         ['label' => 'غير مهتم', 'value' => $kpis['not_interested'], 'tone' => 'bg-danger/10 text-danger', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>'],
         ['label' => 'لم تُحسم', 'value' => $kpis['undecided'], 'tone' => 'bg-warning-soft text-warning', 'icon' => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'],
     ];
@@ -50,7 +50,7 @@
         <div class="rounded-2xl bg-primary-900 text-white p-4 flex flex-col justify-center col-span-2 lg:col-span-1">
             <p class="text-xs text-white/60">معدل تحول المعاينات</p>
             <p class="text-3xl font-bold tabular-nums">{{ $kpis['rate'] }}<span class="text-lg">%</span></p>
-            <p class="text-[11px] text-white/50 mt-1">مهتم ÷ (مهتم + غير مهتم) = {{ $kpis['interested'] }} ÷ {{ $kpis['decided'] }}</p>
+            <p class="text-[11px] text-white/50 mt-1">(مهتم + ربح) ÷ (مهتم + ربح + غير مهتم) = {{ $kpis['interested'] }} ÷ {{ $kpis['decided'] }}</p>
         </div>
     </div>
 
@@ -79,7 +79,7 @@
                             <th class="text-start font-medium px-4 py-3 w-10">#</th>
                             <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                             <th class="text-start font-medium px-4 py-3">المعاينات</th>
-                            <th class="text-start font-medium px-4 py-3">مهتم</th>
+                            <th class="text-start font-medium px-4 py-3">مهتم / ربح</th>
                             <th class="text-start font-medium px-4 py-3">غير مهتم</th>
                             <th class="text-start font-medium px-4 py-3">المعدل</th>
                         </tr>

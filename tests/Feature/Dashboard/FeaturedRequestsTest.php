@@ -40,6 +40,32 @@ class FeaturedRequestsTest extends TestCase
         $this->assertFalse(Client::where('name', 'عميل عادي')->first()->is_featured);
     }
 
+    public function test_featured_notes_are_saved_and_shown_on_the_featured_tab_and_client_page(): void
+    {
+        // الحقل بجوار التشيك بوكس في فورم العميل
+        $this->actingAs($this->user)->get(route('dashboard.clients.index'))
+            ->assertOk()->assertSee('name="featured_notes"', false);
+
+        $this->actingAs($this->user)->post(route('dashboard.clients.store'), [
+            'name' => 'عميل مميز', 'phone_code' => '+965', 'phone' => '55112233',
+            'is_featured' => '1', 'featured_notes' => 'يريد الرد خلال يومين',
+        ])->assertSessionHasNoErrors();
+
+        $client = Client::where('name', 'عميل مميز')->firstOrFail();
+        $this->assertSame('يريد الرد خلال يومين', $client->featured_notes);
+
+        $this->actingAs($this->user)->get(route('dashboard.requests.featured'))
+            ->assertOk()->assertSee('ملاحظات')->assertSee('يريد الرد خلال يومين');
+
+        $this->actingAs($this->user)->get(route('dashboard.clients.show', $client))
+            ->assertOk()->assertSee('ملاحظات الطلب المميز')->assertSee('يريد الرد خلال يومين');
+
+        $this->actingAs($this->user)->put(route('dashboard.clients.update', $client), [
+            'name' => 'عميل مميز', 'phone_code' => '+965', 'phone' => '55112233',
+            'is_featured' => '1', 'featured_notes' => str_repeat('س', 501),
+        ])->assertSessionHasErrors('featured_notes');
+    }
+
     public function test_update_can_toggle_featured_off(): void
     {
         $client = Client::create(['name' => 'عميل', 'phone_code' => '+965', 'phone' => '55112233', 'is_featured' => true]);

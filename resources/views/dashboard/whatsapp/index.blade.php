@@ -130,7 +130,7 @@
                             @csrf @method('PUT')
                             <div class="flex items-center justify-between gap-3 mb-3">
                                 <h3 class="font-bold text-ink">{{ $label }}</h3>
-                                <span class="text-[11px] text-gray-400">{{ $kind === WhatsAppTemplates::KIND_OWNER ? 'تُرسل لأحد أرقام المالك' : 'تُرسل لرقم العميل بعد تسجيل النتيجة' }}</span>
+                                <span class="text-[11px] text-gray-400">{{ $kind === WhatsAppTemplates::KIND_OWNER ? 'تُرسل لأحد مسؤولي العقار أو حارسه' : 'تُرسل لأحد مسؤولي العقار أو حارسه بعد تسجيل النتيجة' }}</span>
                             </div>
                             <textarea name="body" rows="9" required maxlength="4000" dir="auto" @disabled(! auth()->user()->can('whatsapp.edit'))
                                       class="{{ $field }} leading-relaxed">{{ old('body', $templates[$kind]->body ?? WhatsAppTemplates::DEFAULTS[$kind]['body']) }}</textarea>

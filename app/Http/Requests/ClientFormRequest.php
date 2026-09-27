@@ -66,6 +66,7 @@ abstract class ClientFormRequest extends FormRequest
             'agent_id' => ['nullable', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_featured' => ['nullable', 'boolean'],
+            'featured_notes' => ['nullable', 'string', 'max:500'],
 
             'needs' => ['nullable', 'array', 'max:20'],
             'needs.*.id' => ['nullable', 'integer', Rule::exists('client_property_needs', 'id')->where('client_id', $clientId)],
@@ -143,6 +144,7 @@ abstract class ClientFormRequest extends FormRequest
             'agent_id' => 'مندوب المبيعات',
             'notes' => 'الملاحظات',
             'is_featured' => 'طلب مميز',
+            'featured_notes' => 'ملاحظات الطلب المميز',
             'needs.*.category' => 'نوع العقار',
             'needs.*.unit_type_id' => 'نوع الوحدة',
             'needs.*.city_id' => 'المحافظة',

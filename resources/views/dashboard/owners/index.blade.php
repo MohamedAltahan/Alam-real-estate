@@ -133,6 +133,7 @@
                         <th class="text-start font-medium px-4 py-3">المالك</th>
                         <th class="text-start font-medium px-4 py-3">الهاتف</th>
                         <th class="text-start font-medium px-4 py-3">عدد العقارات</th>
+                        <th class="text-start font-medium px-4 py-3">الملفات</th>
                         <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                         <th class="text-start font-medium px-4 py-3">الملاحظات</th>
                         <th class="text-start font-medium px-4 py-3">تاريخ الانضمام</th>
@@ -144,6 +145,7 @@
                         @php
                             $editData = OwnerFormData::editPayload($o);
                             $propertiesData = $o->properties->map(fn ($p) => OwnerFormData::propertyPayload($p))->values();
+                            $filesData = OwnerFormData::filesPayload($o);
                             $extraContacts = max(0, $o->contacts->count() - 1);
                         @endphp
                         {{-- النقر على الصف كله يفتح ملف المالك --}}
@@ -162,13 +164,21 @@
                             <td class="px-4 py-3 text-gray-600">
                                 <span dir="ltr">{{ $o->full_phone ?: '—' }}</span>
                                 @if ($extraContacts)
-                                    <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold" title="أرقام إضافية">+{{ $extraContacts }}</span>
+                                    <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold" title="مسؤولون آخرون">+{{ $extraContacts }}</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3">
                                 <button type="button" @click.stop='openProperties(@json($o->name), @json($propertiesData))' class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-primary-700 hover:bg-primary-50">
                                     <span class="font-bold text-ink tabular-nums">{{ $o->properties_count }}</span>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gray-400"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/></svg>
+                                </button>
+                            </td>
+                            {{-- ملفات المالك تُعرض في نافذة من القائمة مباشرة --}}
+                            <td class="px-4 py-3">
+                                <button type="button" @click.stop='openFiles(@json($o->name), @json($filesData))' title="ملفات المالك"
+                                        class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {{ count($filesData) ? 'text-primary-700 hover:bg-primary-50' : 'text-gray-400 hover:bg-gray-100' }}">
+                                    <span class="font-bold tabular-nums {{ count($filesData) ? 'text-ink' : '' }}">{{ count($filesData) }}</span>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                                 </button>
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $o->latestProperty?->agent?->name ?: '—' }}</td>
@@ -199,7 +209,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
+                        <tr><td colspan="9" class="px-4 py-16 text-center text-gray-400">لا يوجد ملّاك.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -210,6 +220,7 @@
     </div>{{-- /منطقة النتائج --}}
 
     @include('dashboard.owners._form-modal')
+    @include('dashboard.owners._files-modal')
 
     {{-- ملخص عقارات المالك --}}
     <x-modal name="owner-properties" maxWidth="3xl">

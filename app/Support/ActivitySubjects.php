@@ -101,7 +101,8 @@ final class ActivitySubjects
             PropertyOwner::class => [
                 'module' => 'property_owners', 'label' => 'مالك',
                 'snapshot' => ['name', 'phone_code', 'phone', 'email', 'area_id'],
-                'ignore' => [],
+                // موبايل المالك يُعرض في صفحته فقط — لا يُكتب في سجل النشاط
+                'ignore' => ['mobile_code', 'mobile'],
                 'fields' => self::OWNER_LABELS, 'foreign' => ['area_id' => Area::class], 'enums' => [], 'booleans' => [],
             ],
             Client::class => [

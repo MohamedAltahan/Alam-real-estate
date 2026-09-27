@@ -299,35 +299,35 @@ class ClientNeedsAndViewingsTest extends TestCase
             ->assertDontSee('كل الوكلاء');
     }
 
-    // ===== أثر نتيجة المعاينة على العميل (حالة العقار يدوية دائماً) =====
+    // ===== نتيجة المعاينة لا تغيّر حالة الطلب ولا حالة العقار =====
 
-    public function test_interested_outcome_wins_the_client_and_leaves_property_status_alone(): void
+    public function test_viewing_outcomes_never_change_the_client_stage_or_property_status(): void
     {
         $client = $this->makeClient();
+        $stageBefore = $client->stage_id;
         $viewing = $client->viewings()->first();
 
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'interested'])
-            ->assertSessionHasNoErrors();
+        foreach (['interested', 'not_interested', 'studying'] as $outcome) {
+            $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => $outcome])
+                ->assertSessionHasNoErrors();
 
-        $this->property->refresh();
-        $this->assertSame('available', $this->property->status->key);
-        $this->assertNull($this->property->sold_at);
+            $client->refresh();
+            $this->assertSame((int) $stageBefore, (int) $client->stage_id);
+            $this->assertNull($client->won_at);
+        }
 
-        $client->refresh();
-        $this->assertSame('closed_won', $client->stage->key);
-        $this->assertNotNull($client->won_at);
+        // ولا من فورم العميل أيضاً
+        $this->actingAs($this->user)->put(route('dashboard.clients.update', $client), [
+            'name' => $client->name, 'phone_code' => '+965', 'phone' => $client->phone,
+            'viewings' => [['id' => $viewing->id, 'property_id' => $this->property->id, 'scheduled_at' => now()->addDay()->format('Y-m-d H:i'), 'outcome' => 'interested']],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame((int) $stageBefore, (int) $client->refresh()->stage_id);
+
         $this->assertNotNull($viewing->fresh()->outcome_at);
-
-        $this->assertDatabaseMissing('client_audit_logs', ['client_id' => $client->id, 'action' => 'property_status_synced']);
-
-        $stageChange = ClientAuditLog::where('client_id', $client->id)->where('action', 'updated')->get()
-            ->first(fn (ClientAuditLog $log) => isset($log->changes['stage_id']));
-        $this->assertNotNull($stageChange);
-
-        // التراجع عن «مهتم» لا يُنزّل المرحلة
-        $this->actingAs($this->user)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'not_interested'])->assertSessionHasNoErrors();
-        $this->assertSame('closed_won', $client->refresh()->stage->key);
         $this->assertSame('available', $this->property->refresh()->status->key);
+        $this->assertNull($this->property->sold_at);
+        $this->assertFalse(ClientAuditLog::where('client_id', $client->id)->where('action', 'updated')->get()
+            ->contains(fn (ClientAuditLog $log) => isset($log->changes['stage_id'])));
     }
 
     public function test_two_clients_can_both_be_interested_in_the_same_property(): void

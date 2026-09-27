@@ -15,7 +15,7 @@
         <span class="relative inline-flex items-center {{ ClientFields::outcomeTone($viewing->outcome) }} rounded-full">
             <select name="outcome" x-model="outcome" @change="submit()" title="تغيير النتيجة"
                     class="appearance-none rounded-full border-0 bg-transparent ps-3 pe-7 py-1 text-xs font-semibold cursor-pointer text-inherit focus:outline-none focus:ring-2 focus:ring-primary-500/20">
-                @foreach (ClientFields::OUTCOMES as $value => $text)<option value="{{ $value }}" @selected($viewing->outcome === $value)>{{ $text }}</option>@endforeach
+                @foreach (ClientFields::manualOutcomes($viewing->outcome) as $value => $text)<option value="{{ $value }}" @selected($viewing->outcome === $value)>{{ $text }}</option>@endforeach
             </select>
             <x-select-chevron class="end-2" />
         </span>

@@ -92,6 +92,8 @@ Route::middleware(['auth'])->group(function () {
             Route::put('clients/{client}', [ClientController::class, 'update'])->name('clients.update');
             Route::delete('clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
             Route::post('clients/{client}/interactions', [ClientController::class, 'logInteraction'])->name('clients.interactions.store');
+            // حالة الطلب من صفحة العميل (ربح ⇒ اختيار العقار · خسارة ⇒ كل العقارات غير مهتم)
+            Route::patch('clients/{client}/stage', [ClientController::class, 'updateStage'])->name('clients.stage');
 
             // المعاينات — كل المواعيد مع فلاتر التاريخ والمسؤول
             Route::get('viewings', [ViewingController::class, 'index'])->name('viewings.index');

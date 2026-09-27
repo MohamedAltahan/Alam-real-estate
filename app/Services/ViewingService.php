@@ -29,7 +29,7 @@ class ViewingService
         'missing_client' => 'لم تُرسل النتيجة',
     ];
 
-    public function __construct(private ClientAuditLogger $audit, private ViewingOutcomeSync $sync) {}
+    public function __construct(private ClientAuditLogger $audit) {}
 
     public function paginate(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
@@ -37,10 +37,10 @@ class ViewingService
             ->with([
                 'client:id,name,agent_id,phone_code,phone',
                 'client.agent:id,name,phone',
-                'property:id,reference_code,title,agent_id,area_id,owner_id,building_name,purpose',
+                'property:id,reference_code,title,agent_id,area_id,owner_id,building_name,purpose,guard_name,guard_phone_code,guard_phone',
                 'property.agent:id,name,phone',
                 'property.area:id,name',
-                'property.contacts',
+                'property.responsibles',
             ])
             ->orderByDesc('scheduled_at')
             ->orderByDesc('id')
@@ -124,13 +124,12 @@ class ViewingService
     }
 
     /**
-     * تحديث نتيجة المعاينة من الجداول (قيد الانتظار / قيد الدراسة / مهتم / غير مهتم / إلغاء الموعد).
-     * يتبعه أثر النتيجة على العميل (ViewingOutcomeSync) في المعاملة نفسها.
+     * تحديث نتيجة المعاينة (من الجداول أو من تغيير حالة الطلب إلى ربح/خسارة) مع تسجيلها في سجل العميل.
+     * النتيجة لا تغيّر حالة الطلب أبداً — الحالة تُغيَّر من قائمتها في صفحة العميل.
      */
     public function updateOutcome(ClientViewing $viewing, string $outcome, ?string $notes = null): ClientViewing
     {
         return DB::transaction(function () use ($viewing, $outcome, $notes) {
-            $previous = $viewing->outcome;
             $viewing->fill(['outcome' => $outcome]);
 
             if ($notes !== null) {
@@ -150,8 +149,6 @@ class ViewingService
             if ($changes) {
                 $this->audit->record($viewing->client, 'outcome_updated', $viewing, $changes);
             }
-
-            $this->sync->apply($viewing, $previous);
 
             return $viewing;
         });
@@ -275,7 +272,8 @@ class ViewingService
      */
     private function kpis(Collection $rows): array
     {
-        $interested = $rows->where('outcome', ClientViewing::OUTCOME_INTERESTED)->count();
+        // «ربح» نتيجة إيجابية مثل «مهتم»
+        $interested = $rows->whereIn('outcome', [ClientViewing::OUTCOME_INTERESTED, ClientViewing::OUTCOME_WON])->count();
         $notInterested = $rows->where('outcome', ClientViewing::OUTCOME_NOT_INTERESTED)->count();
         $decided = $interested + $notInterested;
 

@@ -8,6 +8,7 @@ import './dashboard/phone-field';
 import './dashboard/property-lookup';
 import './dashboard/repeater';
 import './dashboard/viewing-outcome';
+import './dashboard/client-stage';
 import './dashboard/datetime';
 import './dashboard/notifications';
 import './dashboard/searchable-select';

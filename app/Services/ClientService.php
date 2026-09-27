@@ -8,15 +8,17 @@ use App\Models\ClientPropertyNeed;
 use App\Models\ClientStage;
 use App\Models\ClientType;
 use App\Models\ClientViewing;
-use App\Models\Property;
 use App\Support\FullTextQuery;
 use App\Support\PhoneCountries;
 use App\Support\PhoneNumber;
 use Carbon\Carbon;
+use Closure;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * منطق العملاء المشترك — يخدم الداشبورد (Blade) والـ API معاً (API-first).
@@ -35,7 +37,7 @@ class ClientService
     /** فلاتر تبويب «الطلبات المميزة» في شاشة طلبات التواصل — الأساسية فقط */
     public const FEATURED_FILTER_KEYS = ['search', 'stage_id', 'agent_id'];
 
-    public function __construct(private ClientAuditLogger $audit, private ViewingOutcomeSync $sync) {}
+    public function __construct(private ClientAuditLogger $audit, private ViewingService $viewings) {}
 
     /** استعلام العملاء بعد تطبيق الفلاتر — يخدم القائمة وعدّادات المراحل معاً */
     private function filtered(array $filters = []): Builder
@@ -195,7 +197,7 @@ class ClientService
             'stage', 'type', 'agent', 'source', 'recordedBy',
             'needs.city', 'needs.area', 'needs.unitType',
             'viewings.property.status', 'viewings.property.media', 'viewings.createdBy',
-            'viewings.property.contacts', 'viewings.property.agent', 'viewings.property.area',
+            'viewings.property.responsibles', 'viewings.property.agent', 'viewings.property.area',
             'interactions.user', 'interactions.stage',
             'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
             'auditLogs' => fn ($q) => $q->with('user')->limit(50),
@@ -293,6 +295,53 @@ class ClientService
 
             return $interaction;
         });
+    }
+
+    /**
+     * تغيير حالة الطلب من قائمتها في صفحة العميل.
+     * «ربح»: العقار المختار من معاينات العميل نتيجته «ربح» وباقي المعاينات «غير مهتم».
+     * «خسارة»: كل المعاينات «غير مهتم». غير ذلك: الحالة وحدها. كل تغيير يُسجَّل في سجل العميل.
+     */
+    public function changeStage(Client $client, ClientStage $stage, ?int $wonPropertyId = null): Client
+    {
+        return DB::transaction(function () use ($client, $stage, $wonPropertyId) {
+            $viewings = $client->viewings()->get();
+
+            $outcomeFor = match ($stage->key) {
+                ClientStage::KEY_WON => $this->wonOutcomes($viewings, $wonPropertyId),
+                ClientStage::KEY_LOST => fn (ClientViewing $v) => ClientViewing::OUTCOME_NOT_INTERESTED,
+                default => null,
+            };
+
+            if ($outcomeFor) {
+                foreach ($viewings as $viewing) {
+                    $outcome = $outcomeFor($viewing);
+
+                    if ($viewing->outcome !== $outcome) {
+                        $this->viewings->updateOutcome($viewing->setRelation('client', $client), $outcome);
+                    }
+                }
+            }
+
+            // ClientObserver يسجّل تغيير الحالة ويضبط won_at
+            if ((int) $client->stage_id !== (int) $stage->id) {
+                $client->update(['stage_id' => $stage->id]);
+            }
+
+            return $client;
+        });
+    }
+
+    /** @return Closure(ClientViewing): string نتيجة كل معاينة عند «ربح» */
+    private function wonOutcomes(Collection $viewings, ?int $wonPropertyId): Closure
+    {
+        if ($viewings->isNotEmpty() && ! $viewings->contains(fn (ClientViewing $v) => (int) $v->property_id === (int) $wonPropertyId)) {
+            throw ValidationException::withMessages(['won_property_id' => 'اختر العقار الذي تم الربح عليه من معاينات العميل.']);
+        }
+
+        return fn (ClientViewing $v) => (int) $v->property_id === (int) $wonPropertyId
+            ? ClientViewing::OUTCOME_WON
+            : ClientViewing::OUTCOME_NOT_INTERESTED;
     }
 
     /** معرّف نوع «مستأجر» — كل العملاء الجدد يُسجَّلون به */
@@ -400,12 +449,10 @@ class ClientService
                 'notes' => $row['notes'] ?? null,
             ];
 
-            $viewing = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
             // أي عقار قابل للمعاينة مهما كانت حالته (مباع/قيد التدقيق) — الحالة للعلم فقط
-            $property = Property::query()->with('status')->findOrFail($propertyId);
+            $viewing = ! empty($row['id']) ? $existing->get((int) $row['id']) : null;
 
             if ($viewing) {
-                $previous = $viewing->outcome;
                 $viewing->fill($attributes);
 
                 if ($viewing->isDirty('outcome')) {
@@ -427,7 +474,6 @@ class ClientService
                     $this->audit->record($client, 'viewing_updated', $viewing, $changes);
                 }
             } else {
-                $previous = null;
                 $viewing = $client->viewings()->create($attributes + [
                     'created_by' => auth()->id(),
                     'outcome_at' => $outcome === ClientViewing::OUTCOME_PENDING ? null : now(),
@@ -435,10 +481,6 @@ class ClientService
 
                 $this->audit->record($client, 'viewing_added', $viewing, $this->audit->snapshot($viewing, $fields));
             }
-
-            // أثر النتيجة على العميل («مهتم» ⇒ ربح)
-            $viewing->setRelation('client', $client)->setRelation('property', $property);
-            $this->sync->apply($viewing, $previous);
 
             $kept[] = $viewing->id;
         }

@@ -3,7 +3,7 @@
     زر الإرسال يحمل الحمولة في data-wa-send وتفتحه نافذة _wa-modal (whatsapp.js).
     زر النتيجة قبل تسجيلها يحمل data-wa-blocked فيعرض «يجب اختيار النتيجة أولاً» فوراً عند التمرير وعند النقر.
     كل التلميحات هنا بـ data-hint لا title: تظهر فور الاقتراب بلا تأخير المتصفح (whatsapp.js).
-    يتوقع $viewing مع property.contacts و client.
+    يتوقع $viewing مع property.responsibles (وحقول الحارس) و client.
 --}}
 @inject('whatsapp', 'App\Services\WhatsApp\WhatsAppService')
 @php
