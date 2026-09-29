@@ -1,7 +1,7 @@
 @extends('layouts.dashboard')
 
-@section('title', 'إدارة الموقع')
-@section('page-title', 'إدارة الموقع')
+@section('title', 'إدارة الويبسايت الرئيسي')
+@section('page-title', 'إدارة الويبسايت الرئيسي')
 
 @php
     $tabs = [

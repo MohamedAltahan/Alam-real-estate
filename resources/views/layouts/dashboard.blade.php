@@ -53,7 +53,6 @@
         ['label' => 'أنواع العقارات', 'route' => 'dashboard.unit-types.index', 'active' => 'dashboard.unit-types.*', 'icon' => 'layers', 'permission' => 'unit_types.view'],
         ['label' => 'طلبات التواصل',  'route' => 'dashboard.requests.index', 'active' => 'dashboard.requests.*', 'icon' => 'mail', 'permission' => 'contact_requests.view'],
         ['label' => 'مصادر التسويق',  'route' => 'dashboard.sources.index', 'active' => 'dashboard.sources.*', 'icon' => 'mega', 'permission' => 'marketing_sources.view'],
-        ['label' => 'إدارة الموقع',   'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
         ['label' => 'المواقع الإلكترونية', 'route' => 'dashboard.websites.index', 'active' => 'dashboard.websites.*', 'icon' => 'link', 'permission' => 'publishing_channels.view'],
         ['label' => 'السوشال ميديا',  'route' => 'dashboard.social-channels.index', 'active' => 'dashboard.social-channels.*', 'icon' => 'share', 'permission' => 'publishing_channels.view'],
         ['label' => 'واتساب',         'route' => 'dashboard.whatsapp.index', 'active' => 'dashboard.whatsapp.*', 'icon' => 'whatsapp', 'permission' => 'whatsapp.view'],
@@ -62,6 +61,7 @@
         ['label' => 'إدارة الأدوار',  'route' => 'dashboard.roles.index', 'active' => 'dashboard.roles.*', 'icon' => 'shield', 'permission' => 'roles.view'],
         ['label' => 'الصلاحيات',      'route' => 'dashboard.permissions.index', 'active' => 'dashboard.permissions.*', 'icon' => 'lock', 'permission' => 'permissions.view'],
         ['label' => 'المشرفين',       'route' => 'dashboard.supervisors.index', 'active' => 'dashboard.supervisors.*', 'icon' => 'user-check', 'permission' => 'supervisors.view'],
+        ['label' => 'إدارة الويبسايت الرئيسي', 'route' => 'dashboard.website.index', 'active' => 'dashboard.website.*', 'icon' => 'globe', 'permission' => 'website.view'],
     ])->filter(fn (array $item) => ! $item['permission'] || $me->can($item['permission']))->values();
     $dashboardHomeRoute = $nav->first()['route'] ?? 'dashboard.profile.edit';
 

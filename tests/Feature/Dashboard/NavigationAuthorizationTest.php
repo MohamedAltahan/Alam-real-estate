@@ -25,7 +25,7 @@ class NavigationAuthorizationTest extends TestCase
             ->assertDontSee('ملاك العقارات')
             ->assertDontSee('ميداني')
             ->assertDontSee('طلبات التواصل')
-            ->assertDontSee('إدارة الموقع')
+            ->assertDontSee('إدارة الويبسايت الرئيسي')
             ->assertDontSee('المواقع الإلكترونية')
             ->assertDontSee('السوشال ميديا')
             ->assertDontSee('المشرفين');
