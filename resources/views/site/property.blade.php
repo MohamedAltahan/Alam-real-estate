@@ -8,7 +8,13 @@
     $agent = $p->agent;
     $gallery = $p->gallery_urls;
     $mainImg = $gallery[0] ?? null;
-    $thumbs = array_slice($gallery, 1, 4);
+    // شبكة المصغّرات تتكيّف مع العدد: ≤4 → 2×2 · ≤9 → 3 أعمدة · أكثر → 4 أعمدة (وتمرير لو زادت الصفوف عن 4)
+    $galleryCount = count($gallery);
+    $thumbCols = $galleryCount <= 4 ? 2 : ($galleryCount <= 9 ? 3 : 4);
+    $thumbRows = (int) ceil(max($galleryCount, 1) / $thumbCols);
+    $thumbScroll = $thumbRows > 4;
+    // آخر مصغّرة تمتد لتملأ الصف الناقص بدل ترك خانات فارغة
+    $lastSpan = $galleryCount % $thumbCols ? $thumbCols - ($galleryCount % $thumbCols) + 1 : 1;
     $location = collect([
         $p->area?->name,
         $p->block ? $t('قطعة', 'Block').' '.$p->block : null,
@@ -60,13 +66,18 @@
         </button>
     </div>
 
-    {{-- المعرض: صورة كبيرة (يمين) + 4 مصغّرات 2×2 (شمال) --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-9">
-        <div class="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:min-h-[420px]">
-            @if ($mainImg)<img src="{{ $mainImg }}" class="absolute inset-0 w-full h-full object-cover" alt="{{ $p->title }}">
+    {{-- المعرض: صورة كبيرة (يمين) + كل الصور مصغّرة (شمال) — الضغط على مصغّرة يعرضها في الكبيرة --}}
+    <div x-data="propertyGallery(@js($gallery))" class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-9">
+        <div class="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[420px]">
+            @if ($mainImg)<img src="{{ $mainImg }}" :src="src" @click="openViewer()" class="absolute inset-0 w-full h-full object-cover cursor-zoom-in" alt="{{ $p->title }}">
             @else<div class="absolute inset-0 grid place-items-center text-gray-300"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg></div>@endif
+            @if ($galleryCount > 1)
+                <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums" dir="ltr" x-text="(current + 1) + ' / ' + images.length">1 / {{ $galleryCount }}</span>
+            @endif
             <div class="absolute bottom-4 start-4 flex gap-2">
-                <button class="rounded-full bg-white/85 backdrop-blur-md border border-white/60 text-primary-900 text-xs font-bold px-5 py-2.5 shadow-lg shadow-primary-950/10 hover:bg-white transition">{{ $t('عرض كل الصور', 'All photos') }}</button>
+                @if ($galleryCount)
+                    <button type="button" @click="openViewer()" class="rounded-full bg-white/85 backdrop-blur-md border border-white/60 text-primary-900 text-xs font-bold px-5 py-2.5 shadow-lg shadow-primary-950/10 hover:bg-white transition">{{ $t('عرض كل الصور', 'All photos') }}</button>
+                @endif
                 @if ($p->video_url)
                     {{-- الفيديو يُفتح داخل الموقع؛ الرابط يبقى fallback لو الجافاسكربت متعطّل --}}
                     <a href="{{ $p->video_url }}" target="_blank" rel="noopener"
@@ -78,14 +89,68 @@
                 @endif
             </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-            @for ($i = 0; $i < 4; $i++)
-                <div class="rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:min-h-[204px]">
-                    @if (isset($thumbs[$i]))<img src="{{ $thumbs[$i] }}" class="w-full h-full object-cover" alt="">
-                    @else<div class="w-full h-full grid place-items-center text-gray-200"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>@endif
+        @if ($galleryCount > 1)
+            {{-- موبايل: شريط أفقي · ديسكتوب: شبكة بارتفاع الصورة الكبيرة --}}
+            <div class="flex gap-2 overflow-x-auto pb-1 lg:pb-0 lg:grid lg:gap-3 lg:h-[420px] {{ $thumbScroll ? 'lg:overflow-y-auto lg:pe-1' : 'lg:overflow-visible' }}"
+                 style="grid-template-columns: repeat({{ $thumbCols }}, minmax(0, 1fr)); {{ $thumbScroll ? 'grid-auto-rows: 96px;' : 'grid-template-rows: repeat('.$thumbRows.', minmax(0, 1fr));' }}">
+                @foreach ($gallery as $i => $img)
+                    <button type="button" @click="select({{ $i }})"
+                            @if ($loop->last && $lastSpan > 1) style="grid-column: span {{ $lastSpan }} / span {{ $lastSpan }};" @endif
+                            class="relative shrink-0 w-24 h-20 lg:w-auto lg:h-auto rounded-xl lg:rounded-2xl overflow-hidden bg-gray-100 hover:opacity-90 transition">
+                        <img src="{{ $img }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
+                        {{-- إطار المحدّدة فوق الصورة (الـ ring على الزر نفسه تغطيه الصورة) --}}
+                        <span class="absolute inset-0 rounded-[inherit]" :class="current === {{ $i }} ? 'ring-[3px] ring-inset ring-accent-500' : ''"></span>
+                    </button>
+                @endforeach
+            </div>
+        @else
+            <div class="grid grid-cols-2 gap-3">
+                @for ($i = 0; $i < 4; $i++)
+                    <div class="rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:min-h-[204px] grid place-items-center text-gray-200"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
+                @endfor
+            </div>
+        @endif
+
+        {{-- عارض الصور بملء الشاشة --}}
+        <template x-teleport="body">
+            <div x-cloak x-show="viewer" x-transition.opacity.duration.200ms x-ref="viewer" tabindex="-1"
+                 @keydown.escape.window="viewer && closeViewer()"
+                 @keydown.arrow-left.window="viewer && move(document.dir === 'rtl' ? 1 : -1)"
+                 @keydown.arrow-right.window="viewer && move(document.dir === 'rtl' ? -1 : 1)"
+                 class="fixed inset-0 z-[60] flex flex-col bg-primary-950/95 backdrop-blur-md outline-none">
+                <div class="flex items-center gap-3 px-4 sm:px-6 py-4">
+                    <h3 class="min-w-0 flex-1 text-white font-bold text-sm sm:text-base truncate">{{ $p->title }}</h3>
+                    <span class="text-white/70 text-sm tabular-nums" dir="ltr" x-text="(current + 1) + ' / ' + images.length"></span>
+                    <button type="button" @click="closeViewer()" class="grid place-items-center w-10 h-10 shrink-0 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition" aria-label="{{ $t('إغلاق', 'Close') }}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
                 </div>
-            @endfor
-        </div>
+                <div class="relative flex-1 min-h-0 px-4 sm:px-20" @click.self="closeViewer()">
+                    <img :src="src" class="w-full h-full object-contain select-none" alt="{{ $p->title }}">
+                    <template x-if="images.length > 1">
+                        <div>
+                            <button type="button" @click="move(-1)" class="absolute top-1/2 -translate-y-1/2 start-2 sm:start-5 grid place-items-center w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition" aria-label="{{ $t('السابق', 'Previous') }}">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m15 18-6-6 6-6"/></svg>
+                            </button>
+                            <button type="button" @click="move(1)" class="absolute top-1/2 -translate-y-1/2 end-2 sm:end-5 grid place-items-center w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition" aria-label="{{ $t('التالي', 'Next') }}">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m9 18 6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                {{-- w-max + mx-auto بدل justify-center حتى لا يُقصّ أول الشريط عند كثرة الصور --}}
+                <div x-show="images.length > 1" class="overflow-x-auto px-4 py-4">
+                    <div class="flex gap-2 w-max mx-auto p-0.5">
+                        <template x-for="(img, i) in images" :key="i">
+                            <button type="button" @click="select(i)" class="shrink-0 w-16 h-12 sm:w-20 sm:h-14 rounded-lg overflow-hidden transition"
+                                    :class="current === i ? 'ring-2 ring-accent-500 opacity-100' : 'opacity-50 hover:opacity-80'">
+                                <img :src="img" class="w-full h-full object-cover" alt="" loading="lazy">
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">

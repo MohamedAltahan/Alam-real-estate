@@ -233,6 +233,45 @@ Alpine.store('video', {
     },
 });
 
+/**
+ * معرض صور العقار: الضغط على مصغّرة يعرضها في الصورة الكبيرة،
+ * و«عرض كل الصور» يفتح عارض ملء الشاشة بالأسهم والكيبورد.
+ */
+Alpine.data('propertyGallery', (images = []) => ({
+    images,
+    current: 0,
+    viewer: false,
+
+    get src() {
+        return this.images[this.current] ?? null;
+    },
+
+    select(i) {
+        this.current = i;
+    },
+
+    move(step) {
+        const n = this.images.length;
+        if (n) {
+            this.current = (this.current + step + n) % n;
+        }
+    },
+
+    openViewer() {
+        if (! this.images.length) {
+            return;
+        }
+        this.viewer = true;
+        document.body.style.overflow = 'hidden';
+        this.$nextTick(() => this.$refs.viewer?.focus());
+    },
+
+    closeViewer() {
+        this.viewer = false;
+        document.body.style.overflow = '';
+    },
+}));
+
 window.Alpine = Alpine;
 
 // نؤجّل التشغيل إلى اكتمال المستند حتى تسجّل وحدات dashboard.js مكوّناتها أولاً
