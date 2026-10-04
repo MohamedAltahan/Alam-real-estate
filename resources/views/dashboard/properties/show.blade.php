@@ -18,23 +18,29 @@
         @endcan
     </div>
 
-    {{-- الضغط على صورة من المعرض يعرضها في الصورة الكبيرة --}}
-    <div x-data="{ photo: @js($property->cover_url ?: ($property->gallery_urls[0] ?? null)) }" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    {{-- الضغط على صورة من المعرض يعرضها في الصورة الكبيرة (مع عدّاد «2 / 10» مثل الموقع) --}}
+    @php
+        $photos = $property->gallery_urls ?: array_filter([$property->cover_url]);
+    @endphp
+    <div x-data="{ photos: @js(array_values($photos)), current: 0 }" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div class="lg:col-span-2 space-y-5">
             {{-- الصورة والعنوان --}}
             <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
                 {{-- ارتفاع ثابت بحد أقصى: الصورة داخلها absolute فلا تمدّ الإطار مهما كان مقاسها --}}
                 <div class="relative aspect-[16/9] max-h-[440px] w-full bg-gray-100 grid place-items-center text-gray-300">
-                    @if ($property->cover_url || count($property->gallery_urls))<img src="{{ $property->cover_url ?: $property->gallery_urls[0] }}" :src="photo" class="absolute inset-0 w-full h-full object-contain" alt="">
+                    @if (count($photos))<img src="{{ reset($photos) }}" :src="photos[current]" class="absolute inset-0 w-full h-full object-contain" alt="">
                     @else <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>@endif
+                    @if (count($photos) > 1)
+                        <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums" dir="ltr" x-text="(current + 1) + ' / ' + photos.length">1 / {{ count($photos) }}</span>
+                    @endif
                 </div>
                 {{-- المعرض: سطر واحد قابل للتمرير تحت الصورة الكبيرة --}}
-                @if (count($property->gallery_urls) > 1)
+                @if (count($photos) > 1)
                     <div class="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 border-b border-gray-100">
-                        @foreach ($property->gallery_urls as $url)
-                            <button type="button" @click="photo = @js($url)" class="relative shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
+                        @foreach ($photos as $i => $url)
+                            <button type="button" @click="current = {{ $i }}" class="relative shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
                                 <img src="{{ $url }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
-                                <span class="absolute inset-0 rounded-lg" :class="photo === @js($url) && 'ring-[3px] ring-inset ring-accent-500'"></span>
+                                <span class="absolute inset-0 rounded-lg" :class="current === {{ $i }} && 'ring-[3px] ring-inset ring-accent-500'"></span>
                             </button>
                         @endforeach
                     </div>
