@@ -18,12 +18,14 @@
         @endcan
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    {{-- الضغط على صورة من المعرض يعرضها في الصورة الكبيرة --}}
+    <div x-data="{ photo: @js($property->cover_url ?: ($property->gallery_urls[0] ?? null)) }" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div class="lg:col-span-2 space-y-5">
             {{-- الصورة والعنوان --}}
             <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
-                <div class="aspect-[16/9] bg-gray-100 grid place-items-center text-gray-300">
-                    @if ($property->cover_url)<img src="{{ $property->cover_url }}" class="w-full h-full object-cover" alt="">
+                {{-- ارتفاع ثابت بحد أقصى: الصورة داخلها absolute فلا تمدّ الإطار مهما كان مقاسها --}}
+                <div class="relative aspect-[16/9] max-h-[440px] w-full bg-gray-100 grid place-items-center text-gray-300">
+                    @if ($property->cover_url || count($property->gallery_urls))<img src="{{ $property->cover_url ?: $property->gallery_urls[0] }}" :src="photo" class="absolute inset-0 w-full h-full object-contain" alt="">
                     @else <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>@endif
                 </div>
                 <div class="p-6">
@@ -196,7 +198,12 @@
                 <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                     <h3 class="font-bold text-ink mb-3">المعرض ({{ count($property->gallery_urls) }})</h3>
                     <div class="grid grid-cols-3 gap-2">
-                        @foreach ($property->gallery_urls as $url)<img src="{{ $url }}" class="aspect-square object-cover rounded-lg" alt="">@endforeach
+                        @foreach ($property->gallery_urls as $url)
+                            <button type="button" @click="photo = @js($url)" class="relative aspect-square rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
+                                <img src="{{ $url }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
+                                <span class="absolute inset-0 rounded-lg" :class="photo === @js($url) && 'ring-[3px] ring-inset ring-accent-500'"></span>
+                            </button>
+                        @endforeach
                     </div>
                 </div>
             @endif
