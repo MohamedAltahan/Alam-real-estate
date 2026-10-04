@@ -28,6 +28,17 @@
                     @if ($property->cover_url || count($property->gallery_urls))<img src="{{ $property->cover_url ?: $property->gallery_urls[0] }}" :src="photo" class="absolute inset-0 w-full h-full object-contain" alt="">
                     @else <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>@endif
                 </div>
+                {{-- المعرض: سطر واحد قابل للتمرير تحت الصورة الكبيرة --}}
+                @if (count($property->gallery_urls) > 1)
+                    <div class="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 border-b border-gray-100">
+                        @foreach ($property->gallery_urls as $url)
+                            <button type="button" @click="photo = @js($url)" class="relative shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
+                                <img src="{{ $url }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
+                                <span class="absolute inset-0 rounded-lg" :class="photo === @js($url) && 'ring-[3px] ring-inset ring-accent-500'"></span>
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
                 <div class="p-6">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs text-gray-400">رقم <span dir="ltr" class="font-semibold text-ink">{{ $property->reference_code }}</span></span>
@@ -194,19 +205,6 @@
                 </div>
             @endif
 
-            @if (count($property->gallery_urls))
-                <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
-                    <h3 class="font-bold text-ink mb-3">المعرض ({{ count($property->gallery_urls) }})</h3>
-                    <div class="grid grid-cols-3 gap-2">
-                        @foreach ($property->gallery_urls as $url)
-                            <button type="button" @click="photo = @js($url)" class="relative aspect-square rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
-                                <img src="{{ $url }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
-                                <span class="absolute inset-0 rounded-lg" :class="photo === @js($url) && 'ring-[3px] ring-inset ring-accent-500'"></span>
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
     </div>
 </div>
