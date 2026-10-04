@@ -46,9 +46,10 @@
                     @forelse ($users as $u)
                         @php
                             $role = $u->roles->first();
+                            $phone = \App\Support\PhoneNumber::split($u->phone);
                             $editData = [
                                 'id' => $u->id, 'name' => $u->name, 'email' => $u->email,
-                                'phone' => $u->phone, 'civil_id' => $u->civil_id, 'job_title' => $u->job_title,
+                                'phone_code' => $phone['code'], 'phone' => $phone['national'], 'civil_id' => $u->civil_id, 'job_title' => $u->job_title,
                                 'status' => $u->status, 'is_agent' => (bool) $u->is_agent, 'role' => $role?->name,
                                 // ملف مندوب المبيعات
                                 'bio_ar' => $u->getTranslation('bio', 'ar', false),
@@ -130,8 +131,18 @@
                     <input name="email" type="email" x-model="form.email" required dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-end focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white"></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">كلمة المرور <span x-show="mode==='add'" class="text-danger">*</span></label>
                     <input name="password" type="password" x-model="form.password" :required="mode==='add'" :placeholder="mode==='edit' ? 'اتركه فارغاً لعدم التغيير' : ''" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white"></div>
+                {{-- مفتاح الدولة (الكويت افتراضياً) + الرقم المحلي — يُعاد بناؤه مع كل فتح للمودال --}}
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">رقم الهاتف</label>
-                    <input name="phone" x-model="form.phone" dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-end focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white"></div>
+                    <template x-for="k in [formKey]" :key="k">
+                        <div>
+                            <x-phone-field dynamic countries="countries" code="form.phone_code" national="form.phone"
+                                           code-name="'phone_code'" phone-name="'phone'" :required="false" :show-errors="false"
+                                           x-init="$watch('code', v => form.phone_code = v); $watch('national', v => form.phone = v)" />
+                        </div>
+                    </template>
+                    @error('phone')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                    @error('phone_code')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                </div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">الرقم المدني</label>
                     <input name="civil_id" x-model="form.civil_id" dir="ltr" class="w-full rounded-field border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-end focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 focus:bg-white"></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1.5">المسمى الوظيفي</label>
@@ -286,7 +297,7 @@
 <script>
     function supervisorCrud() {
         const blank = () => ({
-            name: '', email: '', password: '', phone: '', civil_id: '', job_title: '',
+            name: '', email: '', password: '', phone_code: '+965', phone: '', civil_id: '', job_title: '',
             role: '', status: 'active', is_agent: false,
             bio_ar: '', bio_en: '', languages: [], response_time: '', avatar_url: '',
             reviews: [],
@@ -294,6 +305,9 @@
 
         return {
             mode: 'add', action: '', delAction: '', delName: '',
+            countries: @js(\App\Support\PhoneCountries::all()),
+            // يتغيّر مع كل فتح للمودال ليُعاد بناء حقل الهاتف بالقيم الجديدة
+            formKey: 0,
             // معاينة الصورة: الملف المختار حديثاً، وإلا الصورة المحفوظة
             pickedAvatar: '', removeAvatar: false,
             removedReviews: [],
@@ -332,6 +346,7 @@
             startAdd() {
                 this.mode = 'add';
                 this.form = blank();
+                this.formKey++;
                 this.resetAvatar();
                 this.action = '{{ route('dashboard.supervisors.store') }}';
                 this.$dispatch('open-modal', 'supervisor-form');
@@ -344,6 +359,7 @@
                     // نسخة مستقلة حتى لا يعدّل التحرير بيانات الصف في الجدول
                     reviews: (u.reviews ?? []).map(r => ({ ...r, is_published: !!r.is_published })),
                 };
+                this.formKey++;
                 this.resetAvatar();
                 this.action = '{{ url('dashboard/supervisors') }}/' + u.id;
                 this.$dispatch('open-modal', 'supervisor-form');

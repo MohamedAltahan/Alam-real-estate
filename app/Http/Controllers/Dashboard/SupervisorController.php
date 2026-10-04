@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Support\PhoneCountries;
+use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -44,7 +46,8 @@ class SupervisorController extends Controller
         ], self::MESSAGES);
 
         $user = User::create([
-            ...collect($data)->except('role', 'bio_ar', 'bio_en', 'languages', 'avatar')->all(),
+            ...collect($data)->except('role', 'bio_ar', 'bio_en', 'languages', 'avatar', 'phone_code')->all(),
+            'phone' => $this->fullPhone($data),
             'is_agent' => $request->boolean('is_agent'),
             ...$this->agentProfile($request),
         ]);
@@ -71,7 +74,8 @@ class SupervisorController extends Controller
         $previousRole = $supervisor->roles->first()?->name;
 
         $supervisor->fill([
-            ...collect($data)->except('role', 'password', 'bio_ar', 'bio_en', 'languages', 'avatar')->all(),
+            ...collect($data)->except('role', 'password', 'bio_ar', 'bio_en', 'languages', 'avatar', 'phone_code')->all(),
+            'phone' => $this->fullPhone($data),
             'is_agent' => $request->boolean('is_agent'),
             ...$this->agentProfile($request),
             // الحقل قد يغيب كلياً عن الطلب (nullable) — لا نلمس كلمة المرور حينها
@@ -110,6 +114,12 @@ class SupervisorController extends Controller
         return back()->with('success', 'تم حذف المشرف.');
     }
 
+    /** الهاتف يُحفظ كاملاً بمفتاح الدولة ("+965 55112233") — يقرؤه الموقع مباشرة في روابط الاتصال وواتساب */
+    private function fullPhone(array $data): ?string
+    {
+        return PhoneNumber::format($data['phone_code'] ?? null, $data['phone'] ?? null) ?: null;
+    }
+
     /** الاسم المعروض للدور (الوصف العربي وإلا الاسم البرمجي) */
     private function roleLabel(?string $name): ?string
     {
@@ -126,7 +136,8 @@ class SupervisorController extends Controller
     private function sharedRules(): array
     {
         return [
-            'phone' => ['nullable', 'string', 'max:40'],
+            'phone_code' => ['nullable', 'string', Rule::in(PhoneCountries::codes())],
+            'phone' => ['nullable', 'string', 'max:20'],
             'civil_id' => ['nullable', 'string', 'max:40'],
             'job_title' => ['nullable', 'string', 'max:120'],
             'role' => ['required', 'exists:roles,name'],
