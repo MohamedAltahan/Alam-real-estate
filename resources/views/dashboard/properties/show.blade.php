@@ -134,6 +134,7 @@
                     <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->owner_commission_rate !== null ? \App\Support\PropertyFields::percent($property->owner_commission_rate) : '—' }}</bdi></p></div>
                     <div><p class="text-gray-400 text-xs">مندوب المبيعات</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">التصنيف / النوع</p><p class="font-medium text-ink">{{ $property->category?->name }} · {{ $property->unitType?->name }}</p></div>
+                    <div><p class="text-gray-400 text-xs">وقت الإضافة</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->created_at?->format('Y-m-d H:i') ?? '—' }}</bdi></p></div>
                 </div>
             </div>
 
