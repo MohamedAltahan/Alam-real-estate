@@ -29,6 +29,10 @@ withAlpine((Alpine) => {
         ownerProperties: [],
         filesOwner: '',
         ownerFiles: [],
+        contactsOwner: '',
+        ownerContacts: [],
+        notesOwner: '',
+        ownerNotes: '',
 
         init() {
             const reopen = opts.reopen;
@@ -121,6 +125,19 @@ withAlpine((Alpine) => {
             this.filesOwner = name;
             this.ownerFiles = files;
             this.$dispatch('open-modal', 'owner-files');
+        },
+
+        /** كل مسؤولي المالك من عمود «المسؤول» في القائمة */
+        openContacts(name, contacts) {
+            this.contactsOwner = name;
+            this.ownerContacts = contacts;
+            this.$dispatch('open-modal', 'owner-contacts');
+        },
+
+        openNotes(name, notes) {
+            this.notesOwner = name;
+            this.ownerNotes = notes;
+            this.$dispatch('open-modal', 'owner-notes');
         },
     }));
 });

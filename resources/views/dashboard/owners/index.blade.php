@@ -148,6 +148,7 @@
                             $filesData = OwnerFormData::filesPayload($o);
                             $primary = $o->contacts->first();
                             $extraContacts = max(0, $o->contacts->count() - 1);
+                            $contactsData = $o->contacts->map(fn ($c) => ['label' => $c->label($o), 'phone' => $c->full_phone, 'whatsapp' => $c->whatsapp_number])->values();
                         @endphp
                         {{-- النقر على الصف كله يفتح ملف المالك --}}
                         <tr class="hover:bg-gray-50/50 transition cursor-pointer"
@@ -166,16 +167,19 @@
                                     </div>
                                 </div>
                             </td>
-                            {{-- المسؤول الأساسي (أول رقم تواصل): صفته واسمه ثم رقمه --}}
+                            {{-- المسؤول الأساسي (أول رقم تواصل): صفته واسمه ثم رقمه — النقر يعرض كل المسؤولين --}}
                             <td class="px-4 py-3 max-w-[240px]">
                                 @if ($primary)
-                                    <span class="block font-semibold text-ink truncate" title="{{ $primary->label($o) }}">{{ $primary->label($o) }}</span>
-                                    <span class="block text-xs text-gray-500 tabular-nums">
-                                        <bdi dir="ltr">{{ $primary->full_phone ?: '—' }}</bdi>
-                                        @if ($extraContacts)
-                                            <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold" title="مسؤولون آخرون">+{{ $extraContacts }}</span>
-                                        @endif
-                                    </span>
+                                    <button type="button" @click.stop='openContacts(@json($o->name), @json($contactsData))' title="كل المسؤولين"
+                                            class="block w-full text-start rounded-xl -mx-2 px-2 py-1 hover:bg-primary-50 transition">
+                                        <span class="block font-semibold text-ink truncate">{{ $primary->label($o) }}</span>
+                                        <span class="block text-xs text-gray-500 tabular-nums">
+                                            <bdi dir="ltr">{{ $primary->full_phone ?: '—' }}</bdi>
+                                            @if ($extraContacts)
+                                                <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold">+{{ $extraContacts }}</span>
+                                            @endif
+                                        </span>
+                                    </button>
                                 @else
                                     <span class="text-gray-600"><bdi dir="ltr">{{ $o->full_phone ?: '—' }}</bdi></span>
                                 @endif
@@ -197,7 +201,8 @@
                             <td class="px-4 py-3 text-gray-600">{{ $o->latestProperty?->agent?->name ?: '—' }}</td>
                             <td class="px-4 py-3 max-w-[220px]">
                                 @if (filled($o->notes))
-                                    <span class="block text-xs text-gray-600 truncate" title="{{ $o->notes }}">{{ $o->notes }}</span>
+                                    <button type="button" @click.stop='openNotes(@json($o->name), @json($o->notes))' title="عرض الملاحظات"
+                                            class="block w-full text-start rounded-xl -mx-2 px-2 py-1 text-xs text-gray-600 truncate hover:bg-primary-50 hover:text-primary-800 transition">{{ $o->notes }}</button>
                                 @else
                                     <span class="text-xs text-gray-300">—</span>
                                 @endif
@@ -266,6 +271,32 @@
             </template>
             <p x-show="ownerProperties.length === 0" class="text-center text-sm text-gray-400 py-10">لا توجد عقارات مسجلة لهذا المالك.</p>
         </div>
+    </x-modal>
+
+    {{-- كل مسؤولي المالك --}}
+    <x-modal name="owner-contacts" maxWidth="lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100"><div><h3 class="font-bold text-ink">المسؤولون</h3><p class="text-xs text-gray-400" x-text="contactsOwner"></p></div><button type="button" @click="$dispatch('close-modal', 'owner-contacts')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <ul class="p-4 max-h-[70vh] overflow-y-auto divide-y divide-gray-50">
+            <template x-for="(contact, i) in ownerContacts" :key="i">
+                <li class="flex items-center gap-3 px-2 py-3">
+                    <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-primary-50 text-primary-700 text-xs font-bold tabular-nums" x-text="i + 1"></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block font-semibold text-ink truncate" x-text="contact.label"></span>
+                        <span class="block text-xs text-gray-500 tabular-nums"><bdi dir="ltr" x-text="contact.phone || '—'"></bdi></span>
+                    </span>
+                    <a x-show="contact.whatsapp" :href="'https://wa.me/' + contact.whatsapp" target="_blank" rel="noopener" title="واتساب"
+                       class="grid place-items-center w-9 h-9 shrink-0 rounded-full text-success hover:bg-success/10 transition">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.08 1.75-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.43 9.43 0 0 1-4.8-1.32l-.35-.2-3.57.94.95-3.48-.22-.36a9.4 9.4 0 0 1-1.44-5.02c0-5.2 4.24-9.44 9.45-9.44 2.52 0 4.89.99 6.67 2.77a9.38 9.38 0 0 1 2.76 6.68c0 5.2-4.24 9.43-9.44 9.43zm8.03-17.47A11.3 11.3 0 0 0 12.04.5C5.78.5.68 5.6.68 11.86c0 2 .52 3.96 1.52 5.68L.58 23.5l6.1-1.6a11.32 11.32 0 0 0 5.36 1.37h.01c6.26 0 11.36-5.1 11.36-11.36 0-3.03-1.18-5.89-3.33-8.03z"/></svg>
+                    </a>
+                </li>
+            </template>
+        </ul>
+    </x-modal>
+
+    {{-- ملاحظات المالك كاملة --}}
+    <x-modal name="owner-notes" maxWidth="lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100"><div><h3 class="font-bold text-ink">الملاحظات</h3><p class="text-xs text-gray-400" x-text="notesOwner"></p></div><button type="button" @click="$dispatch('close-modal', 'owner-notes')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <p class="p-6 max-h-[70vh] overflow-y-auto text-sm leading-7 text-gray-700 whitespace-pre-line break-words" x-text="ownerNotes"></p>
     </x-modal>
 </div>
 @endsection
