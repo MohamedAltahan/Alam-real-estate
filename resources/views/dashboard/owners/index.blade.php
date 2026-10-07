@@ -131,7 +131,7 @@
                     <tr class="text-gray-500 text-xs border-b border-gray-100 bg-gray-50/60">
                         <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">المالك</th>
-                        <th class="text-start font-medium px-4 py-3">الهاتف</th>
+                        <th class="text-start font-medium px-4 py-3">المسؤول</th>
                         <th class="text-start font-medium px-4 py-3">عدد العقارات</th>
                         <th class="text-start font-medium px-4 py-3">الملفات</th>
                         <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
@@ -146,6 +146,7 @@
                             $editData = OwnerFormData::editPayload($o);
                             $propertiesData = $o->properties->map(fn ($p) => OwnerFormData::propertyPayload($p))->values();
                             $filesData = OwnerFormData::filesPayload($o);
+                            $primary = $o->contacts->first();
                             $extraContacts = max(0, $o->contacts->count() - 1);
                         @endphp
                         {{-- النقر على الصف كله يفتح ملف المالك --}}
@@ -157,14 +158,26 @@
                                     <span class="grid place-items-center w-9 h-9 rounded-full bg-accent-100 text-accent-700 font-bold">{{ mb_substr($o->name, 0, 1) }}</span>
                                     <div class="min-w-0">
                                         <span class="block font-semibold text-ink truncate">{{ $o->name }}</span>
-                                        <span class="block text-xs text-gray-400 truncate"><span dir="ltr">{{ $o->email ?: '—' }}</span></span>
+                                        {{-- موبايل المالك نفسه --}}
+                                        <span class="block text-xs text-gray-500 tabular-nums truncate"><bdi dir="ltr">{{ $o->full_mobile ?: '—' }}</bdi></span>
+                                        @if (filled($o->email))
+                                            <span class="block text-xs text-gray-400 truncate"><bdi dir="ltr">{{ $o->email }}</bdi></span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 text-gray-600">
-                                <span dir="ltr">{{ $o->full_phone ?: '—' }}</span>
-                                @if ($extraContacts)
-                                    <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold" title="مسؤولون آخرون">+{{ $extraContacts }}</span>
+                            {{-- المسؤول الأساسي (أول رقم تواصل): صفته واسمه ثم رقمه --}}
+                            <td class="px-4 py-3 max-w-[240px]">
+                                @if ($primary)
+                                    <span class="block font-semibold text-ink truncate" title="{{ $primary->label($o) }}">{{ $primary->label($o) }}</span>
+                                    <span class="block text-xs text-gray-500 tabular-nums">
+                                        <bdi dir="ltr">{{ $primary->full_phone ?: '—' }}</bdi>
+                                        @if ($extraContacts)
+                                            <span class="ms-1 inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold" title="مسؤولون آخرون">+{{ $extraContacts }}</span>
+                                        @endif
+                                    </span>
+                                @else
+                                    <span class="text-gray-600"><bdi dir="ltr">{{ $o->full_phone ?: '—' }}</bdi></span>
                                 @endif
                             </td>
                             <td class="px-4 py-3">

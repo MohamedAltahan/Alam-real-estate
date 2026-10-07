@@ -57,7 +57,7 @@ class PropertyOwnerManagementTest extends TestCase
         $this->assertSame('501234567', $owner->phone);
     }
 
-    public function test_owner_mobile_is_stored_and_shown_on_the_owner_page_only(): void
+    public function test_owner_mobile_is_stored_and_shown_on_the_owner_page_and_list_only(): void
     {
         $user = $this->userWith(['property_owners.view', 'property_owners.create', 'property_owners.edit', 'properties.view']);
         $viewer = $this->userWith(['property_owners.view']);
@@ -87,9 +87,11 @@ class PropertyOwnerManagementTest extends TestCase
         $property = Property::create(['reference_code' => '5', 'title' => ['ar' => 'عقار', 'en' => 'P'], 'owner_id' => $owner->id]);
         $property->responsibles()->attach($contact->id);
 
-        // صفحة المالك فقط
+        // صفحة المالك، والقائمة: الموبايل تحت اسم المالك والمسؤول الأساسي (صفته · اسمه + رقمه) في عموده
         $this->actingAs($viewer)->get(route('dashboard.owners.show', $owner))->assertOk()->assertSee('موبايل المالك')->assertSee('+965 99112233');
-        $this->actingAs($viewer)->get(route('dashboard.owners.index'))->assertOk()->assertSee('مالك بموبايل')->assertDontSee('99112233');
+        $this->actingAs($viewer)->get(route('dashboard.owners.index'))->assertOk()
+            ->assertSeeInOrder(['المسؤول', 'مالك بموبايل', '+965 99112233', 'الوكيل · سالم', '+965 55110000']);
+        $this->actingAs($viewer)->get(route('dashboard.owners.index', ['search' => '99112233']))->assertOk()->assertSee('مالك بموبايل');
         $this->actingAs($user)->get(route('dashboard.properties.show', $property))->assertOk()->assertDontSee('99112233');
 
         // تعديل الموبايل وحده لا يُكتب في سجل النشاط، وتفريغه يمسح المفتاح أيضاً

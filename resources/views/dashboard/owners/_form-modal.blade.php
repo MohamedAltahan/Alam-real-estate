@@ -39,7 +39,7 @@
                                                x-init="$watch('code', v => form.mobile_code = v); $watch('national', v => form.mobile = v)" />
                             </div>
                         </template>
-                        <p class="mt-1 text-[11px] text-gray-400">يظهر في صفحة المالك فقط — لا تُرسل عليه رسائل واتساب.</p>
+                        <p class="mt-1 text-[11px] text-gray-400">يظهر في صفحة المالك وقائمة الملاك — لا تُرسل عليه رسائل واتساب.</p>
                         @error('mobile')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                     </div>
                     <div>

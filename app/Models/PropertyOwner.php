@@ -25,7 +25,7 @@ class PropertyOwner extends Model implements HasMedia
         'registered_address', 'notes', 'mobile_code', 'mobile',
     ];
 
-    /** رقم موبايل المالك للعرض في صفحته فقط — لا يدخل في أي تحويل JSON/مصفوفة */
+    /** رقم موبايل المالك للعرض فقط (صفحته وقائمة الملاك) — لا يدخل في أي تحويل JSON/مصفوفة */
     protected $hidden = ['mobile_code', 'mobile'];
 
     public function area(): BelongsTo
@@ -64,7 +64,7 @@ class PropertyOwner extends Model implements HasMedia
         return PhoneNumber::digits($this->phone_code, $this->phone);
     }
 
-    /** موبايل المالك نفسه «+965 99112233» — للعرض في صفحة المالك فقط */
+    /** موبايل المالك نفسه «+965 99112233» — للعرض في صفحة المالك وقائمة الملاك */
     public function getFullMobileAttribute(): string
     {
         return filled($this->mobile) ? PhoneNumber::format($this->mobile_code, $this->mobile) : '';

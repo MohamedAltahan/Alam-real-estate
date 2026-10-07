@@ -69,6 +69,7 @@ class PropertyOwnerService
 
             foreach ($numbers as $number) {
                 $q->orWhere('phone', 'like', "%{$number}%")
+                    ->orWhere('mobile', 'like', "%{$number}%")
                     ->orWhereHas('contacts', fn (Builder $c) => $c->where('phone', 'like', "%{$number}%"));
             }
         });
