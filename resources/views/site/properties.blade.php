@@ -33,7 +33,7 @@
     </div>
 </section>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 py-10" x-data="{ filters: true, view: 'grid' }">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-10" x-data="{ filters: window.matchMedia('(min-width: 1024px)').matches, view: 'grid' }">
     {{-- شريط الأدوات: العنوان + الترتيب --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 class="text-xl sm:text-2xl font-bold text-ink">{{ $t('أكثر من', 'More than') }} {{ number_format($properties->total()) }} {{ $t('بيت في عروض العقارات', 'properties available') }}</h2>
