@@ -276,7 +276,7 @@ class PropertyController extends Controller
             'price_period' => ['nullable', 'in:monthly,yearly'],
             'status_id' => ['required', 'exists:property_statuses,id'],
             'owner_id' => ['nullable', 'exists:property_owners,id'],
-            'owner_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'owner_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:999.99'], // قد تتجاوز 100% (مثل شهر ونصف إيجار) — حدّها سعة العمود decimal(5,2)
             'agent_id' => ['nullable', 'exists:users,id'],
             'bedrooms' => ['nullable', 'integer', 'min:0'],
             'bathrooms' => ['nullable', 'integer', 'min:0'],

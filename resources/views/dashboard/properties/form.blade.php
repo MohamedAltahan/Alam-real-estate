@@ -128,7 +128,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="{{ $labelCls }}">السعر ({{ auth()->user()->currencySymbol() }}) <span class="text-danger">*</span></label>
-                        <input name="price" type="number" step="0.001" min="0" value="{{ old('price', $property->price) }}" required class="{{ $inputCls }}">
+                        <input name="price" type="number" step="0.001" min="0" value="{{ old('price', \App\Support\PropertyFields::priceInput($property->price)) }}" required class="{{ $inputCls }}">
                         @error('price')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                     </div>
                     <div x-show="purpose === 'rent'" x-cloak>
@@ -192,7 +192,7 @@
                     </select>
                     @error('owner_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
-                <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="100" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
+                <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="999.99" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
             </div>
 
             {{-- المسؤولون: تظهر قائمة مسؤولي المالك بمجرد اختياره — أكثر من مسؤول --}}

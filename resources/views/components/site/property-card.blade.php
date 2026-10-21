@@ -100,7 +100,7 @@
             <span class="truncate">{{ $location ?: '—' }}</span>
         </p>
 
-        <p class="font-bold text-primary-900 mb-3">{{ number_format($p->price, 0) }} {{ $t('د.ك', 'KD') }}<span class="text-xs text-gray-400 font-normal">{{ $period }}</span></p>
+        <p class="font-bold text-primary-900 mb-3">{{ \App\Support\PropertyFields::price($p->price) }} {{ $t('د.ك', 'KD') }}<span class="text-xs text-gray-400 font-normal">{{ $period }}</span></p>
 
         {{-- المواصفات --}}
         <div class="flex items-center gap-3 text-xs text-gray-500 pb-3 mb-3 border-b border-gray-50">

@@ -209,7 +209,7 @@
                             @endphp
                             <span class="shrink-0 text-end">
                                 <span class="block text-[13px] font-bold text-ink tabular-nums">
-                                    {{ number_format($p->price) }} <span class="text-[10px] text-gray-400 font-bold">{{ $unit }}</span>
+                                    {{ \App\Support\PropertyFields::price($p->price) }} <span class="text-[10px] text-gray-400 font-bold">{{ $unit }}</span>
                                 </span>
                                 @if ($p->status)
                                     <span class="inline-block mt-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold

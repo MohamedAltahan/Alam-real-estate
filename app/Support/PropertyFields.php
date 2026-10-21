@@ -93,4 +93,21 @@ final class PropertyFields
     {
         return rtrim(rtrim(self::rateKey($rate), '0'), '.').'%';
     }
+
+    /** السعر بلا أصفار عشرية زائدة: «250,000» · «1,250.5» (الفلس يظهر فقط إن وُجد) */
+    public static function price(mixed $amount): string
+    {
+        return self::trimZeros(number_format((float) $amount, 3));
+    }
+
+    /** قيمة حقل السعر في الفورم: «250000» بدل «250000.000» */
+    public static function priceInput(mixed $amount): string
+    {
+        return $amount === null || $amount === '' ? '' : self::trimZeros(number_format((float) $amount, 3, '.', ''));
+    }
+
+    private static function trimZeros(string $number): string
+    {
+        return str_contains($number, '.') ? rtrim(rtrim($number, '0'), '.') : $number;
+    }
 }

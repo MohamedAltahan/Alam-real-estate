@@ -71,7 +71,7 @@ class ClientController extends Controller
         $client->load([
             'needs.city', 'needs.area', 'needs.unitType', 'agent',
             'viewings.property.area', 'viewings.property.media',
-            'viewings.property.responsibles', 'viewings.property.agent',
+            'viewings.property.responsibles', 'viewings.property.agent', 'viewings.property.owner',
         ]);
 
         // العميل نفسه هو صاحب كل معاينة — نضبط العلاقة بدل استعلام لكل سطر

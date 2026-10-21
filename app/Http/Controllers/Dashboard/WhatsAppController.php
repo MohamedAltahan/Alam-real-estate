@@ -31,7 +31,7 @@ class WhatsAppController extends Controller
             'templates' => WhatsappTemplate::query()->get()->keyBy('key'),
             'kinds' => WhatsAppTemplates::KINDS,
             'placeholders' => WhatsAppTemplates::PLACEHOLDERS,
-            'messages' => WhatsappMessage::with(['client', 'viewing.property', 'sender'])
+            'messages' => WhatsappMessage::with(['client', 'viewing.property.owner', 'sender'])
                 ->latest('id')->paginate(20, ['*'], 'page')->withQueryString(),
             // رصيد الباقة كما يظهر في لوحة تحكم البوابة (المُرسل والمتبقي)
             'usage' => $this->whatsapp->usage(),

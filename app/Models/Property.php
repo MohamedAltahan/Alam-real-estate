@@ -38,6 +38,9 @@ class Property extends Model implements HasMedia
     /** صفات تعني «حارس العقار» في أرقام الزيارات الميدانية */
     public const GUARD_ROLES = ['الحارس', 'حارس', 'حارس العقار'];
 
+    /** عدد المشاهدات داخلي للشركة فقط — لا يدخل في أي تحويل JSON/مصفوفة */
+    protected $hidden = ['views_count'];
+
     /** حقول قابلة للترجمة AR/EN */
     public array $translatable = ['title', 'short_description', 'description', 'specifications'];
 
@@ -50,6 +53,7 @@ class Property extends Model implements HasMedia
         'bedrooms' => 'integer',
         'bathrooms' => 'integer',
         'reviews_count' => 'integer',
+        'views_count' => 'integer',
         'is_featured' => 'boolean',
         'is_furnished' => 'boolean',
         'owner_commission_rate' => 'decimal:2',
@@ -176,13 +180,21 @@ class Property extends Model implements HasMedia
         return $this->video_id ? "https://img.youtube.com/vi/{$this->video_id}/hqdefault.jpg" : null;
     }
 
-    /** «مبنى: برج السالمية» — يُعرض بجانب الرقم المرجعي أينما ظهر العقار */
+    /**
+     * «مبنى: برج السالمية · المالك: سالم» — يُعرض بجانب الرقم المرجعي أينما ظهر العقار في لوحة التحكم.
+     * داخلي فقط: لا يُستخدم في الموقع ولا في رسائل العملاء (حمّل العلاقة owner مسبقاً في القوائم).
+     */
     public function buildingLabel(): ?string
     {
-        return filled($this->building_name) ? 'مبنى: '.$this->building_name : null;
+        $parts = array_filter([
+            filled($this->building_name) ? 'مبنى: '.$this->building_name : null,
+            filled($this->owner?->name) ? 'المالك: '.$this->owner->name : null,
+        ]);
+
+        return $parts ? implode(' · ', $parts) : null;
     }
 
-    /** «12 — مبنى: برج السالمية» (نص عادي للقوائم والبحث) */
+    /** «12 — مبنى: برج السالمية · المالك: سالم» (نص عادي للقوائم والبحث) */
     public function codeLabel(): string
     {
         return trim(($this->reference_code ?: '#'.$this->id).($this->buildingLabel() ? ' — '.$this->buildingLabel() : ''));

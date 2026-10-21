@@ -76,7 +76,9 @@ final class ActivityPresenter
             }
 
             /** @var class-string<Model> $class */
-            $lookup[$class] = $class::query()->whereIn('id', array_values(array_unique($list)))->get()->keyBy(fn (Model $m) => (int) $m->getKey());
+            $lookup[$class] = $class::query()->whereIn('id', array_values(array_unique($list)))
+                ->when($class === Property::class, fn ($q) => $q->with('owner'))
+                ->get()->keyBy(fn (Model $m) => (int) $m->getKey());
         }
 
         return $lookup;

@@ -151,7 +151,7 @@ class ClientService
             ->with([
                 'stage', 'agent', 'recordedBy',
                 'needs.city', 'needs.area', 'needs.unitType',
-                'viewings.property.media', 'viewings.property.area',
+                'viewings.property.media', 'viewings.property.area', 'viewings.property.owner',
                 'interactions.user', 'interactions.stage',
             ])
             ->latest()
@@ -197,7 +197,7 @@ class ClientService
             'stage', 'type', 'agent', 'source', 'recordedBy',
             'needs.city', 'needs.area', 'needs.unitType',
             'viewings.property.status', 'viewings.property.media', 'viewings.createdBy',
-            'viewings.property.responsibles', 'viewings.property.agent', 'viewings.property.area',
+            'viewings.property.responsibles', 'viewings.property.agent', 'viewings.property.area', 'viewings.property.owner',
             'interactions.user', 'interactions.stage',
             'properties.status', 'properties.area', 'properties.unitType', 'properties.media',
             'auditLogs' => fn ($q) => $q->with('user')->limit(50),

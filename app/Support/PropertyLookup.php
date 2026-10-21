@@ -18,7 +18,7 @@ final class PropertyLookup
         $term = '%'.mb_strtolower($q).'%';
 
         $properties = Property::query()
-            ->with(['status', 'area'])
+            ->with(['status', 'area', 'owner'])
             ->when($q !== '', fn ($query) => $query->where(function ($w) use ($term) {
                 $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
                     ->orWhereRaw('LOWER(title) LIKE ?', [$term]);

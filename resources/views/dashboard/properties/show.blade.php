@@ -18,27 +18,45 @@
         @endcan
     </div>
 
-    {{-- الضغط على صورة من المعرض يعرضها في الصورة الكبيرة (مع عدّاد «2 / 10» مثل الموقع) --}}
+    {{--
+        معرض الصور (propertyGallery في app.js — نفس مكوّن الموقع): أسهم على جانبي الصورة للتنقل،
+        الضغط على مصغّرة يعرضها، والضغط على الصورة يفتح عارض ملء الشاشة بالأسهم والكيبورد.
+    --}}
     @php
         $photos = $property->gallery_urls ?: array_filter([$property->cover_url]);
     @endphp
-    <div x-data="{ photos: @js(array_values($photos)), current: 0 }" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div x-data="propertyGallery(@js(array_values($photos)))" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div class="lg:col-span-2 space-y-5">
             {{-- الصورة والعنوان --}}
             <div class="rounded-card bg-white border border-gray-100 shadow-sm overflow-hidden">
-                {{-- ارتفاع ثابت بحد أقصى: الصورة داخلها absolute فلا تمدّ الإطار مهما كان مقاسها --}}
-                <div class="relative aspect-[16/9] max-h-[440px] w-full bg-gray-100 grid place-items-center text-gray-300">
-                    @if (count($photos))<img src="{{ reset($photos) }}" :src="photos[current]" class="absolute inset-0 w-full h-full object-contain" alt="">
+                {{-- ارتفاع ثابت: الصورة داخلها absolute فلا تمدّ الإطار مهما كان مقاسها؛ نسخة مموّهة منها تملأ الجانبين بدل الفراغ الرمادي --}}
+                <div class="relative h-[320px] sm:h-[480px] lg:h-[560px] w-full overflow-clip bg-gray-100 grid place-items-center text-gray-300">
+                    @if (count($photos))
+                        <img src="{{ reset($photos) }}" :src="src" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-60 scale-110" alt="" aria-hidden="true">
+                        <img src="{{ reset($photos) }}" :src="src" @click="openViewer()" class="absolute inset-0 w-full h-full object-contain cursor-zoom-in" alt="">
+                        <button type="button" @click="openViewer()" title="عرض بملء الشاشة"
+                                class="absolute top-4 end-4 grid place-items-center w-10 h-10 rounded-full bg-primary-950/55 backdrop-blur-md border border-white/25 text-white hover:bg-primary-950/75 transition">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                        </button>
                     @else <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>@endif
                     @if (count($photos) > 1)
-                        <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums" dir="ltr" x-text="(current + 1) + ' / ' + photos.length">1 / {{ count($photos) }}</span>
+                        {{-- dir على bdi الداخلي لا على الشارة نفسها: وإلا تُحسب start من اليسار فتتداخل مع زر ملء الشاشة --}}
+                        <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums"><bdi dir="ltr" x-text="(current + 1) + ' / ' + images.length">1 / {{ count($photos) }}</bdi></span>
+                        <button type="button" @click="move(-1)" title="الصورة السابقة"
+                                class="absolute top-1/2 -translate-y-1/2 start-3 grid place-items-center w-11 h-11 rounded-full bg-primary-950/55 backdrop-blur-md border border-white/25 text-white shadow-lg hover:bg-primary-950/75 transition">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <button type="button" @click="move(1)" title="الصورة التالية"
+                                class="absolute top-1/2 -translate-y-1/2 end-3 grid place-items-center w-11 h-11 rounded-full bg-primary-950/55 backdrop-blur-md border border-white/25 text-white shadow-lg hover:bg-primary-950/75 transition">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
                     @endif
                 </div>
                 {{-- المعرض: سطر واحد قابل للتمرير تحت الصورة الكبيرة --}}
                 @if (count($photos) > 1)
                     <div class="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 border-b border-gray-100">
                         @foreach ($photos as $i => $url)
-                            <button type="button" @click="current = {{ $i }}" class="relative shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
+                            <button type="button" @click="select({{ $i }})" class="relative shrink-0 w-24 h-16 rounded-lg overflow-hidden bg-gray-100 hover:opacity-90 transition">
                                 <img src="{{ $url }}" class="absolute inset-0 w-full h-full object-cover" alt="" loading="lazy">
                                 <span class="absolute inset-0 rounded-lg" :class="current === {{ $i }} && 'ring-[3px] ring-inset ring-accent-500'"></span>
                             </button>
@@ -51,9 +69,11 @@
                         @if ($property->status)<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium" style="color: {{ $property->status->color }}; background-color: {{ $property->status->color }}1a;">{{ $property->status->name }}</span>@endif
                         @if ($property->is_furnished)<span class="rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs font-medium">مفروشة</span>@endif
                         @if ($property->is_featured)<span class="rounded-full bg-accent-100 text-accent-800 px-2.5 py-1 text-xs font-medium">مميّز</span>@endif
+                        {{-- مشاهدات صفحة العقار على الموقع — للشركة فقط --}}
+                        <span class="ms-auto inline-flex items-center gap-1.5 rounded-full bg-gray-100 text-gray-600 px-2.5 py-1 text-xs font-medium tabular-nums" title="مشاهدات صفحة العقار على الموقع (زائر واحد مرة في اليوم)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>{{ number_format($property->views_count) }} مشاهدة</span>
                     </div>
                     <h2 class="text-xl font-bold text-ink">{{ $property->title }}</h2>
-                    <p class="text-primary-700 font-bold text-lg mt-1 tabular-nums">{{ number_format($property->price, 3) }} {{ auth()->user()->currencySymbol() }} <span class="text-sm text-gray-400 font-normal">{{ $property->purpose === 'rent' ? '/'.($property->price_period === 'yearly' ? 'سنة' : 'شهر') : 'للبيع' }}</span></p>
+                    <p class="text-primary-700 font-bold text-lg mt-1 tabular-nums">{{ \App\Support\PropertyFields::price($property->price) }} {{ auth()->user()->currencySymbol() }} <span class="text-sm text-gray-400 font-normal">{{ $property->purpose === 'rent' ? '/'.($property->price_period === 'yearly' ? 'سنة' : 'شهر') : 'للبيع' }}</span></p>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100 text-sm">
                         @if ($property->category?->key !== 'commercial')
@@ -82,6 +102,10 @@
                     @endif
                 </div>
             </div>
+
+            @if (count($photos))
+                <x-photo-viewer :title="$property->title" />
+            @endif
 
             {{-- التقييمات --}}
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">

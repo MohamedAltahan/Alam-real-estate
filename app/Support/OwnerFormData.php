@@ -75,7 +75,7 @@ final class OwnerFormData
             'purpose' => $property->purpose === 'rent'
                 ? 'إيجار / '.($property->price_period === 'yearly' ? 'سنة' : 'شهر')
                 : 'بيع',
-            'price' => number_format((float) $property->price).' '.($user?->currencySymbol() ?? 'د.ك'),
+            'price' => PropertyFields::price($property->price).' '.($user?->currencySymbol() ?? 'د.ك'),
             'status' => $property->status?->name,
             'status_color' => $property->status?->color ?: '#6B7280',
             'bedrooms' => $property->bedrooms,
@@ -84,6 +84,24 @@ final class OwnerFormData
             'agent' => $property->agent?->name,
             'url' => $user?->can('properties.view') ? route('dashboard.properties.show', $property) : null,
         ];
+    }
+
+    /** كل مندوبي المبيعات على عقارات المالك (الأكثر عقارات أولاً) — للقائمة ونافذة المندوبين */
+    public static function agentsPayload(PropertyOwner $owner): array
+    {
+        return $owner->properties
+            ->filter(fn (Property $p) => $p->agent !== null)
+            ->groupBy('agent_id')
+            ->map(fn ($props) => [
+                'name' => $props->first()->agent->name,
+                'job_title' => $props->first()->agent->job_title,
+                'phone' => $props->first()->agent->phone,
+                'email' => $props->first()->agent->email,
+                'count' => $props->count(),
+            ])
+            ->sortBy([['count', 'desc'], ['name', 'asc']])
+            ->values()
+            ->all();
     }
 
     /** بعد فشل التحقق: القيم المُدخلة لإعادة فتح المودال (أو null) */

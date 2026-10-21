@@ -149,6 +149,7 @@
                             $primary = $o->contacts->first();
                             $extraContacts = max(0, $o->contacts->count() - 1);
                             $contactsData = $o->contacts->map(fn ($c) => ['label' => $c->label($o), 'phone' => $c->full_phone, 'whatsapp' => $c->whatsapp_number])->values();
+                            $agentsData = OwnerFormData::agentsPayload($o);
                         @endphp
                         {{-- النقر على الصف كله يفتح ملف المالك --}}
                         <tr class="hover:bg-gray-50/50 transition cursor-pointer"
@@ -198,7 +199,25 @@
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                                 </button>
                             </td>
-                            <td class="px-4 py-3 text-gray-600">{{ $o->latestProperty?->agent?->name ?: '—' }}</td>
+                            {{-- كل مندوبي المبيعات على عقارات المالك — النقر يعرض بيانات كل مندوب --}}
+                            <td class="px-4 py-3 max-w-[220px]">
+                                @if (count($agentsData))
+                                    <button type="button" @click.stop='openAgents(@json($o->name), @json($agentsData))' title="بيانات مندوبي المبيعات"
+                                            class="block w-full text-start rounded-xl -mx-2 px-2 py-1 space-y-0.5 hover:bg-primary-50 transition">
+                                        @foreach (array_slice($agentsData, 0, 3) as $agent)
+                                            <span class="flex items-center gap-1.5 min-w-0">
+                                                <span class="font-semibold text-ink truncate">{{ $agent['name'] }}</span>
+                                                @if (count($agentsData) > 1)<span class="shrink-0 text-[11px] text-gray-400 tabular-nums">({{ $agent['count'] }})</span>@endif
+                                            </span>
+                                        @endforeach
+                                        @if (count($agentsData) > 3)
+                                            <span class="inline-flex items-center rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[11px] font-bold">+{{ count($agentsData) - 3 }}</span>
+                                        @endif
+                                    </button>
+                                @else
+                                    <span class="text-gray-300">—</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 max-w-[220px]">
                                 @if (filled($o->notes))
                                     <button type="button" @click.stop='openNotes(@json($o->name), @json($o->notes))' title="عرض الملاحظات"
@@ -288,6 +307,27 @@
                        class="grid place-items-center w-9 h-9 shrink-0 rounded-full text-success hover:bg-success/10 transition">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.08 1.75-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.04 21.5h-.01a9.43 9.43 0 0 1-4.8-1.32l-.35-.2-3.57.94.95-3.48-.22-.36a9.4 9.4 0 0 1-1.44-5.02c0-5.2 4.24-9.44 9.45-9.44 2.52 0 4.89.99 6.67 2.77a9.38 9.38 0 0 1 2.76 6.68c0 5.2-4.24 9.43-9.44 9.43zm8.03-17.47A11.3 11.3 0 0 0 12.04.5C5.78.5.68 5.6.68 11.86c0 2 .52 3.96 1.52 5.68L.58 23.5l6.1-1.6a11.32 11.32 0 0 0 5.36 1.37h.01c6.26 0 11.36-5.1 11.36-11.36 0-3.03-1.18-5.89-3.33-8.03z"/></svg>
                     </a>
+                </li>
+            </template>
+        </ul>
+    </x-modal>
+
+    {{-- كل مندوبي المبيعات على عقارات المالك --}}
+    <x-modal name="owner-agents" maxWidth="lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100"><div><h3 class="font-bold text-ink">مندوبو المبيعات</h3><p class="text-xs text-gray-400" x-text="agentsOwner"></p></div><button type="button" @click="$dispatch('close-modal', 'owner-agents')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+        <ul class="p-4 max-h-[70vh] overflow-y-auto divide-y divide-gray-50">
+            <template x-for="(agent, i) in ownerAgents" :key="i">
+                <li class="flex items-center gap-3 px-2 py-3">
+                    <span class="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-accent-100 text-accent-700 font-bold" x-text="agent.name.charAt(0)"></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block font-semibold text-ink truncate" x-text="agent.name"></span>
+                        <span class="block text-xs text-gray-400 truncate" x-show="agent.job_title" x-text="agent.job_title"></span>
+                        <span class="flex flex-wrap gap-x-3 text-xs text-gray-500">
+                            <a x-show="agent.phone" :href="'tel:' + agent.phone" class="tabular-nums hover:text-primary-700"><bdi dir="ltr" x-text="agent.phone"></bdi></a>
+                            <a x-show="agent.email" :href="'mailto:' + agent.email" class="truncate hover:text-primary-700"><bdi dir="ltr" x-text="agent.email"></bdi></a>
+                        </span>
+                    </span>
+                    <span class="shrink-0 rounded-full bg-primary-50 text-primary-700 px-2.5 py-1 text-xs font-bold tabular-nums" x-text="agent.count + (agent.count === 1 ? ' عقار' : ' عقارات')"></span>
                 </li>
             </template>
         </ul>

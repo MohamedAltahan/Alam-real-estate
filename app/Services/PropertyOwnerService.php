@@ -101,7 +101,7 @@ class PropertyOwnerService
     {
         return $this->filtered($filters)
             ->with([
-                'area.city', 'contacts', 'latestProperty.agent', 'media',
+                'area.city', 'contacts', 'media',
                 'properties.area.city', 'properties.status', 'properties.unitType',
                 'properties.agent', 'properties.media',
             ])

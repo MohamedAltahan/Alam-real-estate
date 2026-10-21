@@ -16,6 +16,7 @@ use App\Models\Testimonial;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Support\Honeypot;
+use App\Support\PropertyViews;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -150,8 +151,10 @@ class SiteController extends Controller
     }
 
     /** تفاصيل عقار */
-    public function property(Property $property): View
+    public function property(Request $request, Property $property): View
     {
+        PropertyViews::record($request, $property);
+
         $property->load(['area', 'agent', 'owner', 'status', 'unitType', 'category', 'amenities', 'media', 'reviews.createdBy']);
 
         $similar = Property::with(['area', 'agent', 'status', 'media'])

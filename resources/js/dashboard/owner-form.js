@@ -33,6 +33,8 @@ withAlpine((Alpine) => {
         ownerContacts: [],
         notesOwner: '',
         ownerNotes: '',
+        agentsOwner: '',
+        ownerAgents: [],
 
         init() {
             const reopen = opts.reopen;
@@ -132,6 +134,12 @@ withAlpine((Alpine) => {
             this.contactsOwner = name;
             this.ownerContacts = contacts;
             this.$dispatch('open-modal', 'owner-contacts');
+        },
+
+        openAgents(name, agents) {
+            this.agentsOwner = name;
+            this.ownerAgents = agents;
+            this.$dispatch('open-modal', 'owner-agents');
         },
 
         openNotes(name, notes) {

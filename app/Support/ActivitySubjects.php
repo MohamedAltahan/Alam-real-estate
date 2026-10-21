@@ -93,8 +93,8 @@ final class ActivitySubjects
             Property::class => [
                 'module' => 'properties', 'label' => 'عقار',
                 'snapshot' => ['reference_code', 'title', 'purpose', 'price', 'price_period', 'status_id', 'unit_type_id', 'city_id', 'area_id', 'owner_id', 'agent_id', 'building_name'],
-                // مشتقة من التقييمات/الحالة — ليست تعديلاً من المستخدم
-                'ignore' => ['rating', 'reviews_count', 'sold_at'],
+                // مشتقة من التقييمات/الحالة/زيارات الموقع — ليست تعديلاً من المستخدم
+                'ignore' => ['rating', 'reviews_count', 'sold_at', 'views_count'],
                 'fields' => PropertyFields::LABELS, 'foreign' => PropertyFields::FOREIGN,
                 'enums' => PropertyFields::ENUMS, 'booleans' => PropertyFields::BOOLEANS,
             ],

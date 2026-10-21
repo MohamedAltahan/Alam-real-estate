@@ -83,6 +83,7 @@
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
                         <th class="text-start font-medium px-4 py-3 whitespace-nowrap">نسبة العمولة</th>
+                        <th class="text-start font-medium px-4 py-3" title="مشاهدات صفحة العقار على الموقع (داخلي)">المشاهدات</th>
                         <th class="text-start font-medium px-4 py-3">الحالة</th>
                         <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
                         <th class="text-center font-medium px-3 py-3">المواقع</th>
@@ -117,18 +118,21 @@
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block font-semibold text-ink truncate">{{ $p->title }}</span>
-                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->building_name) — مبنى: {{ $p->building_name }}@endif @if ($p->is_furnished) · مفروشة @endif</span>
+                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->buildingLabel()) — {{ $p->buildingLabel() }}@endif @if ($p->is_furnished) · مفروشة @endif</span>
                                     </span>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $p->unitType?->name }} · {{ $p->area?->name }}@if ($p->city) <span class="text-gray-400 text-xs">({{ $p->city->name }})</span>@endif</td>
-                            <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ number_format($p->price, 3) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
+                            <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ \App\Support\PropertyFields::price($p->price) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
                             <td class="px-4 py-3 tabular-nums">
                                 @if ($p->owner_commission_rate !== null)
                                     <span class="font-semibold text-ink" dir="ltr">{{ \App\Support\PropertyFields::percent($p->owner_commission_rate) }}</span>
                                 @else
                                     <span class="text-gray-300">—</span>
                                 @endif
+                            </td>
+                            <td class="px-4 py-3 tabular-nums">
+                                <span class="inline-flex items-center gap-1.5 {{ $p->views_count ? 'text-ink font-semibold' : 'text-gray-300' }}"><svg class="text-gray-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>{{ number_format($p->views_count) }}</span>
                             </td>
                             <td class="px-4 py-3">
                                 @can('properties.edit')
@@ -167,7 +171,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
+                        <tr><td colspan="11" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>

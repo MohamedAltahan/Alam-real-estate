@@ -40,6 +40,7 @@ class ViewingService
                 'property:id,reference_code,title,agent_id,area_id,owner_id,building_name,purpose,guard_name,guard_phone_code,guard_phone',
                 'property.agent:id,name,phone',
                 'property.area:id,name',
+                'property.owner:id,name',
                 'property.responsibles',
             ])
             ->orderByDesc('scheduled_at')
@@ -217,7 +218,7 @@ class ViewingService
         $all = ClientViewing::query()
             ->with([
                 'client:id,name,agent_id,phone_code,phone', 'client.agent:id,name',
-                'property:id,reference_code,title,agent_id,area_id,building_name', 'property.agent:id,name', 'property.area:id,name',
+                'property:id,reference_code,title,agent_id,area_id,owner_id,building_name', 'property.agent:id,name', 'property.area:id,name', 'property.owner:id,name',
             ])
             ->whereBetween('scheduled_at', [$from, $to])
             ->orderByDesc('scheduled_at')
