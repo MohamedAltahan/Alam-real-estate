@@ -11,11 +11,17 @@
         <a href="{{ route('dashboard.properties.index') }}" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-700">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> العودة للعقارات
         </a>
-        @can('properties.edit')
-            <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> تعديل
+        <div class="flex items-center gap-2">
+            {{-- صفحة العقار على الموقع في تبويب جديد (زيارة الموظف لا تُحسب مشاهدة) --}}
+            <a href="{{ route('site.property', $property) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> عرض على الموقع
             </a>
-        @endcan
+            @can('properties.edit')
+                <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> تعديل
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{--
@@ -42,14 +48,7 @@
                     @if (count($photos) > 1)
                         {{-- dir على bdi الداخلي لا على الشارة نفسها: وإلا تُحسب start من اليسار فتتداخل مع زر ملء الشاشة --}}
                         <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums"><bdi dir="ltr" x-text="(current + 1) + ' / ' + images.length">1 / {{ count($photos) }}</bdi></span>
-                        <button type="button" @click="move(-1)" title="الصورة السابقة"
-                                class="absolute top-1/2 -translate-y-1/2 start-3 grid place-items-center w-11 h-11 rounded-full bg-primary-950/55 backdrop-blur-md border border-white/25 text-white shadow-lg hover:bg-primary-950/75 transition">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m15 18-6-6 6-6"/></svg>
-                        </button>
-                        <button type="button" @click="move(1)" title="الصورة التالية"
-                                class="absolute top-1/2 -translate-y-1/2 end-3 grid place-items-center w-11 h-11 rounded-full bg-primary-950/55 backdrop-blur-md border border-white/25 text-white shadow-lg hover:bg-primary-950/75 transition">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="rtl:rotate-180"><path d="m9 18 6-6-6-6"/></svg>
-                        </button>
+                        <x-gallery-arrows />
                     @endif
                 </div>
                 {{-- المعرض: سطر واحد قابل للتمرير تحت الصورة الكبيرة --}}

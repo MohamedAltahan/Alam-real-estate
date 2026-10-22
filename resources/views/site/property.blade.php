@@ -68,12 +68,15 @@
 
     {{-- المعرض: صورة كبيرة (يمين) + كل الصور مصغّرة (شمال) — الضغط على مصغّرة يعرضها في الكبيرة --}}
     <div x-data="propertyGallery(@js($gallery))" class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-9">
-        <div class="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[420px]">
+        {{-- overflow-clip لا hidden: الخلفية المموّهة المكبّرة تفيض، وhidden يسمح للتركيز على الأسهم بتمرير الإطار أفقياً --}}
+        <div class="relative rounded-2xl overflow-clip bg-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[420px]">
             @if ($mainImg)<img src="{{ $mainImg }}" :src="src" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-60" style="transform:scale(1.15)" alt="" aria-hidden="true">
             <img src="{{ $mainImg }}" :src="src" @click="openViewer()" class="absolute inset-0 w-full h-full object-contain cursor-zoom-in" alt="{{ $p->title }}">
             @else<div class="absolute inset-0 grid place-items-center text-gray-300"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg></div>@endif
             @if ($galleryCount > 1)
-                <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums" dir="ltr" x-text="(current + 1) + ' / ' + images.length">1 / {{ $galleryCount }}</span>
+                {{-- dir على bdi الداخلي لا على الشارة: وإلا تُحسب start من اليسار --}}
+                <span class="absolute top-4 start-4 rounded-full bg-primary-950/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 tabular-nums"><bdi dir="ltr" x-text="(current + 1) + ' / ' + images.length">1 / {{ $galleryCount }}</bdi></span>
+                <x-gallery-arrows :prev="$t('الصورة السابقة', 'Previous photo')" :next="$t('الصورة التالية', 'Next photo')" />
             @endif
             <div class="absolute bottom-4 start-4 flex gap-2">
                 @if ($galleryCount)

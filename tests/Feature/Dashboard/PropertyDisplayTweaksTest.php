@@ -99,6 +99,17 @@ class PropertyDisplayTweaksTest extends TestCase
         $this->actingAs($user)->get(route('dashboard.properties.show', $property))->assertOk()->assertSee('150%');
     }
 
+    public function test_property_page_links_to_the_website_and_site_photo_has_arrows(): void
+    {
+        $property = Property::create(['reference_code' => '21', 'title' => ['ar' => 'رابط الموقع', 'en' => 'Site link']]);
+
+        $this->actingAs($this->userWith(['properties.view']))->get(route('dashboard.properties.show', $property))
+            ->assertOk()->assertSee('عرض على الموقع')->assertSee('href="'.route('site.property', $property).'"', false);
+
+        auth()->logout();
+        $this->get(route('site.property', $property))->assertOk()->assertSee('@click="move(-1)"', false)->assertSee('@click="move(1)"', false);
+    }
+
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create();
