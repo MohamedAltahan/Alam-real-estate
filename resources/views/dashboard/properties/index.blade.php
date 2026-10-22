@@ -81,6 +81,7 @@
                         <th class="text-start font-medium px-4 py-3 w-12">#</th>
                         <th class="text-start font-medium px-4 py-3">العقار</th>
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
+                        <th class="text-start font-medium px-4 py-3 whitespace-nowrap">المبنى / المالك</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
                         <th class="text-start font-medium px-4 py-3 whitespace-nowrap">نسبة العمولة</th>
                         <th class="text-start font-medium px-4 py-3" title="مشاهدات صفحة العقار على الموقع (داخلي)">المشاهدات</th>
@@ -118,11 +119,16 @@
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block font-semibold text-ink truncate">{{ $p->title }}</span>
-                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->buildingLabel()) — {{ $p->buildingLabel() }}@endif @if ($p->is_furnished) · مفروشة @endif</span>
+                                        <span class="block text-xs text-gray-400"><span dir="ltr">#{{ $p->reference_code }}</span>@if ($p->is_furnished) · مفروشة @endif</span>
                                     </span>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ $p->unitType?->name }} · {{ $p->area?->name }}@if ($p->city) <span class="text-gray-400 text-xs">({{ $p->city->name }})</span>@endif</td>
+                            {{-- اسم المبنى في عمود خاص وتحته المالك --}}
+                            <td class="px-4 py-3 max-w-[200px]">
+                                <span class="block truncate {{ $p->building_name ? 'font-semibold text-ink' : 'text-gray-300' }}">{{ $p->building_name ?: '—' }}</span>
+                                @if ($p->owner)<span class="block text-xs text-gray-400 truncate">{{ $p->owner->name }}</span>@endif
+                            </td>
                             <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ \App\Support\PropertyFields::price($p->price) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
                             <td class="px-4 py-3 tabular-nums">
                                 @if ($p->owner_commission_rate !== null)
@@ -171,7 +177,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
+                        <tr><td colspan="12" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>

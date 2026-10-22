@@ -68,7 +68,7 @@ class PropertyDisplayTweaksTest extends TestCase
         $this->assertSame('12 — مبنى: برج السالمية · المالك: سالم المالك', $property->codeLabel());
 
         $this->actingAs($this->userWith(['properties.view']))->get(route('dashboard.properties.index'))
-            ->assertOk()->assertSee('مبنى: برج السالمية · المالك: سالم المالك');
+            ->assertOk()->assertSee('المبنى / المالك')->assertSeeInOrder(['#12', 'برج السالمية', 'سالم المالك']);
 
         $this->get(route('site.property', $property))->assertOk()->assertDontSee('سالم المالك');
     }
