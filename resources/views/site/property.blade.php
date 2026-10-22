@@ -69,7 +69,7 @@
     {{-- المعرض: صورة كبيرة (يمين) + كل الصور مصغّرة (شمال) — الضغط على مصغّرة يعرضها في الكبيرة --}}
     <div x-data="propertyGallery(@js($gallery))" class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-9">
         {{-- overflow-clip لا hidden: الخلفية المموّهة المكبّرة تفيض، وhidden يسمح للتركيز على الأسهم بتمرير الإطار أفقياً --}}
-        <div class="relative rounded-2xl overflow-clip bg-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[420px]">
+        <div class="relative rounded-2xl overflow-clip bg-gray-100 aspect-[4/3] lg:aspect-auto lg:h-[560px]">
             @if ($mainImg)<img src="{{ $mainImg }}" :src="src" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-60" style="transform:scale(1.15)" alt="" aria-hidden="true">
             <img src="{{ $mainImg }}" :src="src" @click="openViewer()" class="absolute inset-0 w-full h-full object-contain cursor-zoom-in" alt="{{ $p->title }}">
             @else<div class="absolute inset-0 grid place-items-center text-gray-300"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg></div>@endif
@@ -95,7 +95,7 @@
         </div>
         @if ($galleryCount > 1)
             {{-- موبايل: شريط أفقي · ديسكتوب: شبكة بارتفاع الصورة الكبيرة --}}
-            <div class="flex gap-2 overflow-x-auto pb-1 lg:pb-0 lg:grid lg:gap-3 lg:h-[420px] {{ $thumbScroll ? 'lg:overflow-y-auto lg:pe-1' : 'lg:overflow-visible' }}"
+            <div class="flex gap-2 overflow-x-auto pb-1 lg:pb-0 lg:grid lg:gap-3 lg:h-[560px] {{ $thumbScroll ? 'lg:overflow-y-auto lg:pe-1' : 'lg:overflow-visible' }}"
                  style="grid-template-columns: repeat({{ $thumbCols }}, minmax(0, 1fr)); {{ $thumbScroll ? 'grid-auto-rows: 96px;' : 'grid-template-rows: repeat('.$thumbRows.', minmax(0, 1fr));' }}">
                 @foreach ($gallery as $i => $img)
                     <button type="button" @click="select({{ $i }})"
@@ -110,7 +110,7 @@
         @else
             <div class="grid grid-cols-2 gap-3">
                 @for ($i = 0; $i < 4; $i++)
-                    <div class="rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:min-h-[204px] grid place-items-center text-gray-200"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
+                    <div class="rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] lg:aspect-auto lg:min-h-[274px] grid place-items-center text-gray-200"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
                 @endfor
             </div>
         @endif
