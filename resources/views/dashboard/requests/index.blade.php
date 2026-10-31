@@ -10,7 +10,7 @@
     <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
             <h2 class="text-xl font-bold text-ink">صندوق الوارد</h2>
-            <p class="text-sm text-gray-500">{{ number_format($requests->total()) }} طلب · <span class="text-danger">{{ $unreadCount }} غير مقروء</span></p>
+            <p class="text-sm text-gray-500">{{ number_format($requests->total()) }} طلب · <span class="text-danger" x-text="unread + ' غير مقروء'">{{ $unreadCount }} غير مقروء</span></p>
         </div>
         @include('dashboard.requests._tabs', ['tab' => 'inbox', 'counts' => $tabCounts])
     </div>
@@ -26,12 +26,29 @@
     @php $me = auth()->user(); @endphp
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         @forelse ($requests as $req)
-            @php $isRead = $req->isReadBy($me); @endphp
-            <div class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $isRead ? '' : 'ring-1 ring-primary-200' }}">
+            @php
+                $isRead = $req->isReadBy($me);
+                // بيانات نافذة عرض الطلب كاملاً
+                $viewData = [
+                    'id' => $req->id,
+                    'type' => $req->requestType?->name ?? 'طلب',
+                    'date' => $req->created_at?->format('Y-m-d · h:i A'),
+                    'contacted' => $req->status === 'contacted',
+                    'name' => $req->name,
+                    'email' => $req->email,
+                    'phone' => $req->phone,
+                    'subject' => $req->subject,
+                    'message' => $req->message,
+                    'property' => $req->property?->reference_code,
+                    'handledBy' => $req->handledBy?->name,
+                ];
+            @endphp
+            <div x-data="{ read: @js($isRead) }" @unless ($isRead) :class="{ 'ring-1 ring-primary-200': ! read }" @endunless
+                 class="flex h-full flex-col rounded-card bg-white border border-gray-100 shadow-sm p-5 {{ $isRead ? '' : 'ring-1 ring-primary-200' }}">
                 <div class="flex-1">
                 <div class="flex items-start justify-between gap-2 mb-3">
                     <div class="flex items-center gap-2 flex-wrap min-w-0">
-                        @unless ($isRead)<span class="w-2 h-2 rounded-full bg-primary-600 shrink-0"></span>@endunless
+                        @unless ($isRead)<span x-show="! read" class="w-2 h-2 rounded-full bg-primary-600 shrink-0"></span>@endunless
                         <span class="rounded-full bg-info-soft text-info px-2.5 py-0.5 text-xs font-medium">{{ $req->requestType?->name ?? 'طلب' }}</span>
                         {{-- وقت وصول الطلب — bdi ليُقرأ بالاتجاه الصحيح ويُحاذى مع بقية السطر --}}
                         @if ($req->created_at)
@@ -111,6 +128,10 @@
                     @if ($req->phone)
                         <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $req->phone) }}" target="_blank" class="rounded-full bg-success/10 text-success hover:bg-success/20 text-xs font-medium px-3 py-2">واتساب</a>
                     @endif
+                    <button type="button" @click="openView(@js($viewData), read); read = true" title="عرض الطلب"
+                            class="grid place-items-center w-8 h-8 rounded-full text-gray-500 hover:text-primary-900 hover:bg-gray-100 transition">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
                     @can('contact_requests.delete')
                         <button @click="delAction='{{ route('dashboard.requests.destroy', $req) }}'; delName=@js($req->name); $dispatch('open-modal','req-delete')" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition"><x-icon.trash /></button>
                     @endcan
@@ -134,6 +155,46 @@
                 <button type="button" @click="$dispatch('close-modal','req-delete')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-100">إلغاء</button>
                 <button type="submit" class="rounded-full bg-danger hover:bg-danger/90 text-white font-semibold px-5 py-2.5 text-sm">نعم، احذف</button>
             </form>
+        </div>
+    </x-modal>
+
+    {{-- ===== عرض الطلب كاملاً ===== --}}
+    <x-modal name="req-view" maxWidth="lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-ink">تفاصيل الطلب</h3>
+            <button type="button" @click="$dispatch('close-modal','req-view')" class="text-gray-400 hover:text-gray-700"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="rounded-full bg-info-soft text-info px-2.5 py-0.5 text-xs font-medium" x-text="viewing.type"></span>
+                    <span class="text-[11px] text-gray-400 tabular-nums" x-show="viewing.date"><bdi dir="ltr" x-text="viewing.date"></bdi></span>
+                </div>
+                <span x-show="viewing.contacted" class="rounded-full bg-success-soft text-success px-2.5 py-0.5 text-xs font-medium">تم التواصل</span>
+                <span x-show="! viewing.contacted" class="rounded-full bg-warning-soft text-warning px-2.5 py-0.5 text-xs font-medium">بانتظار</span>
+            </div>
+
+            <div class="rounded-field bg-gray-50 border border-gray-100 p-4 space-y-1.5">
+                <p class="font-bold text-ink" x-text="viewing.name"></p>
+                <p class="text-xs text-gray-500 break-all" x-show="viewing.email"><span dir="ltr" x-text="viewing.email"></span></p>
+                <p class="text-xs text-gray-500" x-show="viewing.phone"><span dir="ltr" x-text="viewing.phone"></span></p>
+            </div>
+
+            {{-- dir=auto: الرسائل الإنجليزية تُعرض ltr بترتيب علامات ترقيم صحيح --}}
+            <p dir="auto" class="text-sm font-bold text-ink" x-show="viewing.subject" x-text="viewing.subject"></p>
+            <p dir="auto" class="text-sm text-gray-600 leading-relaxed whitespace-pre-line break-words" x-show="viewing.message" x-text="viewing.message"></p>
+
+            <div class="space-y-1.5 text-xs" x-show="viewing.property || viewing.handledBy">
+                <p class="text-primary-600" x-show="viewing.property">📍 <span dir="ltr" x-text="viewing.property"></span></p>
+                <p class="text-gray-500" x-show="viewing.handledBy">عالجه: <span class="font-bold text-ink" x-text="viewing.handledBy"></span></p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
+            <a x-show="viewing.phone" :href="'https://wa.me/' + (viewing.phone || '').replace(/[^0-9]/g, '')" target="_blank"
+               class="rounded-full bg-success/10 text-success hover:bg-success/20 text-sm font-medium px-4 py-2.5">واتساب</a>
+            <button type="button" @click="$dispatch('close-modal','req-view')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-100">إغلاق</button>
         </div>
     </x-modal>
 
@@ -230,7 +291,21 @@
     function requestsScreen() {
         return {
             delAction: '', delName: '',
+            unread: {{ (int) $unreadCount }},
+            viewing: {},
             convertAction: '',
+
+            // فتح الطلب يجعله مقروءاً لهذا المستخدم (مرة واحدة)
+            openView(data, wasRead) {
+                this.viewing = data;
+                this.$dispatch('open-modal', 'req-view');
+                if (wasRead) return;
+                this.unread = Math.max(0, this.unread - 1);
+                fetch('{{ url('dashboard/requests') }}/' + data.id + '/read', {
+                    method: 'PUT',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
+                });
+            },
             convert: { name: '', phone: '', email: '', notes: '', duplicate: null, useExisting: false },
 
             startConvert(id, name, phone, email, duplicate) {

@@ -14,6 +14,7 @@ use App\Services\ClientService;
 use App\Services\ContactRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class ContactRequestController extends Controller
@@ -71,6 +72,14 @@ class ContactRequestController extends Controller
             'inbox' => ContactRequest::count(),
             'featured' => Client::featured()->count(),
         ];
+    }
+
+    /** فتح الطلب في نافذة العرض يجعله مقروءاً لهذا المستخدم */
+    public function markRead(Request $request, ContactRequest $contactRequest): Response
+    {
+        $contactRequest->markReadBy($request->user());
+
+        return response()->noContent();
     }
 
     public function markContacted(Request $request, ContactRequest $contactRequest): RedirectResponse

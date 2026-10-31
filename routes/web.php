@@ -172,6 +172,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:contact_requests.view')->group(function () {
             Route::get('requests', [ContactRequestController::class, 'index'])->name('requests.index');
             Route::get('requests/featured', [ContactRequestController::class, 'featured'])->name('requests.featured');
+            Route::put('requests/{contactRequest}/read', [ContactRequestController::class, 'markRead'])->name('requests.read');
             Route::put('requests/{contactRequest}/contacted', [ContactRequestController::class, 'markContacted'])->name('requests.contacted');
             Route::post('requests/{contactRequest}/convert', [ContactRequestController::class, 'convert'])->name('requests.convert');
             Route::delete('requests/{contactRequest}', [ContactRequestController::class, 'destroy'])->name('requests.destroy');
