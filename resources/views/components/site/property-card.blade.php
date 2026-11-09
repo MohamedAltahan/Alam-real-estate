@@ -45,8 +45,9 @@
              @click.capture="if (swiped) { $event.stopPropagation(); swiped = false }"
          @endif>
         @if ($gallery->count())
+            {{-- الصورة الأولى فقط تُحمَّل مع الصفحة — الباقي يُحمَّل عند الوصول إليه (سحب أو نقطة) --}}
             @foreach ($gallery as $idx => $imgPath)
-                <img src="{{ $imgPath }}"
+                <img @if ($idx === 0) src="{{ $imgPath }}" @else data-src="{{ $imgPath }}" x-effect="if (i === {{ $idx }} && !$el.getAttribute('src')) $el.src = $el.dataset.src" @endif
                      class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
                      alt="{{ $p->title }}"
                      @if ($gallery->count() > 1) x-show="i === {{ $idx }}" x-transition.opacity.duration.400ms @endif>
