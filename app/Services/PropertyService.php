@@ -32,8 +32,7 @@ class PropertyService
 
                 $query->where(function ($query) use ($term) {
                     $query->whereRaw('LOWER(reference_code) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(title) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]);
+                        ->orWhereRaw('LOWER(title) LIKE ?', [$term]);
                 });
             })
             ->when($filters['status_id'] ?? null, fn ($q, $v) => $q->where('status_id', $v))

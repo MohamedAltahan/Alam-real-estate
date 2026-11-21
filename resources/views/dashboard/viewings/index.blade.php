@@ -33,7 +33,7 @@
             {{-- البحث دائم الظهور وينضمّ لنموذج الفلاتر بالخاصية form --}}
             <div class="relative w-[260px] max-w-[55vw]">
                 <svg class="absolute inset-y-0 start-4 my-auto text-gray-400" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="باسم العميل أو رقم العقار أو المبنى..." autocomplete="off" form="viewings-filters"
+                <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="باسم العميل أو رقم العقار..." autocomplete="off" form="viewings-filters"
                        class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
             </div>
 

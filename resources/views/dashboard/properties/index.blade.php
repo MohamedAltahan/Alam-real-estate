@@ -38,7 +38,7 @@
     <x-filter-bar id="properties-filters" cols="xl:grid-cols-5"
                   :reset="array_filter($filters) ? route('dashboard.properties.index') : null">
         <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
-                        placeholder="باسم أو رقم العقار أو اسم المبنى..." span="col-span-2 md:col-span-1" />
+                        placeholder="باسم أو رقم العقار..." span="col-span-2 md:col-span-1" />
         <x-filter-select label="الحالة" name="status_id" placeholder="كل الحالات"
                          :options="$statuses->pluck('name', 'id')" :selected="$filters['status_id'] ?? null" />
         <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
