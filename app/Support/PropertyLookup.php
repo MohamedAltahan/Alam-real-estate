@@ -4,7 +4,7 @@ namespace App\Support;
 
 use App\Models\Property;
 
-/** بحث العقارات بالرقم المرجعي أو العنوان لحقول الاختيار (معاينات العملاء · المهام) */
+/** بحث العقارات بالرقم المرجعي أو العنوان أو اسم المبنى لحقول الاختيار (معاينات العملاء · المهام) */
 final class PropertyLookup
 {
     /**
@@ -21,7 +21,8 @@ final class PropertyLookup
             ->with(['status', 'area', 'owner'])
             ->when($q !== '', fn ($query) => $query->where(function ($w) use ($term) {
                 $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
-                    ->orWhereRaw('LOWER(title) LIKE ?', [$term]);
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]);
             }))
             ->latest()
             ->limit($limit)
