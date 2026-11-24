@@ -90,8 +90,14 @@
                                         :class="hi === j ? 'bg-primary-50' : ''"
                                         class="w-full text-start rounded-xl px-3 py-2 text-sm transition">
                                     <span class="flex items-center justify-between gap-2">
-                                        <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
-                                        <span class="text-[11px] text-gray-400" x-text="item.area || ''"></span>
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <strong class="text-ink" dir="ltr" x-text="item.reference_code"></strong>
+                                            {{-- المبنى والمالك — نفس عرض حقل المعاينات --}}
+                                            <span x-show="item.building" x-text="'— ' + item.building" class="text-xs text-gray-500 truncate"></span>
+                                            <span x-show="item.badge" x-text="item.badge" class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                                  :style="item.badge_color ? `color:${item.badge_color};background-color:${item.badge_color}1a` : ''"></span>
+                                        </span>
+                                        <span class="text-[11px] text-gray-400 shrink-0" x-text="item.area || ''"></span>
                                     </span>
                                     <span class="block text-xs text-gray-500 truncate" x-text="item.title || ''"></span>
                                 </button>

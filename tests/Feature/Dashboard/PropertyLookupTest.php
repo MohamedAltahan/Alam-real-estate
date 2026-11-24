@@ -51,4 +51,16 @@ class PropertyLookupTest extends TestCase
         $this->assertSame(['288'], $this->lookup('dashboard.tasks.property-lookup', 'العتيبي'));
         $this->assertSame(['288'], $this->lookup('dashboard.clients.property-lookup', 'فهد'));
     }
+
+    public function test_task_dropdown_shows_building_and_owner_like_viewings(): void
+    {
+        $item = $this->actingAs($this->user)->getJson(route('dashboard.tasks.property-lookup', ['q' => '288']))->json('0');
+        $this->assertSame('مبنى: برج سما · المالك: فهد العتيبي', $item['building']);
+
+        // قالب القائمة في نافذة المهمة (تظهر لمن يملك إضافة المهام) يعرض حقل building
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'tasks.create', 'guard_name' => 'web']));
+        $this->actingAs($this->user)->get(route('dashboard.tasks.index'))
+            ->assertOk()
+            ->assertSee("x-text=\"'— ' + item.building\"", false);
+    }
 }
