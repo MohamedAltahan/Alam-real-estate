@@ -46,7 +46,8 @@
         {{-- التلاشي السفلي من Figma: #F7F8FC 100% ← #000000 0% (نقطتان فقط، بلا درجة وسطى) --}}
         <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f8fc] to-transparent"></div>
 
-        <div class="relative max-w-5xl mx-auto px-4 sm:px-6 pt-44 pb-16 text-center">
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-44 pb-16 text-center">
+            <div class="max-w-5xl mx-auto">
             @if ($it($hero, 'badge'))
                 <span
                     class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 backdrop-blur-sm px-4 py-1.5 text-sm text-white/90 mb-5">
@@ -65,6 +66,7 @@
                 <p class="text-base sm:text-lg text-white/75 max-w-2xl lg:max-w-none mx-auto mb-8 leading-relaxed">
                     {{ $it($hero, 'description') }}</p>
             @endif
+            </div>
 
             {{-- صندوق بحث زجاجي (مربوط بفلاتر صفحة العقارات) --}}
             @php
@@ -72,7 +74,6 @@
                     ->map(fn($x) => ['v' => (string) $x->id, 'l' => (string) $x->name])
                     ->values()
                     ->all();
-                $refItems = $searchReferences->map(fn($r) => ['v' => $r, 'l' => $r])->all();
                 $bedItems = collect([1, 2, 3, 4, 5])
                     ->map(fn($n) => ['v' => (string) $n, 'l' => ($n === 5 ? '+5' : $n) . ' ' . $t('غرف', 'rooms')])
                     ->all();
@@ -86,7 +87,7 @@
             @endphp
             @php $defaultCat = (string) (request('category') ?: optional($searchCategories->first())->id); @endphp
             <form action="{{ route('site.properties') }}" method="GET" x-data="{ cat: '{{ $defaultCat }}' }"
-                class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-5xl mx-auto shadow-2xl text-start">
+                class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
 
                 {{-- تبويب سكني/تجاري (الافتراضي: سكني) --}}
@@ -106,7 +107,18 @@
 
                 {{-- الحقول (قوائم منسدلة قابلة للبحث) --}}
                 <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-                    <x-site.combobox name="reference" :items="$refItems" :placeholder="$t('الرقم المرجعي', 'Reference no.')" />
+                    {{-- بحث حر: الرقم المرجعي أو اسم العقار أو اسم المبنى --}}
+                    <label class="relative col-span-2 sm:flex-[2] sm:min-w-[240px]">
+                        <span class="sr-only">{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}</span>
+                        <svg class="absolute start-4 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" width="15" height="15"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <input type="text" name="q" value="{{ request('q') }}" autocomplete="off" enterkeyhint="search"
+                            placeholder="{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}"
+                            class="w-full rounded-full glass ps-10 pe-4 py-3 text-sm text-white placeholder:text-white/60 hover:bg-white/[0.16] focus:outline-none focus:ring-2 focus:ring-accent-500/40 transition">
+                    </label>
                     <x-site.combobox name="unit_type" :items="$mk($searchUnitTypes)" :placeholder="$t('اختر نوع الوحدة', 'Unit type')" />
                     <x-site.combobox name="area" :items="$mk($searchAreas)" :placeholder="$t('اختر المناطق', 'Areas')" />
                     <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />

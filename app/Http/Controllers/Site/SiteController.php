@@ -52,8 +52,6 @@ class SiteController extends Controller
             'searchAreas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(),
-            // الأرقام المرجعية رقمية — نرتبها عدديًا لا نصيًا
-            'searchReferences' => Property::orderBy('id')->pluck('reference_code')->filter()->values(),
             'videoProperties' => $this->homeVideos($c['videos'] ?? []),
         ]);
     }
@@ -121,7 +119,17 @@ class SiteController extends Controller
             ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
             ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
             ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
+            // روابط قديمة بالرقم المرجعي بالضبط
             ->when($request->reference, fn ($q, $v) => $q->where('reference_code', $v))
+            // البحث الحر: الرقم المرجعي أو اسم العقار أو اسم المبنى — والمطابقة التامة للرقم تظهر أولاً
+            ->when(trim((string) $request->q), function ($q, $v) {
+                $term = '%'.mb_strtolower($v).'%';
+
+                $q->where(fn ($w) => $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]))
+                    ->orderByRaw('CASE WHEN reference_code = ? THEN 0 ELSE 1 END', [$v]);
+            })
             ->when($request->price, function ($q, $v) {
                 if (str_ends_with($v, '+')) {
                     return $q->where('price', '>=', (float) rtrim($v, '+'));
@@ -146,7 +154,7 @@ class SiteController extends Controller
             'areas' => Area::where('is_active', true)
                 ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
                 ->orderBy('sort_order')->get(),
-            'filters' => $request->only('category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
+            'filters' => $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
         ]);
     }
 

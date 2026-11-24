@@ -38,7 +38,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 class="text-xl sm:text-2xl font-bold text-ink">{{ $t('أكثر من', 'More than') }} {{ number_format($properties->total()) }} {{ $t('بيت في عروض العقارات', 'properties available') }}</h2>
         <form method="GET" class="relative">
-            @foreach (['category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'] as $f)
+            @foreach (['q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'] as $f)
                 @if (data_get($filters, $f))<input type="hidden" name="{{ $f }}" value="{{ data_get($filters, $f) }}">@endif
             @endforeach
             <select name="sort" onchange="this.form.submit()"
@@ -84,6 +84,17 @@
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="font-bold text-ink">{{ $t('تصفية النتائج', 'Filters') }}</h3>
                     <a href="{{ route('site.properties') }}" class="text-xs font-bold text-accent-600 hover:text-accent-700">{{ $t('مسح الكل', 'Clear all') }}</a>
+                </div>
+
+                {{-- بحث بالاسم أو الرقم المرجعي أو اسم المبنى (يبقى مع باقي الفلاتر) --}}
+                <div class="pb-3">
+                    <label class="relative block">
+                        <span class="sr-only">{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}</span>
+                        <svg class="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <input type="text" name="q" value="{{ $filters['q'] ?? '' }}" autocomplete="off" enterkeyhint="search" onchange="this.form.submit()"
+                               placeholder="{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}"
+                               class="w-full rounded-full bg-gray-50 border border-gray-200 ps-9 pe-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition">
+                    </label>
                 </div>
 
                 {{-- نوع العقار --}}
