@@ -39,6 +39,7 @@ class PropertyController extends Controller
             'statuses' => PropertyStatus::where('is_active', true)->orderBy('sort_order')->get(),
             'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
+            'categories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'key']),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'channels' => $this->channelsByKind(),
             'owners' => PropertyOwner::orderBy('name')->get(['id', 'name']),

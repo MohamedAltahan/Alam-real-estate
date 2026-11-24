@@ -41,8 +41,23 @@
                         placeholder="باسم أو رقم العقار أو اسم المبنى..." span="col-span-2 md:col-span-1" />
         <x-filter-select label="الحالة" name="status_id" placeholder="كل الحالات"
                          :options="$statuses->pluck('name', 'id')" :selected="$filters['status_id'] ?? null" />
-        <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
-                         :options="$unitTypes->pluck('name', 'id')" :selected="$filters['unit_type_id'] ?? null" />
+        {{-- نوع الوحدة يتبع التصنيف (سكني/تجاري) — نفس أسلوب المحافظة والمنطقة --}}
+        <div class="contents" x-data="{
+                cat: @js((string) ($filters['category_id'] ?? '')),
+                catKeys: @js($categories->pluck('key', 'id')),
+                fits(c) { const k = this.catKeys[this.cat]; return ! k || ! c || c === k; }
+             }">
+            <x-filter-select label="التصنيف" name="category_id" placeholder="كل التصنيفات"
+                             :options="$categories->pluck('name', 'id')" :selected="$filters['category_id'] ?? null"
+                             x-model="cat" @change="$refs.unitTypeSelect.value = ''" />
+            {{-- الخيارات مرسومة من الخادم؛ أنواع التصنيف الآخر تُخفى وتُعطَّل --}}
+            <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع" x-ref="unitTypeSelect">
+                @foreach ($unitTypes as $t)
+                    <option value="{{ $t->id }}" @selected((string) ($filters['unit_type_id'] ?? '') === (string) $t->id)
+                            :hidden="! fits(@js($t->category))" :disabled="! fits(@js($t->category))">{{ $t->name }}</option>
+                @endforeach
+            </x-filter-select>
+        </div>
         {{-- المنطقة تتبع المحافظة — نطاق Alpine واحد بلا كسر الشبكة (display:contents) --}}
         <div class="contents" x-data="{
                 city: @js((string) ($filters['city_id'] ?? '')),

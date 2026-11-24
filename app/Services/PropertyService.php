@@ -17,7 +17,7 @@ class PropertyService
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
         'search', 'status_id', 'city_id', 'area_id', 'unit_type_id', 'purpose', 'website_id', 'social_id', 'from', 'to',
-        'owner_id', 'agent_id', 'commission', 'price_from', 'price_to',
+        'owner_id', 'agent_id', 'commission', 'price_from', 'price_to', 'category_id',
     ];
 
     /** قيمة فلتر النسبة للعقارات التي لم تُحدَّد لها عمولة */
@@ -40,6 +40,7 @@ class PropertyService
             ->when(is_numeric($filters['price_from'] ?? null), fn ($q) => $q->where('price', '>=', (float) $filters['price_from']))
             ->when(is_numeric($filters['price_to'] ?? null), fn ($q) => $q->where('price', '<=', (float) $filters['price_to']))
             ->when($filters['status_id'] ?? null, fn ($q, $v) => $q->where('status_id', $v))
+            ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
             ->when($filters['city_id'] ?? null, fn ($q, $v) => $q->where('city_id', $v))
             ->when($filters['area_id'] ?? null, fn ($q, $v) => $q->where('area_id', $v))
             ->when($filters['unit_type_id'] ?? null, fn ($q, $v) => $q->where('unit_type_id', $v))
