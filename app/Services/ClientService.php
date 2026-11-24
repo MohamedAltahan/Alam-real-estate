@@ -28,7 +28,7 @@ class ClientService
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
         'search', 'stage_id', 'agent_id', 'city_id', 'area_id', 'unit_type_id', 'category', 'area_from', 'area_to', 'rooms',
-        'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q',
+        'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q', 'property_q',
     ];
 
     /** فلاتر احتياج العقار — تُطبَّق معاً على سطر الاحتياج نفسه */
@@ -52,7 +52,20 @@ class ClientService
             ->when($filters['preferred_contact'] ?? null, fn (Builder $q, $v) => $q->where('preferred_contact', $v))
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
-            ->when($this->notesTerm($filters), fn (Builder $q, $term) => $this->applyNotesSearch($q, $term));
+            ->when($this->notesTerm($filters), fn (Builder $q, $term) => $this->applyNotesSearch($q, $term))
+            ->when(trim((string) ($filters['property_q'] ?? '')), fn (Builder $q, $term) => $this->applyPropertySearch($q, $term));
+    }
+
+    /** بحث بالعقار المرتبط بالعميل (عقاراته أو معايناته): الاسم أو اسم المبنى أو الرقم المرجعي */
+    private function applyPropertySearch(Builder $query, string $search): void
+    {
+        $term = '%'.mb_strtolower($search).'%';
+        $match = fn (Builder $p) => $p->where(fn (Builder $w) => $w
+            ->whereRaw('LOWER(properties.title) LIKE ?', [$term])
+            ->orWhereRaw('LOWER(properties.building_name) LIKE ?', [$term])
+            ->orWhereRaw('LOWER(properties.reference_code) LIKE ?', [$term]));
+
+        $query->where(fn (Builder $q) => $q->whereHas('properties', $match)->orWhereHas('viewings.property', $match));
     }
 
     /** @return array<string, string> فلاتر الاحتياج المعبّأة فقط */

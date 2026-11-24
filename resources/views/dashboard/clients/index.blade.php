@@ -28,30 +28,12 @@
         'w-full rounded-field bg-white border border-gray-200 px-3.5 h-10 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15';
     $filterLabel = 'block text-[11px] font-semibold text-gray-500 mb-1';
 
-    $advancedKeys = [
-        'agent_id',
-        'city_id',
-        'area_id',
-        'unit_type_id',
-        'category',
-        'area_from',
-        'area_to',
-        'rooms',
-        'nationality',
-        'social_status',
-        'preferred_contact',
-        'from',
-        'to',
-        'notes_q',
-    ];
-    $advancedActive = collect($filters)->only($advancedKeys)->filter(fn($v) => $v !== null && $v !== '')->isNotEmpty();
     $formOpen = ClientFormData::hasFormErrors($errors);
 @endphp
 
 @section('content')
     <div x-data="{
         addOpen: {{ $formOpen ? 'true' : 'false' }},
-        filtersOpen: {{ $advancedActive ? 'true' : 'false' }},
         delOpen: false,
         delAction: '',
         delName: '',
@@ -133,20 +115,6 @@
                         class="w-full rounded-full bg-white border border-gray-200 ps-11 pe-4 h-11 text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15">
                 </div>
 
-                <button type="button" @click="filtersOpen = ! filtersOpen"
-                    :class="filtersOpen ? 'bg-primary-50 border-primary-200 text-primary-800' :
-                        'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'"
-                    class="inline-flex items-center gap-2 rounded-full border px-4 h-11 text-sm font-semibold transition">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-                    </svg>
-                    فلاتر
-                    @if ($advancedActive)
-                        <span class="w-2 h-2 rounded-full bg-accent-500"></span>
-                    @endif
-                </button>
-
                 @can('clients.create')
                     <button @click="addOpen = true"
                         class="inline-flex items-center gap-2 rounded-full bg-primary-900 hover:bg-primary-800 text-white font-bold px-5 h-11 text-sm transition shrink-0">
@@ -160,12 +128,8 @@
             </div>
         </div>
 
-        {{-- ===== الفلاتر المتقدمة (خارج منطقة النتائج حتى لا تُستبدَل مع كل فلترة) ===== --}}
-        <div x-show="filtersOpen" x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0 -translate-y-2"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-end="opacity-0 -translate-y-2"
+        {{-- ===== الفلاتر (ظاهرة دائماً، خارج منطقة النتائج حتى لا تُستبدَل مع كل فلترة) ===== --}}
+        <div
             class="rounded-card bg-white border border-gray-100 shadow-sm p-4 mb-4" x-data="{
                 city: @js((string) ($filters['city_id'] ?? '')),
                 area: @js((string) ($filters['area_id'] ?? '')),
@@ -285,6 +249,12 @@
                     <input type="search" name="notes_q" form="clients-filters"
                         data-min-length="{{ (int) config('clients.notes_min_length', 3) }}"
                         value="{{ $filters['notes_q'] ?? '' }}" placeholder="3 أحرف على الأقل" autocomplete="off"
+                        class="{{ $filterInput }}">
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">العقار أو المبنى</label>
+                    <input type="search" name="property_q" form="clients-filters"
+                        value="{{ $filters['property_q'] ?? '' }}" placeholder="اسم العقار أو المبنى أو رقمه" autocomplete="off"
                         class="{{ $filterInput }}">
                 </div>
             </div>
