@@ -196,19 +196,24 @@
     @endif
 
     {{-- ===== أزرار عائمة ===== --}}
+    {{-- صفحة العقار: الزرّان يتصلان بمندوب المبيعات المعروض فيها (إن وُجد رقمه)، وإلا الأرقام الرئيسية --}}
+    @php
+        $onProperty = request()->routeIs('site.property') && isset($property);
+        $floatAgentPhone = $onProperty ? $property->agent?->phone : null;
+        $floatWa = $floatAgentPhone ? preg_replace('/[^0-9]/', '', $floatAgentPhone) : $wa;
+        $floatPhone = $floatAgentPhone ?: $set('contact', 'phone');
+        $floatingWaText = $onProperty
+            ? $t('مرحباً، أود الاستفسار عن العقار رقم '.$property->reference_code, 'Hello, I would like to ask about property '.$property->reference_code)
+            : null;
+    @endphp
     <div class="fixed bottom-5 right-5 z-40 flex flex-col gap-2">
-        @if ($wa)
-            @php
-                $floatingWaText = request()->routeIs('site.property') && isset($property)
-                    ? $t('مرحباً، أود الاستفسار عن العقار رقم '.$property->reference_code, 'Hello, I would like to ask about property '.$property->reference_code)
-                    : null;
-            @endphp
-            <a href="https://wa.me/{{ $wa }}{{ $floatingWaText ? '?text='.urlencode($floatingWaText) : '' }}" target="_blank" class="grid place-items-center w-12 h-12 rounded-full bg-success text-white shadow-lg hover:scale-105 transition" aria-label="WhatsApp">
+        @if ($floatWa)
+            <a href="https://wa.me/{{ $floatWa }}{{ $floatingWaText ? '?text='.urlencode($floatingWaText) : '' }}" target="_blank" class="grid place-items-center w-12 h-12 rounded-full bg-success text-white shadow-lg hover:scale-105 transition" aria-label="WhatsApp">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.6.2l-.8 1c-.2.2-.3.2-.6.1-1.5-.7-2.5-1.3-3.4-3-.3-.4.3-.4.7-1.3.1-.2 0-.4 0-.5l-.9-2.1c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.9.9-1.1 2-.7 3.3.5 1.6 1.6 3 3.1 4 2.2 1.5 3.8 1.6 4.6 1.5.6-.1 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.1-.2-.1-.5-.2z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.2-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20z"/></svg>
             </a>
         @endif
-        @if ($set('contact', 'phone'))
-            <a href="tel:{{ preg_replace('/\s/', '', $set('contact', 'phone')) }}" class="grid place-items-center w-12 h-12 rounded-full navy-gradient text-white shadow-lg hover:scale-105 transition" aria-label="call">
+        @if ($floatPhone)
+            <a href="tel:{{ preg_replace('/\s/', '', $floatPhone) }}" class="grid place-items-center w-12 h-12 rounded-full navy-gradient text-white shadow-lg hover:scale-105 transition" aria-label="call">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             </a>
         @endif
