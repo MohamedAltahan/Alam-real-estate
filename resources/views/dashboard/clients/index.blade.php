@@ -257,6 +257,17 @@
                         value="{{ $filters['property_q'] ?? '' }}" placeholder="اسم العقار أو المبنى أو رقمه" autocomplete="off"
                         class="{{ $filterInput }}">
                 </div>
+                {{-- سعر العقار المرتبط بالعميل (لا توجد ميزانية مسجّلة للعميل نفسه) --}}
+                <div>
+                    <label class="{{ $filterLabel }}">سعر العقار من (د.ك)</label>
+                    <input type="number" min="0" step="any" inputmode="decimal" name="price_from" form="clients-filters"
+                        value="{{ $filters['price_from'] ?? '' }}" placeholder="من" dir="ltr" class="{{ $filterInput }} text-end">
+                </div>
+                <div>
+                    <label class="{{ $filterLabel }}">سعر العقار إلى (د.ك)</label>
+                    <input type="number" min="0" step="any" inputmode="decimal" name="price_to" form="clients-filters"
+                        value="{{ $filters['price_to'] ?? '' }}" placeholder="إلى" dir="ltr" class="{{ $filterInput }} text-end">
+                </div>
             </div>
             <div class="flex justify-end mt-3">
                 <a href="{{ route('dashboard.clients.index') }}" data-filters-reset="clients-filters"

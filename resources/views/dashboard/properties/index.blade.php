@@ -68,6 +68,10 @@
                          :options="$channels[\App\Models\PublishingChannel::KIND_WEBSITE]->pluck('name', 'id')" :selected="$filters['website_id'] ?? null" />
         <x-filter-select label="السوشال ميديا" name="social_id" placeholder="كل القنوات"
                          :options="$channels[\App\Models\PublishingChannel::KIND_SOCIAL]->pluck('name', 'id')" :selected="$filters['social_id'] ?? null" />
+        <x-filter-input label="السعر من (د.ك)" name="price_from" :value="$filters['price_from'] ?? ''" type="number" placeholder="من"
+                        min="0" step="any" inputmode="decimal" dir="ltr" class="text-end" />
+        <x-filter-input label="السعر إلى (د.ك)" name="price_to" :value="$filters['price_to'] ?? ''" type="number" placeholder="إلى"
+                        min="0" step="any" inputmode="decimal" dir="ltr" class="text-end" />
         <x-filter-input label="مُضاف من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
         <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
     </x-filter-bar>

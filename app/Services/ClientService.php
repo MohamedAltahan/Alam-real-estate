@@ -28,7 +28,7 @@ class ClientService
     /** مفاتيح فلاتر القائمة */
     public const FILTER_KEYS = [
         'search', 'stage_id', 'agent_id', 'city_id', 'area_id', 'unit_type_id', 'category', 'area_from', 'area_to', 'rooms',
-        'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q', 'property_q',
+        'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q', 'property_q', 'price_from', 'price_to',
     ];
 
     /** فلاتر احتياج العقار — تُطبَّق معاً على سطر الاحتياج نفسه */
@@ -53,17 +53,33 @@ class ClientService
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
             ->when($this->notesTerm($filters), fn (Builder $q, $term) => $this->applyNotesSearch($q, $term))
-            ->when(trim((string) ($filters['property_q'] ?? '')), fn (Builder $q, $term) => $this->applyPropertySearch($q, $term));
+            ->when($this->linkedPropertyFilters($filters), fn (Builder $q, array $f) => $this->applyLinkedProperty($q, $f));
     }
 
-    /** بحث بالعقار المرتبط بالعميل (عقاراته أو معايناته): الاسم أو اسم المبنى أو الرقم المرجعي */
-    private function applyPropertySearch(Builder $query, string $search): void
+    /** @return array{term: string, from: ?float, to: ?float}|null فلاتر العقار المرتبط المعبّأة فقط */
+    private function linkedPropertyFilters(array $filters): ?array
     {
-        $term = '%'.mb_strtolower($search).'%';
-        $match = fn (Builder $p) => $p->where(fn (Builder $w) => $w
-            ->whereRaw('LOWER(properties.title) LIKE ?', [$term])
-            ->orWhereRaw('LOWER(properties.building_name) LIKE ?', [$term])
-            ->orWhereRaw('LOWER(properties.reference_code) LIKE ?', [$term]));
+        $term = trim((string) ($filters['property_q'] ?? ''));
+        $from = is_numeric($filters['price_from'] ?? null) ? (float) $filters['price_from'] : null;
+        $to = is_numeric($filters['price_to'] ?? null) ? (float) $filters['price_to'] : null;
+
+        return ($term !== '' || $from !== null || $to !== null) ? ['term' => $term, 'from' => $from, 'to' => $to] : null;
+    }
+
+    /**
+     * العقار المرتبط بالعميل (عقاراته أو معايناته): الاسم أو اسم المبنى أو الرقم المرجعي، ونطاق سعره.
+     * الشروط كلها على العقار نفسه — «برج الحمرا» + 500–800 يعني عقاراً في البرج بهذا السعر.
+     */
+    private function applyLinkedProperty(Builder $query, array $f): void
+    {
+        $term = '%'.mb_strtolower($f['term']).'%';
+        $match = fn (Builder $p) => $p
+            ->when($f['term'] !== '', fn (Builder $p) => $p->where(fn (Builder $w) => $w
+                ->whereRaw('LOWER(properties.title) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(properties.building_name) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(properties.reference_code) LIKE ?', [$term])))
+            ->when($f['from'] !== null, fn (Builder $p) => $p->where('properties.price', '>=', $f['from']))
+            ->when($f['to'] !== null, fn (Builder $p) => $p->where('properties.price', '<=', $f['to']));
 
         $query->where(fn (Builder $q) => $q->whereHas('properties', $match)->orWhereHas('viewings.property', $match));
     }
