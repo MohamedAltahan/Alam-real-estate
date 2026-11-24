@@ -30,7 +30,9 @@
 
 @section('content')
     {{-- ===================== الهيرو ===================== --}}
-    <section class="relative isolate overflow-hidden text-white" x-data="{ i: 0, imgs: @js(array_values($hero['images'] ?? [])), ms: {{ (int) ($hero['rotate_seconds'] ?? 5) * 1000 }} }" x-init="if (imgs.length > 1) setInterval(() => i = (i + 1) % imgs.length, ms)">
+    <section class="relative isolate z-20 text-white" x-data="{ i: 0, imgs: @js(array_values($hero['images'] ?? [])), ms: {{ (int) ($hero['rotate_seconds'] ?? 5) * 1000 }} }" x-init="if (imgs.length > 1) setInterval(() => i = (i + 1) % imgs.length, ms)">
+        {{-- طبقات الخلفية مقصوصة وحدها؛ الهيرو نفسه بلا قص وفوق ما بعده حتى تنزل قوائم البحث فوق الأقسام التالية --}}
+        <div class="absolute inset-0 overflow-hidden" aria-hidden="true">
         {{-- خلفية متحركة --}}
         <div class="absolute inset-0 bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950"></div>
         <template x-for="(im, idx) in imgs" :key="idx">
@@ -45,6 +47,7 @@
         <div class="absolute inset-0 bg-gradient-to-r from-primary-950/40 via-transparent to-primary-950/40"></div>
         {{-- التلاشي السفلي من Figma: #F7F8FC 100% ← #000000 0% (نقطتان فقط، بلا درجة وسطى) --}}
         <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f8fc] to-transparent"></div>
+        </div>
 
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-44 pb-16 text-center">
             <div class="max-w-5xl mx-auto">
