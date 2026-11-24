@@ -124,7 +124,7 @@ class TaskController extends Controller
 
     public function propertyLookup(Request $request): JsonResponse
     {
-        return response()->json(PropertyLookup::search((string) $request->query('q', ''), false));
+        return response()->json(PropertyLookup::search((string) $request->query('q', '')));
     }
 
     /** الموظفون القابلون للإسناد والفلترة */

@@ -75,7 +75,7 @@
                     <div class="relative">
                         <input x-ref="input" x-model="q" @input="search()" @keydown="onKey($event)" @blur="onBlur()"
                                @focus="q.trim().length >= 2 && results.length && (open = true)"
-                               placeholder="ابحث بالرقم أو اسم العقار أو المبنى..." autocomplete="off" class="{{ $field }} pe-9">
+                               placeholder="ابحث بالرقم أو اسم العقار أو المبنى أو المالك..." autocomplete="off" class="{{ $field }} pe-9">
                         <button type="button" x-show="row.property_id" @click="clear()" title="مسح"
                                 class="absolute end-2 top-1/2 -translate-y-1/2 grid place-items-center w-6 h-6 rounded-full text-gray-400 hover:text-danger hover:bg-danger/10">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
