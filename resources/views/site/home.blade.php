@@ -88,8 +88,19 @@
                     ['v' => '50000+', 'l' => $t('أكثر من 50,000 د.ك', 'Over 50,000 KD')],
                 ];
             @endphp
-            @php $defaultCat = (string) (request('category') ?: optional($searchCategories->first())->id); @endphp
-            <form action="{{ route('site.properties') }}" method="GET" x-data="{ cat: '{{ $defaultCat }}' }"
+            @php
+                $defaultCat = (string) (request('category') ?: optional($searchCategories->first())->id);
+                // في «تجاري» تحلّ المساحة محل غرف النوم
+                $commercialCat = (string) optional($searchCategories->firstWhere('key', 'commercial'))->id;
+                $sizeItems = [
+                    ['v' => '0-50', 'l' => $t('أقل من 50 م²', 'Under 50 m²')],
+                    ['v' => '50-100', 'l' => '50 - 100 ' . $t('م²', 'm²')],
+                    ['v' => '100-200', 'l' => '100 - 200 ' . $t('م²', 'm²')],
+                    ['v' => '200-500', 'l' => '200 - 500 ' . $t('م²', 'm²')],
+                    ['v' => '500+', 'l' => $t('أكثر من 500 م²', 'Over 500 m²')],
+                ];
+            @endphp
+            <form action="{{ route('site.properties') }}" method="GET" x-data="{ cat: '{{ $defaultCat }}', commercial: '{{ $commercialCat }}' }"
                 class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
 
@@ -124,7 +135,13 @@
                     </label>
                     <x-site.combobox name="unit_type" :items="$mk($searchUnitTypes)" :placeholder="$t('اختر نوع الوحدة', 'Unit type')" />
                     <x-site.combobox name="area" :items="$mk($searchAreas)" :placeholder="$t('اختر المناطق', 'Areas')" />
-                    <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />
+                    {{-- x-if يُخرج الحقل غير الظاهر من النموذج فلا يُرسل --}}
+                    <template x-if="! commercial || cat !== commercial">
+                        <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />
+                    </template>
+                    <template x-if="commercial && cat === commercial">
+                        <x-site.combobox name="size" :items="$sizeItems" :placeholder="$t('المساحة', 'Area')" />
+                    </template>
                     <x-site.combobox name="price" :items="$priceItems" :placeholder="$t('الأسعار', 'Price')" />
                     <button type="submit"
                         class="inline-flex items-center justify-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold w-full sm:w-auto px-4 sm:px-6 py-3 text-sm shrink-0 shadow-lg shadow-accent-500/25 transition">

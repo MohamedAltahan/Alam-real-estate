@@ -130,14 +130,8 @@ class SiteController extends Controller
                     ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]))
                     ->orderByRaw('CASE WHEN reference_code = ? THEN 0 ELSE 1 END', [$v]);
             })
-            ->when($request->price, function ($q, $v) {
-                if (str_ends_with($v, '+')) {
-                    return $q->where('price', '>=', (float) rtrim($v, '+'));
-                }
-                [$min, $max] = array_pad(explode('-', $v), 2, null);
-
-                return $q->where('price', '>=', (float) $min)->when($max !== null, fn ($qq) => $qq->where('price', '<=', (float) $max));
-            })
+            ->when($request->price, fn ($q, $v) => $this->applyRange($q, 'price', (string) $v))
+            ->when($request->size, fn ($q, $v) => $this->applyRange($q, 'area_size', (string) $v))
             ->when($request->sort === 'price_asc', fn ($q) => $q->orderBy('price'))
             ->when($request->sort === 'price_desc', fn ($q) => $q->orderByDesc('price'))
             ->when(! in_array($request->sort, ['price_asc', 'price_desc']), fn ($q) => $q->latest())
@@ -154,8 +148,19 @@ class SiteController extends Controller
             'areas' => Area::where('is_active', true)
                 ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
                 ->orderBy('sort_order')->get(),
-            'filters' => $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'),
+            'filters' => $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size'),
         ]);
+    }
+
+    /** نطاق بصيغة «من-إلى» أو «من+» (السعر، المساحة) */
+    private function applyRange($query, string $column, string $value)
+    {
+        if (str_ends_with($value, '+')) {
+            return $query->where($column, '>=', (float) rtrim($value, '+'));
+        }
+        [$min, $max] = array_pad(explode('-', $value), 2, null);
+
+        return $query->where($column, '>=', (float) $min)->when($max !== null, fn ($q) => $q->where($column, '<=', (float) $max));
     }
 
     /** تفاصيل عقار */

@@ -16,6 +16,13 @@
         ['0-1000', $t('أقل من 1,000 د.ك / شهر', 'Under KD 1,000 /mo')],
         ['1000+', $t('أكثر من 1,000 د.ك / شهر', 'Over KD 1,000 /mo')],
     ];
+    $sizes = [
+        ['0-50', $t('أقل من 50 م²', 'Under 50 m²')],
+        ['50-100', '50 - 100 '.$t('م²', 'm²')],
+        ['100-200', '100 - 200 '.$t('م²', 'm²')],
+        ['200-500', '200 - 500 '.$t('م²', 'm²')],
+        ['500+', $t('أكثر من 500 م²', 'Over 500 m²')],
+    ];
     $viewBtn = 'grid place-items-center w-10 h-10 rounded-full border transition';
 @endphp
 
@@ -38,7 +45,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 class="text-xl sm:text-2xl font-bold text-ink">{{ $t('أكثر من', 'More than') }} {{ number_format($properties->total()) }} {{ $t('بيت في عروض العقارات', 'properties available') }}</h2>
         <form method="GET" class="relative">
-            @foreach (['q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price'] as $f)
+            @foreach (['q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size'] as $f)
                 @if (data_get($filters, $f))<input type="hidden" name="{{ $f }}" value="{{ data_get($filters, $f) }}">@endif
             @endforeach
             <select name="sort" onchange="this.form.submit()"
@@ -165,6 +172,15 @@
                     @foreach ([1, 2, 3, 4, 5] as $n)
                         <label class="{{ $optRow }}"><span>{{ $n == 5 ? '+5' : $n }} {{ $t('غرف', 'rooms') }}</span>
                             <input type="radio" name="bedrooms" value="{{ $n }}" @checked(($filters['bedrooms'] ?? '') == $n) onchange="this.form.submit()" class="{{ $radio }}"></label>
+                    @endforeach
+                </div>
+
+                {{-- المساحة (تُستخدم أساساً مع التجاري) --}}
+                <div class="py-3 border-t border-gray-100">
+                    <p class="{{ $groupTitle }}">{{ $t('المساحة', 'Area') }}</p>
+                    @foreach ($sizes as [$val, $label])
+                        <label class="{{ $optRow }}"><span>{{ $label }}</span>
+                            <input type="radio" name="size" value="{{ $val }}" @checked(($filters['size'] ?? '') === $val) onchange="this.form.submit()" class="{{ $radio }}"></label>
                     @endforeach
                 </div>
             </form>
