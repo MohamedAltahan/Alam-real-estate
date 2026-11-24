@@ -31,7 +31,7 @@ class PropertySearchTest extends TestCase
         $this->get(route('site.home'))
             ->assertOk()
             ->assertSee('name="q"', false)
-            ->assertSee('ابحث باسم العقار أو الرقم المرجعي')
+            ->assertSee('ابحث باسم العقار أو المبنى أو الرقم المرجعي')
             ->assertDontSee('name="reference"', false);
     }
 

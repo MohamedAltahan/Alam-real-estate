@@ -109,14 +109,14 @@
                 <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                     {{-- بحث حر: الرقم المرجعي أو اسم العقار أو اسم المبنى --}}
                     <label class="relative col-span-2 sm:flex-[2] sm:min-w-[240px]">
-                        <span class="sr-only">{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}</span>
+                        <span class="sr-only">{{ $t('ابحث باسم العقار أو المبنى أو الرقم المرجعي', 'Name or reference no.') }}</span>
                         <svg class="absolute start-4 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" width="15" height="15"
                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.3-4.3" />
                         </svg>
                         <input type="text" name="q" value="{{ request('q') }}" autocomplete="off" enterkeyhint="search"
-                            placeholder="{{ $t('ابحث باسم العقار أو الرقم المرجعي', 'Name or reference no.') }}"
+                            placeholder="{{ $t('ابحث باسم العقار أو المبنى أو الرقم المرجعي', 'Name or reference no.') }}"
                             class="w-full rounded-full glass ps-10 pe-4 py-3 text-sm text-white placeholder:text-white/60 hover:bg-white/[0.16] focus:outline-none focus:ring-2 focus:ring-accent-500/40 transition">
                     </label>
                     <x-site.combobox name="unit_type" :items="$mk($searchUnitTypes)" :placeholder="$t('اختر نوع الوحدة', 'Unit type')" />
