@@ -89,7 +89,8 @@ class ViewingService
 
                 $q->where(function (Builder $q) use ($term) {
                     $q->whereHas('client', fn (Builder $c) => $c->whereRaw('LOWER(name) LIKE ?', [$term]))
-                        ->orWhereHas('property', fn (Builder $p) => $p->whereRaw('LOWER(reference_code) LIKE ?', [$term]));
+                        ->orWhereHas('property', fn (Builder $p) => $p->whereRaw('LOWER(reference_code) LIKE ?', [$term])
+                            ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]));
                 });
             });
     }
