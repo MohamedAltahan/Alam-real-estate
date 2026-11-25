@@ -41,7 +41,11 @@ withAlpine((Alpine) => {
             this.loading = true;
 
             try {
-                const response = await fetch(`${this.url}?q=${encodeURIComponent(q)}`, {
+                // الرابط قد يحمل معاملات مسبقاً (شاشة تعديل العميل: ?client=…) — نضيف q بدل لصق «?» ثانية
+                const url = new URL(this.url, window.location.origin);
+                url.searchParams.set('q', q);
+
+                const response = await fetch(url, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
                     credentials: 'same-origin',
                     signal: this.controller.signal,
