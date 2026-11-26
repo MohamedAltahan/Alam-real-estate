@@ -127,8 +127,26 @@
                     <p class="text-[11px] text-gray-400">اترك الكل فارغاً ليفتح الزر كل العقارات.</p>
                 </div>
 
-                <x-cms.dropzone label="صورة توضيحية" name="featured[image]"
+                <x-cms.dropzone label="صورة الأيقونة (تظهر صغيرة بجوار العنوان)" name="featured[image]"
                                 :media="$homeSecs['featured']->getFirstMedia('image')" />
+
+                {{-- ارتفاع البانر نفسه، وعلى أساسه تُقص صورة الخلفية --}}
+                <div x-data="{ height: @js((string) old('featured.height', $s('featured', 'ar', 'height', ''))) }" class="space-y-3">
+                    <div class="sm:max-w-xs">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">ارتفاع البانر بالبكسل (فارغ = حسب المحتوى)</label>
+                        <input type="number" name="featured[height]" x-model="height" min="120" max="700" step="1" dir="ltr"
+                               placeholder="مثال: 300" class="{{ $numCls }}">
+                        @error('featured.height')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                    </div>
+                    <x-cms.dropzone label="صورة خلفية البانر كامل" name="featured[background]"
+                                    :media="$homeSecs['featured']->getFirstMedia('background')" />
+                    <p class="text-[11px] text-gray-500">
+                        قصّ صورة الخلفية قبل رفعها بمقاس
+                        <span dir="ltr" class="font-bold" x-text="'1232 × ' + (height || 200)"></span>
+                        بكسل (أو ضعفه للوضوح:
+                        <span dir="ltr" class="font-bold" x-text="'2464 × ' + (height || 200) * 2"></span>). على الموبايل تُقص الأطراف تلقائياً.
+                    </p>
+                </div>
             </div>
 
             {{-- العقارات المميزة (المحتوى تلقائي من العقارات؛ هنا الترويسة والإظهار) --}}

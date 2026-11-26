@@ -229,7 +229,13 @@
     @if ($offersBannerVisible && $it($featured, 'title'))
         <section class="max-w-7xl mx-auto px-4 sm:px-6 mt-20 relative z-10">
             <div
-                class="rounded-3xl navy-gradient text-white p-6 sm:p-8 flex flex-wrap items-center gap-5 justify-between overflow-hidden relative isolate">
+                class="rounded-3xl navy-gradient text-white p-6 sm:p-8 flex flex-wrap content-center items-center gap-5 justify-between overflow-hidden relative isolate"
+                @if ((int) data_get($featured, 'height')) style="min-height: {{ (int) data_get($featured, 'height') }}px" @endif>
+                {{-- خلفية البانر كامل + طبقة داكنة حتى يبقى النص مقروءاً --}}
+                @if ($img($featured['background'] ?? null))
+                    <img src="{{ $img($featured['background']) }}" class="absolute inset-0 -z-10 w-full h-full object-cover" alt="">
+                    <div class="absolute inset-0 -z-10 bg-primary-950/55"></div>
+                @endif
                 <div class="absolute -top-16 -end-10 w-56 h-56 rounded-full bg-white/[0.07] blur-2xl"></div>
                 <div class="absolute -bottom-20 -start-16 w-56 h-56 rounded-full bg-white/[0.05] blur-2xl"></div>
 

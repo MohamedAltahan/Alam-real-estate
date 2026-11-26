@@ -420,6 +420,10 @@ class SiteController extends Controller
                 $content['image'] = $single;
             }
 
+            if ($background = $s->imageUrl('background')) {
+                $content['background'] = $background;
+            }
+
             // كل بند له مجموعة صور مستقلة (المناطق مثلاً)
             if (! empty($content['items']) && is_array($content['items'])) {
                 $content['items'] = array_map(function ($item) use ($s) {

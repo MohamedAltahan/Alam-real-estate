@@ -93,7 +93,12 @@ class WebsiteController extends Controller
         $featured->is_visible = $request->boolean('featured.visible', true);
         $this->syncMedia($request, $featured, 'image', 'featured.image', (array) $request->input('featured.image_removed', []), single: true);
 
-        $this->fill($featured, shared: ['link' => $this->bannerLink($request)],
+        $this->syncMedia($request, $featured, 'background', 'featured.background', (array) $request->input('featured.background_removed', []), single: true);
+
+        // ارتفاع البانر بالبكسل (فارغ = حسب المحتوى)
+        $height = (int) ($ft['height'] ?? 0) ?: null;
+
+        $this->fill($featured, shared: ['link' => $this->bannerLink($request), 'height' => $height],
             ar: ['title' => $ft['title_ar'] ?? '', 'description' => $ft['description_ar'] ?? '', 'button' => $ft['button_ar'] ?? ''],
             en: ['title' => $ft['title_en'] ?? '', 'description' => $ft['description_en'] ?? '', 'button' => $ft['button_en'] ?? '']
         );
@@ -548,12 +553,15 @@ class WebsiteController extends Controller
         $request->validate([
             'hero.images.*' => $rules,
             'featured.image' => $rules,
+            'featured.background' => $rules,
+            'featured.height' => ['nullable', 'integer', 'min:120', 'max:700'],
             'cta.image' => $rules,
             'area_items.*.image' => $rules,
         ], [
             'max' => 'حجم الصورة يتجاوز الحد المسموح (٦ ميجابايت).',
             'image' => 'الملف المرفوع ليس صورة صالحة.',
             'mimetypes' => 'الصيغ المسموحة: jpg · png · webp فقط.',
+            'featured.height.*' => 'ارتفاع البانر رقم بين ١٢٠ و ٧٠٠ بكسل.',
         ]);
     }
 

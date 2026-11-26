@@ -3,10 +3,13 @@
 namespace Tests\Feature\Site;
 
 use App\Models\City;
+use App\Models\PageSection;
 use App\Models\PropertyCategory;
 use App\Models\UnitType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -92,6 +95,32 @@ class OffersBannerTest extends TestCase
             ->assertSee('name="featured[link][category]"', false)
             ->assertSee('name="featured[link][unit_type]"', false)
             ->assertSee('name="featured[link][city]"', false);
+    }
+
+    public function test_icon_background_and_height_are_separate(): void
+    {
+        Storage::fake('public');
+
+        $this->save([
+            'visible' => 1, 'height' => 320,
+            'image' => UploadedFile::fake()->image('icon.png', 100, 100),
+            'background' => UploadedFile::fake()->image('bg.jpg', 1232, 320),
+        ]);
+
+        $section = PageSection::where('key', 'featured')->firstOrFail();
+
+        $this->get(route('site.home'))
+            ->assertOk()
+            ->assertSee('style="min-height: 320px"', false)
+            ->assertSee($section->imageUrl('image'), false)
+            ->assertSee($section->imageUrl('background'), false);
+    }
+
+    public function test_banner_height_is_limited(): void
+    {
+        $this->actingAs($this->editor)
+            ->put(route('dashboard.website.homepage'), ['featured' => ['height' => 5000]])
+            ->assertSessionHasErrors('featured.height');
     }
 
     private function save(array $featured): void
