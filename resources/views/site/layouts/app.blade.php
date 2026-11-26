@@ -199,12 +199,14 @@
     {{-- ===== أزرار عائمة ===== --}}
     {{-- صفحة العقار: الزرّان يتصلان بمندوب المبيعات المعروض فيها (إن وُجد رقمه)، وإلا الأرقام الرئيسية --}}
     @php
-        $onProperty = request()->routeIs('site.property') && isset($property);
-        $floatAgentPhone = $onProperty ? $property->agent?->phone : null;
+        // العقار من الرابط نفسه لا من متغيّر $property: حلقة «العقارات المشابهة» في الصفحة تعيد استخدامه
+        $floatProperty = request()->routeIs('site.property') ? request()->route('property') : null;
+        $onProperty = $floatProperty instanceof \App\Models\Property;
+        $floatAgentPhone = $onProperty ? $floatProperty->agent?->phone : null;
         $floatWa = $floatAgentPhone ? preg_replace('/[^0-9]/', '', $floatAgentPhone) : $wa;
         $floatPhone = $floatAgentPhone ?: $set('contact', 'phone');
         $floatingWaText = $onProperty
-            ? $t('مرحباً، أود الاستفسار عن العقار رقم '.$property->reference_code, 'Hello, I would like to ask about property '.$property->reference_code)
+            ? $t('مرحباً، أود الاستفسار عن العقار رقم '.$floatProperty->reference_code, 'Hello, I would like to ask about property '.$floatProperty->reference_code)
             : null;
     @endphp
     <div class="fixed bottom-5 right-5 z-40 flex flex-col gap-2">
