@@ -59,7 +59,7 @@ class PropertyOwnerManagementTest extends TestCase
 
     public function test_owner_mobile_is_stored_and_shown_on_the_owner_page_and_list_only(): void
     {
-        $user = $this->userWith(['property_owners.view', 'property_owners.create', 'property_owners.edit', 'properties.view']);
+        $user = $this->userWith(['property_owners.view', 'property_owners.create', 'property_owners.edit', 'properties.view', 'properties.view_commission']);
         $viewer = $this->userWith(['property_owners.view']);
 
         $this->actingAs($user)->post(route('dashboard.owners.store'), [

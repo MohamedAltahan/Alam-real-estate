@@ -30,12 +30,22 @@ Alpine.data('combobox', (opts = {}) => ({
         this.value = String(item.v);
         this.label = item.l;
         this.close();
+        this.changed();
     },
 
     clear() {
+        const had = this.value !== '';
         this.value = '';
         this.label = '';
         this.close();
+        if (had) {
+            this.changed();
+        }
+    },
+
+    /** يُبلغ الفورم الأب بالقيمة الجديدة (مثلاً المحافظة ← تقصر قائمة المناطق) */
+    changed() {
+        this.$dispatch('combobox-change', { name: opts.name ?? '', value: this.value });
     },
 
     close() {

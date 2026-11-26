@@ -71,10 +71,39 @@ class PermissionMatrixController extends Controller
         'watermark' => ['view', 'edit'],
     ];
 
+    /**
+     * صلاحيات تفصيلية داخل الوحدات (تظهر تحت المصفوفة) — لسحب أجزاء بعينها من دور مثل مندوب المبيعات.
+     * base: الصلاحية التي كانت تكفي قبل إضافتها، فتُمنح تلقائياً لمن يملكها (لا يتغيّر السلوك حتى تُلغى).
+     */
+    public const EXTRAS = [
+        'clients.view_all' => [
+            'module' => 'clients',
+            'label' => 'عرض كل العملاء',
+            'hint' => 'بدونها يرى المستخدم عملاءه فقط: المسجَّلين باسمه كمندوب مبيعات أو الذين أضافهم بنفسه — في القائمة والمعاينات والإشعارات ولوحة التحكم.',
+            'base' => 'clients.view',
+        ],
+        'clients.assign' => [
+            'module' => 'clients',
+            'label' => 'تغيير مندوب المبيعات للعميل',
+            'hint' => 'بدونها لا يستطيع اختيار أو تغيير مندوب العميل؛ والعميل الذي يضيفه مندوب المبيعات يُسجَّل باسمه تلقائياً.',
+            'base' => 'clients.edit',
+        ],
+        'properties.view_commission' => [
+            'module' => 'properties',
+            'label' => 'عرض نسبة عمولة المالك',
+            'hint' => 'بدونها تُخفى نسبة العمولة من قائمة العقارات وفلترها وتفاصيل العقار وفورمه.',
+            'base' => 'properties.view',
+        ],
+    ];
+
     /** «العقارات: تعديل · العملاء: حذف» — لسجل النشاط */
     public static function describePermissions(array $names): string
     {
         return collect($names)->map(function (string $name) {
+            if (isset(self::EXTRAS[$name])) {
+                return (self::MODULES[self::EXTRAS[$name]['module']] ?? '').': '.self::EXTRAS[$name]['label'];
+            }
+
             [$module, $action] = array_pad(explode('.', $name, 2), 2, '');
 
             return (self::MODULES[$module] ?? $module).': '.(self::ACTIONS[$action] ?? $action);
@@ -98,6 +127,7 @@ class PermissionMatrixController extends Controller
             'assigned' => $current ? $current->permissions->pluck('name')->flip() : collect(),
             'modules' => self::MODULES,
             'actions' => self::ACTIONS,
+            'extras' => self::EXTRAS,
         ]);
     }
 
@@ -120,6 +150,7 @@ class PermissionMatrixController extends Controller
                 $valid[] = "{$m}.{$a}";
             }
         }
+        $valid = array_merge($valid, array_keys(self::EXTRAS));
         $selected = array_values(array_intersect($data['permissions'] ?? [], $valid));
 
         // نتأكد أن الصلاحيات موجودة ثم نزامنها

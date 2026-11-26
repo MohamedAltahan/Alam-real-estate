@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ClientViewing;
+use App\Models\Property;
 use App\Models\User;
 use App\Notifications\ViewingReminder;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,8 @@ class ViewingReminderService
             ->with(['client:id,name,agent_id,recorded_by', 'property:id,reference_code,agent_id'])
             ->where('outcome', ClientViewing::OUTCOME_PENDING)
             ->whereNull('reminded_at')
+            // لا تذكير لمعاينة عقار نُقل إلى الأرشيف
+            ->whereIn('property_id', Property::query()->select('id'))
             ->where('scheduled_at', '<=', $now->copy()->addMinutes(self::MAX_LEAD_MINUTES))
             ->where('scheduled_at', '>=', $now->copy()->subHours(self::STALE_HOURS))
             ->orderBy('scheduled_at')

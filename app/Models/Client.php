@@ -94,6 +94,19 @@ class Client extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    /**
+     * العملاء الذين يحق للمستخدم رؤيتهم: الكل مع صلاحية «عرض كل العملاء»،
+     * وإلا عملاؤه فقط — المسجَّلون باسمه كمندوب مبيعات أو الذين أضافهم بنفسه.
+     */
+    public function scopeVisibleTo($query, ?User $user)
+    {
+        if (! $user || $user->can('clients.view_all')) {
+            return $query;
+        }
+
+        return $query->where(fn ($q) => $q->where('agent_id', $user->id)->orWhere('recorded_by', $user->id));
+    }
+
     /** الطلبات المميزة — تبويب في شاشة طلبات التواصل */
     public function scopeFeatured($query)
     {

@@ -5,19 +5,23 @@
     'value' => '',
     'label' => '',
     'searchLabel' => null,
+    // تعبير JS يقرّر ظهور كل عنصر (item) — يُقيَّم داخل نطاق الفورم الأب، مثل
+    // «نوع الوحدة حسب التصنيف» أو «المنطقة حسب المحافظة». الاختيار الذي يخرج من القائمة يُمسح.
+    'match' => 'true',
 ])
 
 @php
     $loc = app()->getLocale();
     $tt = fn ($ar, $en) => $loc === 'ar' ? $ar : $en;
-    $cfg = ['value' => (string) $value, 'label' => (string) $label, 'items' => array_values($items)];
+    $cfg = ['name' => $name, 'value' => (string) $value, 'label' => (string) $label, 'items' => array_values($items)];
     $searchText = $searchLabel ?: $tt('ابحث...', 'Search...');
     $allText = $tt('الكل', 'All');
     $emptyText = $tt('لا توجد نتائج', 'No results');
 @endphp
 
 <div x-data="combobox(@js($cfg))" @click.outside="close()" @keydown.escape.window="close()"
-     class="relative flex-1 min-w-[128px]">
+     @if ($match !== 'true') x-effect="if (value && ! items.some(item => String(item.v) === value && ({{ $match }}))) clear()" @endif
+     {{ $attributes->class('relative flex-1 min-w-[128px]') }}>
     <input type="hidden" name="{{ $name }}" :value="value">
 
     {{-- الزر --}}
@@ -46,14 +50,14 @@
                 <button type="button" @click="clear()"
                         class="w-full text-start rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 transition">{{ $allText }}</button>
             </li>
-            <template x-for="item in filtered()" :key="item.v">
+            <template x-for="item in filtered().filter(item => ({{ $match }}))" :key="item.v">
                 <li>
                     <button type="button" @click="pick(item)" x-text="item.l"
                             class="w-full text-start rounded-lg px-3 py-2 text-sm transition"
                             :class="value === String(item.v) ? 'bg-primary-50 text-primary-800 font-semibold' : 'text-gray-700 hover:bg-gray-50'"></button>
                 </li>
             </template>
-            <li x-show="! filtered().length" class="px-3 py-3 text-sm text-gray-400 text-center">{{ $emptyText }}</li>
+            <li x-show="! filtered().filter(item => ({{ $match }})).length" class="px-3 py-3 text-sm text-gray-400 text-center">{{ $emptyText }}</li>
         </ul>
     </div>
 </div>

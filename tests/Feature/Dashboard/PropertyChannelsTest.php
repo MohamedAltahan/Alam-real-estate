@@ -15,7 +15,7 @@ class PropertyChannelsTest extends TestCase
 
     public function test_saving_website_channels_does_not_touch_social_channels(): void
     {
-        $user = $this->userWith(['properties.view', 'properties.edit']);
+        $user = $this->userWith(['properties.view', 'properties.view_commission', 'properties.edit']);
         $olx = PublishingChannel::create(['kind' => 'website', 'name' => 'OLX']);
         $dubizzle = PublishingChannel::create(['kind' => 'website', 'name' => 'Dubizzle']);
         $facebook = PublishingChannel::create(['kind' => 'social', 'name' => 'Facebook']);
@@ -44,7 +44,7 @@ class PropertyChannelsTest extends TestCase
 
     public function test_properties_index_filters_by_channel_and_shows_counts(): void
     {
-        $user = $this->userWith(['properties.view']);
+        $user = $this->userWith(['properties.view', 'properties.view_commission']);
         $olx = PublishingChannel::create(['kind' => 'website', 'name' => 'OLX']);
         $facebook = PublishingChannel::create(['kind' => 'social', 'name' => 'Facebook']);
 
@@ -72,7 +72,7 @@ class PropertyChannelsTest extends TestCase
 
     public function test_updating_channels_requires_edit_permission(): void
     {
-        $user = $this->userWith(['properties.view']);
+        $user = $this->userWith(['properties.view', 'properties.view_commission']);
         $property = Property::create(['reference_code' => '30', 'title' => ['ar' => 'عقار', 'en' => 'P']]);
 
         $this->actingAs($user)->put(route('dashboard.properties.channels.update', $property), ['kind' => 'website'])

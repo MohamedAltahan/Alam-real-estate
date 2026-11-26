@@ -57,7 +57,8 @@ class ClientViewing extends Model
 
     public function property(): BelongsTo
     {
-        return $this->belongsTo(Property::class);
+        // يبقى ظاهراً حتى لو نُقل العقار إلى الأرشيف (السجل والتاريخ لا ينكسران)
+        return $this->belongsTo(Property::class)->withTrashed();
     }
 
     public function createdBy(): BelongsTo

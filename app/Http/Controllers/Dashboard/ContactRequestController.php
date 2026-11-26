@@ -109,6 +109,11 @@ class ContactRequestController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        // بدون «تغيير مندوب المبيعات للعميل»: العميل الجديد باسم مندوب المبيعات الذي حوّله
+        if (! $request->user()->can('clients.assign')) {
+            $data['agent_id'] = $request->user()->is_agent ? $request->user()->id : null;
+        }
+
         $client = $this->service->convertToClient($contactRequest, $data, $request->user()->id);
 
         return redirect()

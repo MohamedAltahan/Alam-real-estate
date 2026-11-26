@@ -37,6 +37,16 @@ class PropertyDisplayTweaksTest extends TestCase
             ->assertSee('55552222');
     }
 
+    public function test_property_details_show_the_building_name_first(): void
+    {
+        $owner = PropertyOwner::create(['name' => 'شركة أوتاد', 'phone_code' => '+965', 'phone' => '99881122']);
+        $property = Property::create(['reference_code' => '55', 'title' => ['ar' => 'شقة', 'en' => 'Flat'], 'building_name' => 'برج أورينت', 'owner_id' => $owner->id]);
+
+        $this->actingAs($this->userWith(['properties.view']))->get(route('dashboard.properties.show', $property))
+            ->assertOk()
+            ->assertSeeInOrder(['المالك ومندوب المبيعات', 'اسم المبنى', 'برج أورينت', 'المالك', 'شركة أوتاد']);
+    }
+
     public function test_prices_drop_needless_decimal_zeros_without_changing_the_value(): void
     {
         $this->assertSame('250,000', PropertyFields::price('250000.000'));
@@ -47,7 +57,7 @@ class PropertyDisplayTweaksTest extends TestCase
         $this->assertSame('', PropertyFields::priceInput(null));
 
         $property = Property::create(['reference_code' => '9', 'title' => ['ar' => 'سعر', 'en' => 'Price'], 'price' => 250000, 'purpose' => 'sale']);
-        $viewer = $this->userWith(['properties.view', 'properties.edit']);
+        $viewer = $this->userWith(['properties.view', 'properties.view_commission', 'properties.edit']);
 
         $this->actingAs($viewer)->get(route('dashboard.properties.index'))->assertOk()->assertSee('250,000')->assertDontSee('250,000.000');
         $this->actingAs($viewer)->get(route('dashboard.properties.show', $property))->assertOk()->assertSee('250,000')->assertDontSee('250,000.000');
@@ -80,7 +90,7 @@ class PropertyDisplayTweaksTest extends TestCase
         PropertyCategory::create(['name' => ['ar' => 'سكني', 'en' => 'Residential'], 'key' => 'residential']);
         $apartment = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment'], 'category' => 'residential']);
         $status = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
-        $user = $this->userWith(['properties.view', 'properties.create']);
+        $user = $this->userWith(['properties.view', 'properties.view_commission', 'properties.create']);
 
         $payload = fn (mixed $rate) => [
             'title' => ['ar' => 'عمولة كبيرة', 'en' => 'Big commission'],

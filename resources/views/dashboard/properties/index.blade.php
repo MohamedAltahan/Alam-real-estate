@@ -26,12 +26,23 @@
             <h2 class="text-xl font-bold text-ink">العقارات</h2>
             <p class="text-sm text-gray-500">{{ number_format($properties->total()) }} عقار</p>
         </div>
-        @can('properties.create')
-            <a href="{{ route('dashboard.properties.create') }}" class="inline-flex items-center gap-2 rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2.5 text-sm transition">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                إضافة عقار
-            </a>
-        @endcan
+        <div class="flex items-center gap-2">
+            {{-- الأرشيف: العقارات المؤرشفة بحالتها، قابلة للاسترجاع --}}
+            @can('properties.delete')
+                @php $archivedCount = \App\Models\Property::onlyTrashed()->count(); @endphp
+                <a href="{{ route('dashboard.properties.archive') }}" class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2.5 text-sm transition">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4"/></svg>
+                    الأرشيف
+                    @if ($archivedCount)<span class="grid place-items-center min-w-[20px] h-5 px-1.5 rounded-full bg-warning-soft text-warning text-[11px] font-bold tabular-nums">{{ $archivedCount }}</span>@endif
+                </a>
+            @endcan
+            @can('properties.create')
+                <a href="{{ route('dashboard.properties.create') }}" class="inline-flex items-center gap-2 rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-4 py-2.5 text-sm transition">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    إضافة عقار
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{-- الفلاتر تُطبَّق فور الاختيار (البحث بالضغط على Enter) --}}
@@ -77,8 +88,10 @@
                          :options="$owners->pluck('name', 'id')" :selected="$filters['owner_id'] ?? null" />
         <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل المندوبين"
                          :options="$agents->pluck('name', 'id')" :selected="$filters['agent_id'] ?? null" />
-        <x-filter-select label="نسبة العمولة" name="commission" placeholder="كل النسب"
-                         :options="$commissionOptions" :selected="$filters['commission'] ?? null" />
+        @can('properties.view_commission')
+            <x-filter-select label="نسبة العمولة" name="commission" placeholder="كل النسب"
+                             :options="$commissionOptions" :selected="$filters['commission'] ?? null" />
+        @endcan
         <x-filter-select label="المواقع الإلكترونية" name="website_id" placeholder="كل المواقع"
                          :options="$channels[\App\Models\PublishingChannel::KIND_WEBSITE]->pluck('name', 'id')" :selected="$filters['website_id'] ?? null" />
         <x-filter-select label="السوشال ميديا" name="social_id" placeholder="كل القنوات"
@@ -102,7 +115,9 @@
                         <th class="text-start font-medium px-4 py-3">النوع / المنطقة</th>
                         <th class="text-start font-medium px-4 py-3 whitespace-nowrap">المبنى / المالك</th>
                         <th class="text-start font-medium px-4 py-3">السعر</th>
-                        <th class="text-start font-medium px-4 py-3 whitespace-nowrap">نسبة العمولة</th>
+                        @can('properties.view_commission')
+                            <th class="text-start font-medium px-4 py-3 whitespace-nowrap">نسبة العمولة</th>
+                        @endcan
                         <th class="text-start font-medium px-4 py-3" title="مشاهدات صفحة العقار على الموقع (داخلي)">المشاهدات</th>
                         <th class="text-start font-medium px-4 py-3">الحالة</th>
                         <th class="text-start font-medium px-4 py-3">مندوب المبيعات</th>
@@ -149,13 +164,15 @@
                                 @if ($p->owner)<span class="block text-xs text-gray-400 truncate">{{ $p->owner->name }}</span>@endif
                             </td>
                             <td class="px-4 py-3 text-ink font-semibold tabular-nums">{{ \App\Support\PropertyFields::price($p->price) }} {{ auth()->user()->currencySymbol() }}<span class="text-xs text-gray-400 font-normal">{{ $p->purpose === 'rent' ? '/'.($p->price_period === 'yearly' ? 'سنة' : 'شهر') : '' }}</span></td>
-                            <td class="px-4 py-3 tabular-nums">
-                                @if ($p->owner_commission_rate !== null)
-                                    <span class="font-semibold text-ink" dir="ltr">{{ \App\Support\PropertyFields::percent($p->owner_commission_rate) }}</span>
-                                @else
-                                    <span class="text-gray-300">—</span>
-                                @endif
-                            </td>
+                            @can('properties.view_commission')
+                                <td class="px-4 py-3 tabular-nums">
+                                    @if ($p->owner_commission_rate !== null)
+                                        <span class="font-semibold text-ink" dir="ltr">{{ \App\Support\PropertyFields::percent($p->owner_commission_rate) }}</span>
+                                    @else
+                                        <span class="text-gray-300">—</span>
+                                    @endif
+                                </td>
+                            @endcan
                             <td class="px-4 py-3 tabular-nums">
                                 <span class="inline-flex items-center gap-1.5 {{ $p->views_count ? 'text-ink font-semibold' : 'text-gray-300' }}"><svg class="text-gray-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>{{ number_format($p->views_count) }}</span>
                             </td>
@@ -191,12 +208,12 @@
                             @endforeach
                             <td class="px-4 py-3">
                                 @can('properties.delete')
-                                    <button @click.stop="delAction = '{{ route('dashboard.properties.destroy', $p) }}'; delName = @js($p->reference_code); $dispatch('open-modal', 'prop-delete')" class="grid place-items-center w-8 h-8 rounded-full text-danger hover:bg-danger/10 transition" title="حذف"><x-icon.trash /></button>
+                                    <button @click.stop="delAction = '{{ route('dashboard.properties.destroy', $p) }}'; delName = @js($p->reference_code); $dispatch('open-modal', 'prop-delete')" class="grid place-items-center w-8 h-8 rounded-full text-warning hover:bg-warning-soft transition" title="أرشفة" aria-label="أرشفة"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4"/></svg></button>
                                 @endcan
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="12" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
+                        <tr><td colspan="{{ auth()->user()->can('properties.view_commission') ? 12 : 11 }}" class="px-4 py-16 text-center text-gray-400">لا توجد عقارات.@can('properties.create') <a href="{{ route('dashboard.properties.create') }}" class="text-primary-700 font-medium">أضف أول عقار</a>@endcan</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -254,13 +271,14 @@
 
     <x-modal name="prop-delete" maxWidth="md">
         <div class="p-6 text-center">
-            <span class="grid place-items-center w-12 h-12 rounded-full bg-danger/10 text-danger mx-auto mb-4"><x-icon.trash size="24" /></span>
-            <h3 class="font-bold text-ink mb-1">حذف العقار</h3>
-            <p class="text-sm text-gray-500 mb-6">هل أنت متأكد من حذف العقار رقم "<span x-text="delName" class="font-semibold text-ink" dir="ltr"></span>"؟</p>
+            <span class="grid place-items-center w-12 h-12 rounded-full bg-warning-soft text-warning mx-auto mb-4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4"/></svg></span>
+            <h3 class="font-bold text-ink mb-1">أرشفة العقار</h3>
+            <p class="text-sm text-gray-500 mb-2">هل تريد نقل العقار رقم "<span x-text="delName" class="font-semibold text-ink" dir="ltr"></span>" إلى الأرشيف؟</p>
+            <p class="text-xs text-gray-400 mb-6">سيختفي من الموقع والقوائم ونتائج البحث، ويحتفظ بحالته الحالية (متاح/مباع...) وكل بياناته — ويمكن استرجاعه في أي وقت.</p>
             <form :action="delAction" method="POST" class="flex items-center justify-center gap-3">
                 @csrf @method('DELETE')
                 <button type="button" @click="$dispatch('close-modal', 'prop-delete')" class="rounded-full px-4 py-2.5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-100">إلغاء</button>
-                <button type="submit" class="rounded-full bg-danger hover:bg-danger/90 text-white font-semibold px-5 py-2.5 text-sm">نعم، احذف</button>
+                <button type="submit" class="rounded-full bg-primary-900 hover:bg-primary-800 text-white font-semibold px-5 py-2.5 text-sm">نعم، أرشِف</button>
             </form>
         </div>
     </x-modal>

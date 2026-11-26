@@ -22,6 +22,7 @@ class ClientPropertySearchTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'clients.view', 'guard_name' => 'web']));
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'clients.view_all', 'guard_name' => 'web']));
 
         $tower = Property::create(['reference_code' => '701', 'title' => ['ar' => 'شقة إطلالة بحرية', 'en' => 'Sea view'], 'building_name' => 'برج الحمرا']);
         $villa = Property::create(['reference_code' => '702', 'title' => ['ar' => 'فيلا الجابرية', 'en' => 'Jabriya villa']]);

@@ -7,6 +7,7 @@ use App\Models\City;
 use App\Models\Client;
 use App\Models\ClientPropertyNeed;
 use App\Models\ClientViewing;
+use App\Models\MarketingSource;
 use App\Models\Property;
 use App\Models\UnitType;
 use Illuminate\Support\ViewErrorBag;
@@ -30,8 +31,29 @@ final class ClientFormData
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get()
                 ->map(fn (UnitType $type) => ['id' => $type->id, 'name' => $type->name, 'category' => $type->category])->values()->all(),
             'countries' => PhoneCountries::all(),
+            'sources' => self::sources($client),
             'lookupUrl' => route('dashboard.clients.property-lookup', $client ? ['client' => $client->id] : []),
         ];
+    }
+
+    /**
+     * «مصدر العميل» (من شاشة مصادر التسويق) مجمّعة حسب نوع المصدر —
+     * النشطة فقط، مع إبقاء مصدر العميل الحالي حتى لو أصبح غير نشط.
+     * $all = كل المصادر (فلتر القائمة: عملاء قدامى قد يحملون مصدراً متوقفاً).
+     *
+     * @return array<string, array<int, array{id:int, name:string}>>
+     */
+    public static function sources(?Client $client, bool $all = false): array
+    {
+        return MarketingSource::query()
+            ->with('type')
+            ->unless($all, fn ($query) => $query->where(fn ($q) => $q->where('status', 'active')
+                ->when($client?->source_id, fn ($q, $id) => $q->orWhere('id', $id))))
+            ->orderBy('name')
+            ->get()
+            ->groupBy(fn (MarketingSource $s) => (string) ($s->type?->name ?: 'أخرى'))
+            ->map(fn ($group) => $group->map(fn (MarketingSource $s) => ['id' => $s->id, 'name' => $s->name])->values()->all())
+            ->all();
     }
 
     /** @return array<int, array<string, string>> */

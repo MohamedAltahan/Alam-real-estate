@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
@@ -24,6 +25,8 @@ class Property extends Model implements HasMedia
 {
     use HasTranslations;
     use InteractsWithWebImages;
+    // الحذف ينقل العقار إلى «الأرشيف» ويمكن استرجاعه — لا حذف نهائي من الشاشة
+    use SoftDeletes;
 
     protected $table = 'properties';
 
@@ -99,6 +102,12 @@ class Property extends Model implements HasMedia
     public function agent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'agent_id');
+    }
+
+    /** من نقل العقار إلى الأرشيف */
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function amenities(): BelongsToMany

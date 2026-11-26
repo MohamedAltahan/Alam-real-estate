@@ -36,6 +36,7 @@ final class ActivityPresenter
                 'module_label' => ActivitySubjects::moduleLabel($log->module),
                 'subject' => $log->subject_label,
                 'url' => $subject ? ActivitySubjects::url($subject) : null,
+                'archived' => $subject && method_exists($subject, 'trashed') && $subject->trashed(),
                 'lines' => self::lines($log, $lookup),
             ];
         });
@@ -76,7 +77,13 @@ final class ActivityPresenter
             }
 
             /** @var class-string<Model> $class */
-            $lookup[$class] = $class::query()->whereIn('id', array_values(array_unique($list)))
+            $query = $class::query();
+            // المؤرشف (soft delete) ما زال موجوداً وله صفحة — يبقى رابطه في السجل
+            if (method_exists($class, 'bootSoftDeletes')) {
+                $query->withTrashed();
+            }
+
+            $lookup[$class] = $query->whereIn('id', array_values(array_unique($list)))
                 ->when($class === Property::class, fn ($q) => $q->with('owner'))
                 ->get()->keyBy(fn (Model $m) => (int) $m->getKey());
         }

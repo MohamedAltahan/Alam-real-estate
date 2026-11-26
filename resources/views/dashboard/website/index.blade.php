@@ -74,11 +74,59 @@
                                 name="hero[images]" multiple :media="$homeSecs['hero']->getMedia('images')" />
             </div>
 
-            {{-- عروض عقارية مميزة --}}
+            {{-- بانر «عروض عقارية مميزة»: إظهار/إخفاء + نص الزر + وجهته (تصنيف · نوع وحدة · محافظة) --}}
+            @php $bannerLink = (array) $s('featured', 'ar', 'link', []); @endphp
             <div class="{{ $sectionCard }}">
-                <h3 class="font-bold text-ink">عروض عقارية مميزة</h3>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-bold text-ink">بانر عروض عقارية مميزة</h3>
+                    <x-cms.visibility name="featured[visible]" :visible="$homeSecs['featured']->is_visible" />
+                </div>
                 <x-cms.pair label="العنوان" group="featured" field="title" :ar="$s('featured','ar','title')" :en="$s('featured','en','title')" />
                 <x-cms.pair label="الوصف" group="featured" field="description" type="textarea" :ar="$s('featured','ar','description')" :en="$s('featured','en','description')" />
+                <x-cms.pair label="نص الزر (فارغ = «اكتشف العروض»)" group="featured" field="button" :ar="$s('featured','ar','button')" :en="$s('featured','en','button')" />
+
+                {{-- الزر يفتح صفحة العقارات مفلترة بما يُختار هنا — نوع الوحدة يتبع التصنيف --}}
+                <div x-data="{
+                        cat: @js((string) ($bannerLink['category'] ?? '')),
+                        unit: @js((string) ($bannerLink['unit_type'] ?? '')),
+                        catKeys: @js($propertyCategories->pluck('key', 'id')->map(fn ($k) => (string) $k)),
+                        types: @js($unitTypes->map(fn ($u) => ['id' => (string) $u->id, 'name' => $u->name, 'category' => $u->category])->values()),
+                        typesFor() { const k = this.catKeys[this.cat]; return k ? this.types.filter(t => ! t.category || t.category === k) : this.types; }
+                     }" class="rounded-field border border-gray-100 bg-gray-50/60 p-3 space-y-2">
+                    <p class="text-xs font-semibold text-gray-600">عند الضغط على الزر ينتقل الزائر إلى العقارات:</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">التصنيف</label>
+                            <select name="featured[link][category]" x-model="cat"
+                                    @change="if (unit && ! typesFor().some(t => t.id === unit)) unit = ''" class="{{ $numCls }}">
+                                <option value="">كل التصنيفات</option>
+                                @foreach ($propertyCategories as $pc)
+                                    <option value="{{ $pc->id }}" @selected((string) ($bannerLink['category'] ?? '') === (string) $pc->id)>{{ $pc->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">نوع الوحدة</label>
+                            <select name="featured[link][unit_type]" x-model="unit" class="{{ $numCls }}">
+                                <option value="">كل الأنواع</option>
+                                <template x-for="t in typesFor()" :key="t.id">
+                                    <option :value="t.id" x-text="t.name" :selected="t.id === unit"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">المحافظة</label>
+                            <select name="featured[link][city]" class="{{ $numCls }}">
+                                <option value="">كل المحافظات</option>
+                                @foreach ($cities as $city)
+                                    <option value="{{ $city->id }}" @selected((string) ($bannerLink['city'] ?? '') === (string) $city->id)>{{ $city->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-400">اترك الكل فارغاً ليفتح الزر كل العقارات.</p>
+                </div>
+
                 <x-cms.dropzone label="صورة توضيحية" name="featured[image]"
                                 :media="$homeSecs['featured']->getFirstMedia('image')" />
             </div>
@@ -473,7 +521,7 @@
                     @error('contact_map_lat')<p class="text-xs text-danger">{{ $message }}</p>@enderror
                     @error('contact_map_lng')<p class="text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
-                @foreach (['facebook' => 'فيسبوك', 'instagram' => 'إنستجرام', 'twitter' => 'تويتر (X)', 'linkedin' => 'لينكدإن'] as $k => $label)
+                @foreach (['facebook' => 'فيسبوك', 'instagram' => 'إنستجرام', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'linkedin' => 'لينكدإن'] as $k => $label)
                     <div><label class="block text-sm font-medium text-gray-700 mb-1.5">{{ $label }}</label><input name="social_{{ $k }}" value="{{ $settings['social_'.$k] }}" dir="ltr" placeholder="https://" class="{{ $numCls }}"></div>
                 @endforeach
             </div>

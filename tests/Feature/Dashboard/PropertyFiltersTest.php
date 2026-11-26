@@ -154,6 +154,7 @@ class PropertyFiltersTest extends TestCase
             'guard_name' => 'web',
         ]);
         $user->givePermissionTo($permission);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'properties.view_commission', 'guard_name' => 'web']));
 
         return $user;
     }

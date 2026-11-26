@@ -23,6 +23,8 @@ final class ActivitySubjects
         'created' => 'إضافة',
         'updated' => 'تعديل',
         'deleted' => 'حذف',
+        'archived' => 'أرشفة',
+        'restored' => 'استرجاع',
     ];
 
     /** ألوان شارة العملية (Tailwind) */
@@ -30,6 +32,8 @@ final class ActivitySubjects
         'created' => 'bg-success-soft text-success',
         'updated' => 'bg-info-soft text-info',
         'deleted' => 'bg-danger/10 text-danger',
+        'archived' => 'bg-warning-soft text-warning',
+        'restored' => 'bg-success-soft text-success',
     ];
 
     public const MODULES = [

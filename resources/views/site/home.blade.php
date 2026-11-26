@@ -100,13 +100,34 @@
                     ['v' => '500+', 'l' => $t('أكثر من 500 م²', 'Over 500 m²')],
                 ];
             @endphp
-            <form action="{{ route('site.properties') }}" method="GET" x-data="{ cat: '{{ $defaultCat }}', commercial: '{{ $commercialCat }}' }"
+            @php
+                // نوع الوحدة يحمل مفتاح تصنيفه (k) والمنطقة تحمل محافظتها (c) — للتصفية داخل القوائم
+                $unitTypeItems = $searchUnitTypes
+                    ->map(fn($u) => ['v' => (string) $u->id, 'l' => (string) $u->name, 'k' => (string) $u->category])
+                    ->values()->all();
+                $areaItems = $searchAreas
+                    ->map(fn($a) => ['v' => (string) $a->id, 'l' => (string) $a->name, 'c' => (string) $a->city_id])
+                    ->values()->all();
+            @endphp
+            <form action="{{ route('site.properties') }}" method="GET"
+                x-data="{ cat: '{{ $defaultCat }}', commercial: '{{ $commercialCat }}', city: '',
+                          catKeys: @js($searchCategories->pluck('key', 'id')->map(fn($k) => (string) $k)) }"
+                @combobox-change="if ($event.detail.name === 'city') city = $event.detail.value"
                 class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
 
-                {{-- تبويب سكني/تجاري (الافتراضي: سكني) --}}
+                {{-- تبويب سكني/تجاري (الافتراضي: سكني) + شارة «للإيجار» بجواره (للعرض فقط، لا تغيّر الفلترة) --}}
                 @if ($searchCategories->count())
-                    <div class="flex justify-start mb-3">
+                    {{-- «للإيجار» أولاً ثم تبويب سكني/تجاري --}}
+                    <div class="flex flex-wrap items-center justify-start gap-2.5 mb-3">
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm font-semibold text-accent-300 whitespace-nowrap backdrop-blur-sm">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="7.5" cy="15.5" r="5.5" />
+                                <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
+                            </svg>
+                            {{ $t('للإيجار', 'For rent') }}
+                        </span>
                         <div class="inline-flex glass rounded-full p-1 text-sm">
                             @foreach ($searchCategories as $sc)
                                 <button type="button" @click="cat = '{{ $sc->id }}'"
@@ -119,8 +140,24 @@
                     </div>
                 @endif
 
-                {{-- الحقول (قوائم منسدلة قابلة للبحث) --}}
+                {{-- الحقول (قوائم منسدلة قابلة للبحث) بالترتيب:
+                     المحافظة · المنطقة · نوع الوحدة · غرف النوم (المساحة في التجاري) · الأسعار · الرقم المرجعي --}}
                 <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                    <x-site.combobox name="city" :items="$mk($searchCities)" :placeholder="$t('المحافظة', 'Governorate')" />
+                    {{-- المناطق تُقصر على المحافظة المختارة --}}
+                    <x-site.combobox name="area" :items="$areaItems" :placeholder="$t('المنطقة', 'Area')"
+                        match="! city || item.c === city" />
+                    {{-- أنواع الوحدات تتبع التبويب: سكني ← أنواع السكني فقط، والعكس للتجاري --}}
+                    <x-site.combobox name="unit_type" :items="$unitTypeItems" :placeholder="$t('نوع الوحدة', 'Unit type')"
+                        match="! catKeys[cat] || ! item.k || item.k === catKeys[cat]" />
+                    {{-- x-if يُخرج الحقل غير الظاهر من النموذج فلا يُرسل --}}
+                    <template x-if="! commercial || cat !== commercial">
+                        <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />
+                    </template>
+                    <template x-if="commercial && cat === commercial">
+                        <x-site.combobox name="size" :items="$sizeItems" :placeholder="$t('المساحة', 'Area size')" />
+                    </template>
+                    <x-site.combobox name="price" :items="$priceItems" :placeholder="$t('الأسعار', 'Price')" class="col-span-2" />
                     {{-- بحث حر: الرقم المرجعي أو اسم العقار أو اسم المبنى --}}
                     <label class="relative col-span-2 sm:flex-[2] sm:min-w-[240px]">
                         <span class="sr-only">{{ $t('ابحث باسم العقار أو المبنى أو الرقم المرجعي', 'Name or reference no.') }}</span>
@@ -133,18 +170,8 @@
                             placeholder="{{ $t('ابحث باسم العقار أو المبنى أو الرقم المرجعي', 'Name or reference no.') }}"
                             class="w-full rounded-full glass ps-10 pe-4 py-3 text-sm text-white placeholder:text-white/60 hover:bg-white/[0.16] focus:outline-none focus:ring-2 focus:ring-accent-500/40 transition">
                     </label>
-                    <x-site.combobox name="unit_type" :items="$mk($searchUnitTypes)" :placeholder="$t('اختر نوع الوحدة', 'Unit type')" />
-                    <x-site.combobox name="area" :items="$mk($searchAreas)" :placeholder="$t('اختر المناطق', 'Areas')" />
-                    {{-- x-if يُخرج الحقل غير الظاهر من النموذج فلا يُرسل --}}
-                    <template x-if="! commercial || cat !== commercial">
-                        <x-site.combobox name="bedrooms" :items="$bedItems" :placeholder="$t('غرف النوم', 'Bedrooms')" />
-                    </template>
-                    <template x-if="commercial && cat === commercial">
-                        <x-site.combobox name="size" :items="$sizeItems" :placeholder="$t('المساحة', 'Area')" />
-                    </template>
-                    <x-site.combobox name="price" :items="$priceItems" :placeholder="$t('الأسعار', 'Price')" />
                     <button type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold w-full sm:w-auto px-4 sm:px-6 py-3 text-sm shrink-0 shadow-lg shadow-accent-500/25 transition">
+                        class="col-span-2 inline-flex items-center justify-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold w-full sm:w-auto px-4 sm:px-6 py-3 text-sm shrink-0 shadow-lg shadow-accent-500/25 transition">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.4" stroke-linecap="round">
                             <circle cx="11" cy="11" r="8" />
@@ -184,8 +211,12 @@
         </div>
     </section>
 
-    {{-- ===================== عروض مميزة ===================== --}}
-    @if ($it($featured, 'title'))
+    {{-- ===================== بانر عروض مميزة =====================
+         يُظهَر/يُخفى من «إدارة الموقع»، والزر يفتح العقارات بالتصنيف/النوع/المحافظة المختارة هناك --}}
+    @php
+        $bannerHref = route('site.properties', array_filter((array) data_get($featured, 'link', [])));
+    @endphp
+    @if ($offersBannerVisible && $it($featured, 'title'))
         <section class="max-w-7xl mx-auto px-4 sm:px-6 mt-20 relative z-10">
             <div
                 class="rounded-3xl navy-gradient text-white p-6 sm:p-8 flex flex-wrap items-center gap-5 justify-between overflow-hidden relative isolate">
@@ -212,8 +243,8 @@
                     </div>
                 </div>
 
-                <a href="{{ route('site.properties') }}"
-                    class="relative rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold px-7 py-3 text-sm shadow-lg shadow-accent-500/20 transition">{{ $t('اكتشف العروض', 'Explore offers') }}</a>
+                <a href="{{ $bannerHref }}"
+                    class="relative rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold px-7 py-3 text-sm shadow-lg shadow-accent-500/20 transition">{{ $it($featured, 'button') ?: $t('اكتشف العروض', 'Explore offers') }}</a>
             </div>
         </section>
     @endif
@@ -222,28 +253,49 @@
     {{-- المعلَّم عليها «عقار مميّز» من لوحة التحكم، بكارت صفحة العقارات نفسه --}}
     @if ($featuredProperties->count())
         <section id="featured-properties" class="max-w-7xl mx-auto px-4 sm:px-6 pt-20 scroll-mt-24" x-data="carousel">
-            {{-- الترويسة + أسهم التنقل --}}
+            {{-- الترويسة (أسهم التنقل على جانبي البطاقات) --}}
             <div class="mb-7">
                 <span
                     class="inline-block rounded-full bg-accent-100 border border-accent-700 text-accent-700 px-3.5 py-1 text-xs font-bold mb-3">{{ $t('عقارات مختارة', 'Hand-picked') }}</span>
-                <div class="flex items-center justify-between gap-4 mb-1">
-                    <h2 class="text-2xl sm:text-3xl font-bold text-ink">
-                        {{ $it($featProps, 'title') ?: $t('العقارات المميزة', 'Featured Properties') }}</h2>
-                    <x-site.carousel-nav class="flex" />
-                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-ink mb-1">
+                    {{ $it($featProps, 'title') ?: $t('العقارات المميزة', 'Featured Properties') }}</h2>
                 <p class="text-gray-500 text-sm">
                     {{ $it($featProps, 'description') ?: $t('مجموعة مختارة من أفضل العقارات المتاحة لدينا حالياً.', 'A hand-picked selection of our best available properties.') }}
                 </p>
             </div>
 
-            <div x-ref="track"
-                class="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                @foreach ($featuredProperties as $property)
-                    {{-- على lg: أربع بطاقات كاملة في الصف — العرض = (100% ناقص 3 فواصل gap-5) ÷ 4 --}}
-                    <div class="snap-start shrink-0 w-[85%] sm:w-[46%] lg:w-[calc((100%-3.75rem)/4)]">
-                        <x-site.property-card :property="$property" />
-                    </div>
-                @endforeach
+            @php
+                // عرض البطاقة الواحدة — يُستخدم للبطاقات ولمقياس ارتفاع الصورة الذي تتوسّطه الأسهم
+                $featCardW = 'w-[85%] sm:w-[46%] lg:w-[calc((100%-3.75rem)/4)]';
+                // أزرار دائرية بيضاء بظل خفيف
+                $sideBtn = 'pointer-events-auto absolute top-1/2 grid place-items-center w-10 h-10 rounded-full bg-white border border-gray-200 text-primary-900 shadow-lg shadow-primary-950/10 hover:bg-gray-50 hover:text-accent-700 transition';
+            @endphp
+            {{-- مسافة جانبية (sm+) تسكن فيها الأسهم خارج البطاقات فلا تغطي أسهم الصور داخلها --}}
+            <div class="relative sm:px-12">
+                <div x-ref="track"
+                    class="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    @foreach ($featuredProperties as $property)
+                        {{-- على lg: أربع بطاقات كاملة في الصف — العرض = (100% ناقص 3 فواصل gap-5) ÷ 4 --}}
+                        <div class="snap-start shrink-0 {{ $featCardW }}">
+                            <x-site.property-card :property="$property" />
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- أسهم التنقل على الجانبين في منتصف ارتفاع صورة البطاقة؛
+                     السابق في جهة البداية (يمين بالعربي) والتالي في جهة النهاية.
+                     على الموبايل تُخفى — الشريط يُسحب بالإصبع --}}
+                <div x-show="canScroll" x-cloak class="pointer-events-none absolute inset-x-0 top-0 hidden sm:block sm:px-12">
+                    <div class="{{ $featCardW }} aspect-[4/3]"></div>
+                    <button type="button" @click="nav(-1)" aria-label="{{ $t('السابق', 'Previous') }}"
+                        class="{{ $sideBtn }} start-0 -translate-y-1/2">
+                        <svg class="rtl:rotate-180" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <button type="button" @click="nav(1)" aria-label="{{ $t('التالي', 'Next') }}"
+                        class="{{ $sideBtn }} end-0 -translate-y-1/2">
+                        <svg class="rtl:rotate-180" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
             </div>
         </section>
     @endif

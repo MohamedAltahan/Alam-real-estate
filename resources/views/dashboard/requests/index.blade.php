@@ -240,10 +240,15 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" x-show="! convert.useExisting">
                     <div>
                         <label class="{{ $lbl }}">مندوب المبيعات</label>
-                        <select name="agent_id" class="{{ $field }}">
-                            <option value="">— اختر —</option>
-                            @foreach ($agents as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
-                        </select>
+                        @can('clients.assign')
+                            <select name="agent_id" class="{{ $field }}">
+                                <option value="">— اختر —</option>
+                                @foreach ($agents as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
+                            </select>
+                        @else
+                            {{-- بلا صلاحية التغيير: العميل يُسجَّل باسم من حوّله (لو كان مندوب مبيعات) --}}
+                            <div class="{{ $field }} bg-gray-100 text-gray-600 cursor-not-allowed">{{ auth()->user()->is_agent ? auth()->user()->name : '—' }}</div>
+                        @endcan
                     </div>
                     <div>
                         <label class="{{ $lbl }}">مصدر التسويق</label>

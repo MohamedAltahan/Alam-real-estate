@@ -34,7 +34,7 @@ class ViewingController extends Controller
             'outcomes' => ClientFields::OUTCOMES,
             'cities' => City::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']),
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
-            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'category']),
             'waStates' => ViewingService::WA_STATES,
             'filters' => $filters,
         ]);

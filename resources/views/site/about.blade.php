@@ -143,12 +143,12 @@
                         @else
                             <span class="absolute inset-0 grid place-items-center text-accent-500/90 font-bold text-5xl font-display">{{ mb_substr($agent->name, 0, 1) }}</span>
                         @endif
-                        <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-primary-700/95 via-primary-700/55 to-transparent"></div>
+                        {{-- الصورة صافية بلا ظل: العدد والتقييم في شارات زجاجية صغيرة فوقها --}}
                         <div class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between text-white">
-                            <span class="text-xs font-bold">{{ $agent->properties_count }} {{ $t('عقار', 'listings') }}</span>
+                            <span class="rounded-full bg-primary-950/45 backdrop-blur-md border border-white/20 px-2.5 py-1 text-xs font-bold">{{ $agent->properties_count }} {{ $t('عقار', 'listings') }}</span>
                             {{-- التقييم الحقيقي من متوسط تقييمات مندوب المبيعات --}}
                             @if ($agent->reviews_count)
-                                <span class="text-accent-500 text-xs flex items-center gap-1">
+                                <span class="rounded-full bg-primary-950/45 backdrop-blur-md border border-white/20 px-2.5 py-1 text-accent-500 text-xs flex items-center gap-1">
                                     ★<span class="tabular-nums" dir="ltr">{{ number_format((float) $agent->rating, 1) }}</span>
                                 </span>
                             @endif

@@ -23,8 +23,8 @@ class PropertyUpdateTest extends TestCase
         Storage::fake('public');
 
         $user = User::factory()->create();
-        foreach (['properties.view', 'properties.edit'] as $permission) {
-            $user->givePermissionTo(Permission::create(['name' => $permission, 'guard_name' => 'web']));
+        foreach (['properties.view', 'properties.view_commission', 'properties.edit'] as $permission) {
+            $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']));
         }
 
         $area = Area::create(['name' => ['ar' => 'السالمية', 'en' => 'Salmiya']]);

@@ -35,7 +35,7 @@ class WatermarkTest extends TestCase
             ->assertSee('واتر مارك')
             ->assertSee(route('dashboard.watermark.index'), false);
 
-        $stranger = $this->userWith(['properties.view']);
+        $stranger = $this->userWith(['properties.view', 'properties.view_commission']);
         $this->actingAs($stranger)->get(route('dashboard.watermark.index'))->assertForbidden();
         $this->actingAs($stranger)->get(route('dashboard.properties.index'))
             ->assertOk()

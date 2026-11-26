@@ -84,8 +84,16 @@
                         <div class="relative">
                             <select name="unit_type_id" class="{{ $field }} appearance-none pe-10 cursor-pointer">
                                 <option value="">{{ $t('اختر نوع الوحدة', 'Choose unit type') }}</option>
-                                @foreach ($unitTypes as $u)
-                                    <option value="{{ $u->id }}" @selected(old('unit_type_id') == $u->id)>{{ $u->name }}</option>
+                                {{-- مجمّعة حسب التصنيف: سكني / تجاري --}}
+                                @foreach ([\App\Models\UnitType::RESIDENTIAL => $t('سكني', 'Residential'), \App\Models\UnitType::COMMERCIAL => $t('تجاري', 'Commercial')] as $catKey => $catLabel)
+                                    @php $group = $unitTypes->where('category', $catKey); @endphp
+                                    @if ($group->isNotEmpty())
+                                        <optgroup label="{{ $catLabel }}">
+                                            @foreach ($group as $u)
+                                                <option value="{{ $u->id }}" @selected(old('unit_type_id') == $u->id)>{{ $u->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                 @endforeach
                             </select>
                             {!! $chev !!}

@@ -22,7 +22,7 @@ class ClientOwnerWorkflowTest extends TestCase
     public function test_new_client_fields_and_recording_employee_are_saved(): void
     {
         $user = User::factory()->create();
-        $this->grant($user, ['clients.view', 'clients.create']);
+        $this->grant($user, ['clients.view', 'clients.view_all', 'clients.create']);
         $stage = ClientStage::where('key', 'new')->firstOrFail();
         $unitType = UnitType::create(['name' => ['ar' => 'شقة', 'en' => 'Apartment']]);
 
@@ -84,7 +84,7 @@ class ClientOwnerWorkflowTest extends TestCase
     {
         Storage::fake('public');
         $user = User::factory()->create();
-        $this->grant($user, ['clients.view', 'clients.create', 'clients.edit']);
+        $this->grant($user, ['clients.view', 'clients.view_all', 'clients.create', 'clients.edit', 'clients.assign']);
 
         $this->actingAs($user)->post(route('dashboard.clients.store'), [
             'name' => 'عميل الملفات',
@@ -135,7 +135,7 @@ class ClientOwnerWorkflowTest extends TestCase
     public function test_client_pages_render_notes_and_requested_unit_type(): void
     {
         $user = User::factory()->create();
-        $this->grant($user, ['clients.view']);
+        $this->grant($user, ['clients.view', 'clients.view_all']);
         $unitType = UnitType::create(['name' => ['ar' => 'فيلا', 'en' => 'Villa']]);
         $client = Client::create([
             'name' => 'عميل العرض', 'phone_code' => '+965', 'phone' => '44444444', 'notes' => 'ملاحظة مهمة',
@@ -195,7 +195,7 @@ class ClientOwnerWorkflowTest extends TestCase
     private function grant(User $user, array $permissions): void
     {
         foreach ($permissions as $name) {
-            $user->givePermissionTo(Permission::create(['name' => $name, 'guard_name' => 'web']));
+            $user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
     }
 }

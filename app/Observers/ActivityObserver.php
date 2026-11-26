@@ -20,11 +20,29 @@ class ActivityObserver
 
     public function updated(Model $model): void
     {
+        // الاسترجاع من الأرشيف يحفظ deleted_at = null — يُسجَّل «استرجاع» في restored لا «تعديل»
+        if ($model->wasChanged('deleted_at')) {
+            return;
+        }
+
         $this->activity->updated($model);
     }
 
+    /** الموديلات ذات soft delete (العقارات) تُسجَّل «أرشفة»؛ وغيرها «حذف» نهائي */
     public function deleting(Model $model): void
     {
+        if (method_exists($model, 'isForceDeleting') && ! $model->isForceDeleting()) {
+            $this->activity->record('archived', $model);
+
+            return;
+        }
+
         $this->activity->deleted($model);
+    }
+
+    /** استرجاع عقار من الأرشيف */
+    public function restored(Model $model): void
+    {
+        $this->activity->record('restored', $model);
     }
 }

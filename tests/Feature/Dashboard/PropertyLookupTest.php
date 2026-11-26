@@ -21,7 +21,7 @@ class PropertyLookupTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['tasks.view', 'clients.view'] as $name) {
+        foreach (['tasks.view', 'clients.view', 'clients.view_all'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
 

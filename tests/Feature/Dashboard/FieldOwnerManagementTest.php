@@ -166,7 +166,7 @@ class FieldOwnerManagementTest extends TestCase
 
     public function test_property_create_form_is_prefilled_from_the_field_record(): void
     {
-        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.create']);
+        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.view_commission', 'properties.create']);
         $this->propertyLookups();
         $record = $this->record(['property_number' => 'PACI-777', 'address' => 'قطعة 4 شارع 12', 'latitude' => 29.3375, 'longitude' => 48.0758]);
         $record->contacts()->create(['name' => 'سعد المطيري', 'role' => 'المالك', 'phone_code' => '+965', 'phone' => '99001122']);
@@ -205,7 +205,7 @@ class FieldOwnerManagementTest extends TestCase
     public function test_property_store_from_field_record_copies_photos_and_converts_the_owner(): void
     {
         Storage::fake('public');
-        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.create']);
+        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.view_commission', 'properties.create']);
         $lookups = $this->propertyLookups();
         $record = $this->record(['latitude' => 29.3375, 'longitude' => 48.0758]);
         $record->contacts()->create(['name' => 'سعد المطيري', 'role' => 'المالك', 'phone_code' => '+965', 'phone' => '99001122']);
@@ -243,7 +243,7 @@ class FieldOwnerManagementTest extends TestCase
 
     public function test_property_store_with_a_selected_owner_links_instead_of_creating(): void
     {
-        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.create']);
+        $user = $this->userWith(['field_owners.view', 'properties.view', 'properties.view_commission', 'properties.create']);
         $lookups = $this->propertyLookups();
         $existing = PropertyOwner::create(['name' => 'مالك قديم', 'phone_code' => '+965', 'phone' => '55555555']);
         $record = $this->record();

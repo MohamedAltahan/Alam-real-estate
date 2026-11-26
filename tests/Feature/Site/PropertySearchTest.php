@@ -52,15 +52,32 @@ class PropertySearchTest extends TestCase
             ->assertDontSee('شقة مفروشة في السالمية');
     }
 
-    public function test_search_by_reference_lists_the_exact_match_first(): void
+    public function test_exact_reference_shows_only_that_property(): void
     {
+        // «31» رقم عقار موجود ⇒ يظهر وحده، بلا 131
         $this->get(route('site.properties', ['q' => '31']))
             ->assertOk()
-            ->assertSeeInOrder(['شقة الرقم المطابق', 'شقة الرقم الأطول'])
+            ->assertSee('شقة الرقم المطابق')
+            ->assertDontSee('شقة الرقم الأطول')
             ->assertDontSee('شقة مفروشة في السالمية');
 
-        // بدون بحث: الأحدث أولاً (يتأكد أن الترتيب أعلاه سببه المطابقة التامة)
-        $this->get(route('site.properties'))->assertSeeInOrder(['شقة الرقم الأطول', 'شقة الرقم المطابق']);
+        // جزء من رقم لا يطابق عقاراً بعينه ⇒ بحث جزئي كالمعتاد
+        $this->get(route('site.properties', ['q' => '13']))
+            ->assertOk()
+            ->assertSee('شقة الرقم الأطول')
+            ->assertDontSee('شقة الرقم المطابق');
+    }
+
+    public function test_exact_reference_ignores_the_category_tab_of_the_home_search(): void
+    {
+        $residential = \App\Models\PropertyCategory::create(['name' => ['ar' => 'سكني', 'en' => 'Residential'], 'key' => 'residential']);
+        $commercial = \App\Models\PropertyCategory::create(['name' => ['ar' => 'تجاري', 'en' => 'Commercial'], 'key' => 'commercial']);
+        Property::where('reference_code', '31')->update(['category_id' => $commercial->id]);
+
+        // البحث من تبويب «سكني» برقم عقار تجاري يجده
+        $this->get(route('site.properties', ['category' => $residential->id, 'q' => '31']))
+            ->assertOk()
+            ->assertSee('شقة الرقم المطابق');
     }
 
     public function test_search_term_is_kept_in_the_filters_panel(): void

@@ -234,6 +234,29 @@
                         @endforeach
                     </select>
                 </div>
+                {{-- مصدر العميل (مصادر التسويق) مجمّعة حسب النوع --}}
+                <div>
+                    <label class="{{ $filterLabel }}">مصدر العميل</label>
+                    <select name="source_id" form="clients-filters" class="{{ $filterSelect }}">
+                        <option value="">الكل</option>
+                        @foreach ($sourceOptions as $typeName => $list)
+                            <optgroup label="{{ $typeName }}">
+                                @foreach ($list as $src)
+                                    <option value="{{ $src['id'] }}" @selected((string) ($filters['source_id'] ?? '') === (string) $src['id'])>{{ $src['name'] }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- حضوري: للعميل معاينة حضورية أم لا --}}
+                <div>
+                    <label class="{{ $filterLabel }}" title="نعم = للعميل معاينة حضورية واحدة على الأقل">حضوري</label>
+                    <select name="in_person" form="clients-filters" class="{{ $filterSelect }}">
+                        <option value="">الكل</option>
+                        <option value="1" @selected(($filters['in_person'] ?? '') === '1')>نعم</option>
+                        <option value="0" @selected(($filters['in_person'] ?? '') === '0')>لا</option>
+                    </select>
+                </div>
                 <div>
                     <label class="{{ $filterLabel }}">مسجّل من تاريخ</label>
                     <input name="from" form="clients-filters" data-datepicker value="{{ $filters['from'] ?? '' }}"

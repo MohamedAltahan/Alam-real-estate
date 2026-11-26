@@ -71,7 +71,7 @@ class NotificationFeed
             : collect();
 
         $clients = self::canView($user, 'clients.view') && self::enabled($user, 'new_clients', true)
-            ? Client::with('source')->latest()->take($limit)->get()
+            ? Client::with('source')->visibleTo($user)->latest()->take($limit)->get()
                 ->map(fn (Client $c) => [
                     'id' => null,
                     'kind' => 'client',
@@ -144,7 +144,7 @@ class NotificationFeed
         }
 
         $finalIds = ClientStage::where('is_final', true)->pluck('id');
-        $query = Client::query()->when($finalIds->isNotEmpty(), fn ($q) => $q->where(
+        $query = Client::query()->visibleTo($user)->when($finalIds->isNotEmpty(), fn ($q) => $q->where(
             fn ($q) => $q->whereNull('stage_id')->orWhereNotIn('stage_id', $finalIds)
         ));
         $count = $query->count();

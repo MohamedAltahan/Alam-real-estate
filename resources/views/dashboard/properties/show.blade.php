@@ -11,18 +11,40 @@
         <a href="{{ route('dashboard.properties.index') }}" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-700">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> العودة للعقارات
         </a>
-        <div class="flex items-center gap-2">
-            {{-- صفحة العقار على الموقع في تبويب جديد (زيارة الموظف لا تُحسب مشاهدة) --}}
-            <a href="{{ route('site.property', $property) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> عرض على الموقع
-            </a>
-            @can('properties.edit')
-                <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> تعديل
+        {{-- العقار المحذوف لا يُعرض على الموقع ولا يُعدَّل حتى يُسترجع --}}
+        @unless ($property->trashed())
+            <div class="flex items-center gap-2">
+                {{-- صفحة العقار على الموقع في تبويب جديد (زيارة الموظف لا تُحسب مشاهدة) --}}
+                <a href="{{ route('site.property', $property) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> عرض على الموقع
                 </a>
+                @can('properties.edit')
+                    <a href="{{ route('dashboard.properties.edit', $property) }}" class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 hover:bg-gray-50 text-sm text-gray-700 px-3 py-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> تعديل
+                    </a>
+                @endcan
+            </div>
+        @endunless
+    </div>
+
+    @if ($property->trashed())
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning/30 bg-warning-soft px-4 py-3">
+            <p class="text-sm text-warning font-semibold">
+                هذا العقار في «الأرشيف» — مخفي من الموقع والقوائم ونتائج البحث
+                @if ($property->status) · بحالة «{{ $property->status->name }}»@endif
+                <span class="font-normal text-gray-500">(أُرشف {{ $property->deleted_at?->format('Y-m-d') }}@if ($property->deletedBy) بواسطة {{ $property->deletedBy->name }}@endif)</span>
+            </p>
+            @can('properties.delete')
+                <form method="POST" action="{{ route('dashboard.properties.restore', $property) }}">
+                    @csrf @method('PATCH')
+                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-full bg-success-soft text-success hover:brightness-95 font-semibold px-4 py-2 text-sm transition">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+                        استرجاع العقار
+                    </button>
+                </form>
             @endcan
         </div>
-    </div>
+    @endif
 
     {{--
         معرض الصور (propertyGallery في app.js — نفس مكوّن الموقع): أسهم على جانبي الصورة للتنقل،
@@ -146,6 +168,8 @@
             <div class="rounded-card bg-white border border-gray-100 shadow-sm p-6">
                 <h3 class="font-bold text-ink mb-3">المالك ومندوب المبيعات</h3>
                 <div class="space-y-3 text-sm">
+                    {{-- اسم المبنى أولاً وبوضوح: المبنى الذي يتبع له العقار --}}
+                    <div><p class="text-gray-400 text-xs">اسم المبنى</p><p class="font-bold text-ink {{ $property->building_name ? '' : 'text-gray-300 font-medium' }}" dir="auto">{{ $property->building_name ?: '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">المالك</p>
                         @if ($property->owner && auth()->user()->can('property_owners.view'))
                             <a href="{{ route('dashboard.owners.show', $property->owner) }}" class="font-medium text-primary-800 hover:underline">{{ $property->owner->name }}</a>
@@ -154,7 +178,9 @@
                         @endif
                     </div>
                     {{-- نسبة العمولة والموقع والحارس والمسؤولون ظاهرة دائماً لكل من يفتح العقار («—» عند عدم التحديد) --}}
-                    <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->owner_commission_rate !== null ? \App\Support\PropertyFields::percent($property->owner_commission_rate) : '—' }}</bdi></p></div>
+                    @can('properties.view_commission')
+                        <div><p class="text-gray-400 text-xs">نسبة العمولة من المالك</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->owner_commission_rate !== null ? \App\Support\PropertyFields::percent($property->owner_commission_rate) : '—' }}</bdi></p></div>
+                    @endcan
                     <div><p class="text-gray-400 text-xs">مندوب المبيعات</p><p class="font-medium text-ink">{{ $property->agent?->name ?? '—' }}</p></div>
                     <div><p class="text-gray-400 text-xs">التصنيف / النوع</p><p class="font-medium text-ink">{{ $property->category?->name }} · {{ $property->unitType?->name }}</p></div>
                     <div><p class="text-gray-400 text-xs">وقت الإضافة</p><p class="font-medium text-ink tabular-nums"><bdi dir="ltr">{{ $property->created_at?->format('Y-m-d H:i') ?? '—' }}</bdi></p></div>

@@ -192,7 +192,9 @@
                     </select>
                     @error('owner_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
                 </div>
-                <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="999.99" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
+                @can('properties.view_commission')
+                    <x-input label="عمولة المالك (%)" name="owner_commission_rate" type="number" step="0.01" min="0" max="999.99" :value="$property->owner_commission_rate" placeholder="مثال: 2.5" />
+                @endcan
             </div>
 
             {{-- المسؤولون: تظهر قائمة مسؤولي المالك بمجرد اختياره — أكثر من مسؤول --}}

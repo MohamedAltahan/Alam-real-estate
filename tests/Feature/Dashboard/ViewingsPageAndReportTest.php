@@ -31,7 +31,7 @@ class ViewingsPageAndReportTest extends TestCase
 
     public function test_viewings_page_lists_filters_and_numbers_rows(): void
     {
-        $viewer = $this->userWith(['clients.view']);
+        $viewer = $this->userWith(['clients.view', 'clients.view_all']);
         $agentA = User::factory()->create(['is_agent' => true, 'name' => 'المسؤول أ']);
         $agentB = User::factory()->create(['is_agent' => true, 'name' => 'المسؤول ب']);
 
@@ -64,7 +64,7 @@ class ViewingsPageAndReportTest extends TestCase
 
     public function test_outcome_pills_above_the_table_carry_counts_that_ignore_the_outcome_filter(): void
     {
-        $viewer = $this->userWith(['clients.view']);
+        $viewer = $this->userWith(['clients.view', 'clients.view_all']);
         $this->viewing('ع1', null, now()->addDay());
         $this->viewing('ع2', null, now()->addDay(), ClientViewing::OUTCOME_INTERESTED);
         $this->viewing('ع3', null, now()->addDay(), ClientViewing::OUTCOME_INTERESTED);
@@ -86,7 +86,7 @@ class ViewingsPageAndReportTest extends TestCase
 
     public function test_viewings_can_be_filtered_by_property_location_purpose_presence_and_whatsapp_state(): void
     {
-        $viewer = $this->userWith(['clients.view']);
+        $viewer = $this->userWith(['clients.view', 'clients.view_all']);
         $city = City::create(['name' => ['ar' => 'حولي', 'en' => 'Hawalli']]);
         $area = Area::create(['name' => ['ar' => 'السالمية', 'en' => 'Salmiya'], 'city_id' => $city->id]);
         $shop = UnitType::create(['name' => ['ar' => 'محل', 'en' => 'Shop'], 'category' => 'commercial']);
@@ -112,8 +112,8 @@ class ViewingsPageAndReportTest extends TestCase
 
     public function test_notes_can_be_edited_inline_with_permission_and_are_audited(): void
     {
-        $viewer = $this->userWith(['clients.view']);
-        $editor = $this->userWith(['clients.view', 'clients.edit']);
+        $viewer = $this->userWith(['clients.view', 'clients.view_all']);
+        $editor = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
         $viewing = $this->viewing('عميل الملاحظة', null, now()->addDay());
 
         // المحرّر يرى زر الملاحظة بحمولته، والمشاهد يرى النص فقط
@@ -140,8 +140,8 @@ class ViewingsPageAndReportTest extends TestCase
 
     public function test_updating_the_outcome_requires_edit_permission_and_is_audited(): void
     {
-        $viewer = $this->userWith(['clients.view']);
-        $editor = $this->userWith(['clients.view', 'clients.edit']);
+        $viewer = $this->userWith(['clients.view', 'clients.view_all']);
+        $editor = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
         $viewing = $this->viewing('عميل النتيجة', null, now()->addDay());
 
         $this->actingAs($viewer)->patch(route('dashboard.viewings.outcome', $viewing), ['outcome' => 'interested'])->assertForbidden();

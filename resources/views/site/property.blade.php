@@ -52,7 +52,7 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-8">
-    {{-- العنوان + مشاركة --}}
+    {{-- العنوان (زر «مشاركة» أُزيل بطلب العميل) --}}
     <div class="flex items-center justify-between gap-4 mb-5">
         <div class="flex items-center gap-3 min-w-0">
             <h1 class="text-2xl sm:text-3xl font-bold text-ink">{{ $p->title }}</h1>
@@ -60,10 +60,6 @@
                 <span data-badge="{{ $badge['key'] }}" class="shrink-0 rounded-full bg-danger text-white text-xs sm:text-sm font-extrabold px-4 py-1.5">{{ $t($badge['ar'], $badge['en']) }}</span>
             @endif
         </div>
-        <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-800 shrink-0 transition">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>
-            {{ $t('مشاركة', 'Share') }}
-        </button>
     </div>
 
     {{-- المعرض: صورة كبيرة (يمين) + كل الصور مصغّرة (شمال) — الضغط على مصغّرة يعرضها في الكبيرة --}}
@@ -191,14 +187,10 @@
                         </div>
                     </div>
 
-                    {{-- إحصائيات في صناديق --}}
-                    <div class="grid grid-cols-3 gap-2 mb-5">
-                        @foreach ([[$agent->clients()->count(), $t('عميل سعيد', 'clients')], [$agent->properties()->count(), $t('عقار', 'listings')], [max(1, (int) now()->diffInYears($agent->created_at)), $t('سنوات خبرة', 'years')]] as [$num, $lbl])
-                            <div class="rounded-xl bg-gray-50 py-3 text-center">
-                                <p class="font-bold text-ink tabular-nums">{{ $num }}</p>
-                                <p class="text-[11px] text-gray-400 mt-0.5">{{ $lbl }}</p>
-                            </div>
-                        @endforeach
+                    {{-- عدد عقارات مندوب المبيعات فقط (بلا عملاء/سنوات) في المنتصف --}}
+                    <div class="rounded-xl bg-gray-50 py-3 text-center mb-5">
+                        <p class="text-lg font-bold text-ink tabular-nums">{{ $agent->properties()->count() }}</p>
+                        <p class="text-[11px] text-gray-400 mt-0.5">{{ $t('عقار', 'listings') }}</p>
                     </div>
 
                     @if ($agent->getTranslation('bio', $loc, false))

@@ -25,6 +25,11 @@ class RolePermissionSeeder extends Seeder
                 $all[] = $name;
             }
         }
+        // الصلاحيات التفصيلية (عرض كل العملاء ...) — تُمنح لكل دور يملك صلاحيتها الأساسية
+        foreach (array_keys(PermissionMatrixController::EXTRAS) as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            $all[] = $name;
+        }
 
         // الأدوار: name إنجليزي (للكود) + description عربي (للعرض)
         $roles = [
@@ -78,7 +83,14 @@ class RolePermissionSeeder extends Seeder
             $role->description = $cfg['description'];
             $role->status = 'active';
             $role->save();
-            $role->syncPermissions(array_values($cfg['perms']));
+
+            $perms = $cfg['perms'];
+            foreach (PermissionMatrixController::EXTRAS as $extra => $meta) {
+                if (in_array($meta['base'], $perms, true)) {
+                    $perms[] = $extra;
+                }
+            }
+            $role->syncPermissions(array_values(array_unique($perms)));
         }
     }
 

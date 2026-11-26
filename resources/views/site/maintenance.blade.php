@@ -49,10 +49,8 @@
         <img src="{{ asset('images/logo.png') }}" alt="{{ $t('علم العقارية', 'Alam Realestate') }}"
              class="h-9 sm:h-10 w-auto drop-shadow-[0_0_8px_rgba(196,154,25,0.75)]">
         <a href="{{ route('site.locale', $rtl ? 'en' : 'ar') }}" rel="nofollow"
-           class="inline-flex items-center gap-2 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/10 px-4 text-sm text-white/90 transition">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/></svg>
-            {{ $rtl ? 'English' : 'عربي' }}
-        </a>
+           class="grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/10 text-sm font-bold tracking-wide text-white/90 transition"
+           title="{{ $rtl ? 'English' : 'عربي' }}" aria-label="{{ $rtl ? 'English' : 'عربي' }}">{{ $rtl ? 'En' : 'Ar' }}</a>
     </header>
 
     <section class="flex-1 grid place-items-center px-4 sm:px-6 py-12 sm:py-16">

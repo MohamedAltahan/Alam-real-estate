@@ -42,7 +42,7 @@ class PropertyFormDependenciesTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['properties.view', 'properties.create', 'properties.edit'] as $name) {
+        foreach (['properties.view', 'properties.view_commission', 'properties.create', 'properties.edit'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
 
@@ -163,9 +163,10 @@ class PropertyFormDependenciesTest extends TestCase
 
     public function test_commission_location_guard_and_responsibles_always_show_for_any_viewer(): void
     {
-        // مستخدم بصلاحية عرض العقارات فقط (مثل مندوب المبيعات) — بلا صلاحية الملاك
+        // مستخدم بصلاحية عرض العقارات (مثل مندوب المبيعات) — بلا صلاحية الملاك؛ نسبة العمولة بصلاحيتها التفصيلية
         $viewer = User::factory()->create();
         $viewer->givePermissionTo(Permission::firstOrCreate(['name' => 'properties.view', 'guard_name' => 'web']));
+        $viewer->givePermissionTo(Permission::firstOrCreate(['name' => 'properties.view_commission', 'guard_name' => 'web']));
 
         $owner = PropertyOwner::create(['name' => 'أبو خالد', 'phone_code' => '+965', 'phone' => '55112233']);
         $agent = $owner->contacts()->create(['phone_code' => '+965', 'phone' => '66000000', 'role' => 'الوكيل', 'name' => 'سالم']);

@@ -61,7 +61,8 @@ class FieldOwner extends Model implements HasMedia
 
     public function convertedProperty(): BelongsTo
     {
-        return $this->belongsTo(Property::class, 'converted_property_id');
+        // يبقى ظاهراً حتى لو نُقل العقار إلى الأرشيف
+        return $this->belongsTo(Property::class, 'converted_property_id')->withTrashed();
     }
 
     public function isOwnerConverted(): bool

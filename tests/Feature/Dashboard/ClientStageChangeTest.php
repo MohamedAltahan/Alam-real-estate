@@ -30,7 +30,7 @@ class ClientStageChangeTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = $this->userWith(['clients.view', 'clients.edit']);
+        $this->user = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         foreach ([['new', 'طلب جديد', 0], ['viewing', 'معاينة العقار', 2], ['closed_won', 'ربح', 3], ['closed_lost', 'خسارة', 4]] as [$key, $name, $order]) {
             ClientStage::firstOrCreate(['key' => $key], ['name' => ['ar' => $name, 'en' => $key], 'color' => '#2E7D5B', 'sort_order' => $order, 'is_active' => true]);
@@ -60,7 +60,7 @@ class ClientStageChangeTest extends TestCase
         $this->assertSame(1, substr_count($html, '<option value="won"'));
         $this->assertStringContainsString('<option value="won" :hidden="row.outcome !== \'won\'"', $html);
 
-        $this->actingAs($this->userWith(['clients.view']))->get(route('dashboard.clients.show', $this->client))
+        $this->actingAs($this->userWith(['clients.view', 'clients.view_all']))->get(route('dashboard.clients.show', $this->client))
             ->assertOk()->assertDontSee('clientStage(', false)->assertSee('طلب جديد');
     }
 
@@ -134,7 +134,7 @@ class ClientStageChangeTest extends TestCase
 
     public function test_changing_the_stage_requires_edit_permission(): void
     {
-        $this->actingAs($this->userWith(['clients.view']))
+        $this->actingAs($this->userWith(['clients.view', 'clients.view_all']))
             ->patch(route('dashboard.clients.stage', $this->client), ['stage_id' => $this->stage('closed_lost')->id])
             ->assertForbidden();
 

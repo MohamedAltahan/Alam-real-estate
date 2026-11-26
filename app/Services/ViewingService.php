@@ -73,6 +73,9 @@ class ViewingService
     private function filtered(array $filters = []): Builder
     {
         return ClientViewing::query()
+            // بدون «عرض كل العملاء»: معاينات عملاء المستخدم فقط
+            ->when(auth()->user() && ! auth()->user()->can('clients.view_all'),
+                fn (Builder $q) => $q->whereHas('client', fn (Builder $c) => $c->visibleTo(auth()->user())))
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('scheduled_at', '>=', CarbonImmutable::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('scheduled_at', '<=', CarbonImmutable::parse($v)->endOfDay()))
             ->when($filters['agent_id'] ?? null, fn (Builder $q, $v) => $q->whereHas('client', fn (Builder $c) => $c->where('agent_id', $v)))

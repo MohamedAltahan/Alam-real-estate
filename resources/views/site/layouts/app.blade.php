@@ -51,9 +51,8 @@
 
             {{-- يمين: لغة + زر --}}
             <div class="flex items-center gap-2 ms-auto md:ms-0">
-                <a href="{{ route('site.locale', $rtl ? 'en' : 'ar') }}" class="grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 active:scale-95 border border-white/10 text-white/90 transition" title="{{ $t('English', 'عربي') }}">
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/></svg>
-                </a>
+                {{-- تبديل اللغة: يعرض اللغة التي سينتقل إليها — En في العربي و Ar في الإنجليزي --}}
+                <a href="{{ route('site.locale', $rtl ? 'en' : 'ar') }}" lang="{{ $rtl ? 'en' : 'ar' }}" class="grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 hover:text-accent-400 active:bg-white/25 active:scale-95 border border-white/10 text-white/90 text-sm font-bold tracking-wide transition" title="{{ $t('English', 'عربي') }}" aria-label="{{ $t('English', 'عربي') }}">{{ $rtl ? 'En' : 'Ar' }}</a>
                 <a href="{{ route('site.list-property') }}" class="hidden sm:inline-flex items-center gap-2 rounded-full gold-gradient hover:brightness-110 text-primary-900 font-semibold px-5 py-2.5 text-sm shadow-lg shadow-accent-500/20 transition">{{ $t('اعرض عقارك', 'List your property') }}</a>
                 <button @click="open = !open" class="md:hidden grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/25 active:scale-95 border border-white/10 transition" aria-label="menu">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16M4 6h16M4 18h16"/></svg>
@@ -78,7 +77,9 @@
     {{-- ===== الفوتر ===== --}}
     @php
         $socialIcons = [
-            'twitter' => '<path d="M18.9 2H22l-7 8 8.2 12h-6.4l-5-7.3-5.8 7.3H2.9l7.5-8.6L2.5 2h6.6l4.5 6.7zm-1.1 18h1.8L7.3 3.9H5.4z"/>',
+            'tiktok' => '<path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>',
+            // evenodd حتى يظهر مثلث التشغيل مفرّغاً داخل المستطيل
+            'youtube' => '<path fill-rule="evenodd" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6z"/>',
             'facebook' => '<path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.29-.04-1.27-.13-2.41-.13-2.39 0-4.02 1.46-4.02 4.13v2.3H7.5V13h2.77v8z"/>',
             'linkedin' => '<path d="M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.76-2.05C20.5 8.65 21 11 21 14.2V21h-4v-6c0-1.43-.03-3.27-2-3.27-2 0-2.3 1.56-2.3 3.17V21H9z"/>',
             'instagram' => '<path d="M12 2.2c-2.7 0-3 .01-4.05.06-1.05.05-1.77.22-2.4.46a4.8 4.8 0 0 0-1.75 1.14A4.8 4.8 0 0 0 2.66 5.6c-.24.63-.4 1.35-.46 2.4C2.16 9.05 2.15 9.38 2.15 12s.01 2.95.06 4c.05 1.05.22 1.77.46 2.4a4.8 4.8 0 0 0 1.14 1.75 4.8 4.8 0 0 0 1.75 1.14c.63.24 1.35.4 2.4.46 1.05.05 1.38.06 4.05.06s3-.01 4.05-.06c1.05-.05 1.77-.22 2.4-.46a5 5 0 0 0 2.89-2.89c.24-.63.4-1.35.46-2.4.05-1.05.06-1.38.06-4s-.01-2.95-.06-4c-.05-1.05-.22-1.77-.46-2.4a4.8 4.8 0 0 0-1.14-1.75 4.8 4.8 0 0 0-1.75-1.14c-.63-.24-1.35-.4-2.4-.46-1.05-.05-1.38-.06-4.05-.06zm0 1.8c2.62 0 2.93.01 3.97.06.96.04 1.48.2 1.82.34.46.18.79.39 1.13.73.34.34.55.67.73 1.13.13.34.3.86.34 1.82.05 1.04.06 1.35.06 3.92s-.01 2.88-.06 3.92c-.4.96-.2 1.48-.34 1.82-.18.46-.39.79-.73 1.13-.34.34-.67.55-1.13.73-.34.13-.86.3-1.82.34-1.04.05-1.35.06-3.97.06s-2.93-.01-3.97-.06c-.96-.04-1.48-.2-1.82-.34a3 3 0 0 1-1.13-.73 3 3 0 0 1-.73-1.13c-.13-.34-.3-.86-.34-1.82C3.96 14.88 3.95 14.57 3.95 12s.01-2.88.06-3.92c.04-.96.2-1.48.34-1.82.18-.46.39-.79.73-1.13a3 3 0 0 1 1.13-.73c.34-.13.86-.3 1.82-.34C9.07 4.01 9.38 4 12 4z"/><path d="M12 15.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm0-8.13a4.93 4.93 0 1 0 0 9.86 4.93 4.93 0 0 0 0-9.86zM18.4 6.87a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0z"/>',
@@ -158,7 +159,7 @@
             {{-- الشريط السفلي --}}
             <div class="border-t border-gray-200 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p class="text-xs text-gray-400 order-2 sm:order-1">© {{ date('Y') }} {{ $t('علم العقارية . جميع الحقوق محفوظة', 'Alam Realestate. All rights reserved.') }}</p>
-                @php $activeSocials = collect(['twitter', 'facebook', 'linkedin', 'instagram'])->filter(fn ($s) => $set('social', $s)); @endphp
+                @php $activeSocials = collect(['tiktok', 'youtube', 'facebook', 'linkedin', 'instagram'])->filter(fn ($s) => $set('social', $s)); @endphp
                 @if ($activeSocials->count())
                     <div class="flex items-center gap-3 order-1 sm:order-2">
                         <span class="text-xs text-gray-400">{{ $t('تابعنا', 'Follow us') }}</span>

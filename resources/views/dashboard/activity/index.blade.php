@@ -114,6 +114,7 @@
                                 <td class="px-4 py-3 max-w-[280px]">
                                     @if ($row['url'])
                                         <a href="{{ $row['url'] }}" class="font-semibold text-ink hover:text-primary-700" dir="auto">{{ $row['subject'] ?: '—' }}</a>
+                                        @if ($row['archived'] ?? false)<span class="text-[11px] text-warning ms-1">(مؤرشف)</span>@endif
                                     @else
                                         <span class="text-gray-500" dir="auto">{{ $row['subject'] ?: '—' }}</span>
                                         @if ($row['event'] === 'deleted' || $row['subject'])<span class="text-[11px] text-gray-400 ms-1">(محذوف)</span>@endif

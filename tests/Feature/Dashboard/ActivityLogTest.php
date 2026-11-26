@@ -27,7 +27,7 @@ class ActivityLogTest extends TestCase
 
     public function test_property_changes_are_logged_with_arabic_labels_and_without_derived_noise(): void
     {
-        $editor = $this->userWith(['properties.view', 'properties.edit']);
+        $editor = $this->userWith(['properties.view', 'properties.view_commission', 'properties.edit']);
         $available = PropertyStatus::create(['name' => ['ar' => 'متاح', 'en' => 'Available'], 'key' => 'available']);
         $sold = PropertyStatus::create(['name' => ['ar' => 'مباع', 'en' => 'Sold'], 'key' => 'sold']);
 
@@ -67,10 +67,18 @@ class ActivityLogTest extends TestCase
         $title = ActivityLog::where('module', 'properties')->where('event', 'updated')->latest('id')->firstOrFail();
         $this->assertSame(['old' => 'شقة السالمية', 'new' => 'شقة السالمية الجديدة'], $title->changes['title']);
 
-        // الحذف يحتفظ باسم السجل رغم زواله
+        // حذف العقار = أرشفة: يُسجَّل «أرشفة» ويبقى رابطه (صفحة العقار تفتح للمؤرشف) مع علامة «مؤرشف»
         $property->delete();
+        $archived = ActivityLog::where('module', 'properties')->where('event', 'archived')->firstOrFail();
+        $this->assertSame('12 — مبنى: برج السالمية', $archived->subject_label);
+        $row = ActivityPresenter::present(collect([$archived]))->first();
+        $this->assertSame(route('dashboard.properties.show', $property->id), $row['url']);
+        $this->assertTrue($row['archived']);
+        $this->assertSame(0, ActivityLog::where('module', 'properties')->where('event', 'deleted')->count());
+
+        // الحذف النهائي (غير متاح من الشاشة) يبقى «حذف» ويحتفظ باسم السجل رغم زواله
+        $property->forceDelete();
         $deleted = ActivityLog::where('module', 'properties')->where('event', 'deleted')->firstOrFail();
-        $this->assertSame('12 — مبنى: برج السالمية', $deleted->subject_label);
         $this->assertSame('12', $deleted->changes['reference_code']['old']);
         $this->assertNull(ActivityPresenter::present(collect([$deleted]))->first()['url']);
     }
@@ -79,7 +87,7 @@ class ActivityLogTest extends TestCase
     {
         $user = $this->userWith([
             'property_owners.view', 'property_owners.create', 'property_owners.edit', 'property_owners.delete',
-            'clients.view', 'clients.create', 'tasks.view', 'tasks.create',
+            'clients.view', 'clients.view_all', 'clients.create', 'tasks.view', 'tasks.create',
         ]);
         $city = City::create(['name' => ['ar' => 'حولي', 'en' => 'Hawalli']]);
         $area = Area::create(['name' => ['ar' => 'السالمية', 'en' => 'Salmiya'], 'city_id' => $city->id]);
@@ -215,23 +223,23 @@ class ActivityLogTest extends TestCase
         $page = $this->actingAs($viewer)->get(route('dashboard.activity.index'))->assertOk()
             ->assertSee('سجل النشاط')->assertSee('مالك للفلترة')->assertSee('77')->assertSee('88')
             ->assertSee(route('dashboard.properties.show', $kept), false) // الباقي له رابط
-            ->assertSee('(محذوف)')->assertSee('data-filter-set="event"', false);
+            ->assertSee('(مؤرشف)')->assertSee('data-filter-set="event"', false);
         $this->assertSame(4, $page->viewData('eventCounts')['total']);
-        $this->assertSame(['created' => 3, 'deleted' => 1], $page->viewData('eventCounts')['events']);
+        $this->assertEquals(['created' => 3, 'archived' => 1], $page->viewData('eventCounts')['events']);
 
         $index = fn (array $q) => $this->actingAs($viewer)->get(route('dashboard.activity.index', $q))->assertOk();
 
         $index(['module' => 'property_owners'])->assertSee('مالك للفلترة')->assertDontSee('عقار باقٍ')->assertDontSee('>77<', false);
-        $index(['event' => 'deleted'])->assertSee('88')->assertDontSee('مالك للفلترة');
+        $index(['event' => 'archived'])->assertSee('88')->assertDontSee('مالك للفلترة');
         $index(['user_id' => $other->id])->assertSee('77')->assertDontSee('مالك للفلترة');
         $index(['from' => now()->subDays(2)->toDateString()])->assertSee('مالك للفلترة')->assertDontSee('>77<', false);
         $index(['to' => now()->subDays(10)->toDateString()])->assertSee('77')->assertDontSee('مالك للفلترة');
         $index(['search' => 'للفلترة'])->assertSee('مالك للفلترة')->assertDontSee('>77<', false);
 
         // عدّادات الأزرار تتجاهل فلتر العملية نفسه
-        $counts = $index(['event' => 'deleted', 'module' => 'properties'])->viewData('eventCounts');
+        $counts = $index(['event' => 'archived', 'module' => 'properties'])->viewData('eventCounts');
         $this->assertSame(3, $counts['total']);
-        $this->assertSame(['created' => 2, 'deleted' => 1], $counts['events']);
+        $this->assertEquals(['created' => 2, 'archived' => 1], $counts['events']);
 
         // الشريط الجانبي: يظهر لصاحب الصلاحية فقط
         $this->actingAs($viewer)->get(route('dashboard.profile.edit'))->assertOk()->assertSee(route('dashboard.activity.index'), false);

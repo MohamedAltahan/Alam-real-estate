@@ -8,8 +8,10 @@ use App\Models\Faq;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\Models\Property;
+use App\Models\PropertyCategory;
 use App\Models\Setting;
 use App\Models\Testimonial;
+use App\Models\UnitType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -51,6 +53,9 @@ class WebsiteController extends Controller
             'offersHeader' => $this->listingHeader('offers'),
             'propsHeader' => $this->listingHeader('properties'),
             'cities' => City::where('is_active', true)->withCount('properties')->orderBy('sort_order')->get(),
+            // وجهة زر بانر «عروض مميزة»
+            'propertyCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'key']),
+            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'category']),
             'featuredCount' => Property::featured()->count(),
             // العقارات المرشَّحة لقسم الفيديوهات (لها رابط يوتيوب فقط)
             'videoPool' => Property::withVideo()->latest()->get(['id', 'reference_code', 'title', 'video_url']),
@@ -82,14 +87,15 @@ class WebsiteController extends Controller
             en: ['badge' => $h['badge_en'] ?? '', 'title' => $h['title_en'] ?? '', 'subtitle' => $h['subtitle_en'] ?? '', 'description' => $h['description_en'] ?? '']
         );
 
-        // --- Featured ---
+        // --- بانر «عروض مميزة»: إظهار/إخفاء + نص الزر + وجهته (تصنيف/نوع وحدة/محافظة يختارها المدير) ---
         $ft = $request->input('featured', []);
         $featured = $this->section($home, 'featured', 1);
+        $featured->is_visible = $request->boolean('featured.visible', true);
         $this->syncMedia($request, $featured, 'image', 'featured.image', (array) $request->input('featured.image_removed', []), single: true);
 
-        $this->fill($featured, shared: [],
-            ar: ['title' => $ft['title_ar'] ?? '', 'description' => $ft['description_ar'] ?? ''],
-            en: ['title' => $ft['title_en'] ?? '', 'description' => $ft['description_en'] ?? '']
+        $this->fill($featured, shared: ['link' => $this->bannerLink($request)],
+            ar: ['title' => $ft['title_ar'] ?? '', 'description' => $ft['description_ar'] ?? '', 'button' => $ft['button_ar'] ?? ''],
+            en: ['title' => $ft['title_en'] ?? '', 'description' => $ft['description_en'] ?? '', 'button' => $ft['button_en'] ?? '']
         );
 
         // --- العقارات المميزة: تُعرض تلقائياً (المعلَّم عليها «عقار مميّز»)، وهنا الترويسة والإظهار فقط ---
@@ -413,7 +419,8 @@ class WebsiteController extends Controller
     // ===== Helpers =====
     private const SETTINGS = [
         'contact' => ['phone', 'email', 'address', 'whatsapp', 'map_lat', 'map_lng'],
-        'social' => ['facebook', 'instagram', 'twitter', 'linkedin'],
+        // تيك توك حلّ محل تويتر (X)، ويوتيوب جديد
+        'social' => ['facebook', 'instagram', 'tiktok', 'youtube', 'linkedin'],
     ];
 
     private function homePage(): Page
@@ -481,6 +488,30 @@ class WebsiteController extends Controller
     private function put(Page $page, string $key, int $order, array $shared, array $ar, array $en): void
     {
         $this->fill($this->section($page, $key, $order), $shared, $ar, $en);
+    }
+
+    /**
+     * وجهة زر البانر = فلاتر صفحة العقارات (category · unit_type · city).
+     * القيم غير الموجودة تُهمل، ونوع الوحدة الذي لا يتبع التصنيف المختار يُهمل كذلك.
+     *
+     * @return array{category: ?string, unit_type: ?string, city: ?string}
+     */
+    private function bannerLink(Request $request): array
+    {
+        $link = (array) $request->input('featured.link', []);
+        $category = PropertyCategory::find((int) ($link['category'] ?? 0));
+        $unitType = UnitType::find((int) ($link['unit_type'] ?? 0));
+        $city = City::find((int) ($link['city'] ?? 0));
+
+        if ($unitType && $category && $unitType->category && $unitType->category !== $category->key) {
+            $unitType = null;
+        }
+
+        return [
+            'category' => $category ? (string) $category->id : null,
+            'unit_type' => $unitType ? (string) $unitType->id : null,
+            'city' => $city ? (string) $city->id : null,
+        ];
     }
 
     private function section(Page $page, string $key, int $order): PageSection

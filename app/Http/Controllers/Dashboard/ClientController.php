@@ -40,6 +40,8 @@ class ClientController extends Controller
             'areas' => Area::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'city_id']),
             'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'nationalities' => Client::query()->whereNotNull('nationality')->distinct()->orderBy('nationality')->pluck('nationality'),
+            // فلتر «مصدر العميل»: كل المصادر حتى المتوقفة
+            'sourceOptions' => ClientFormData::sources(null, all: true),
             'filters' => $filters,
             'form' => ClientFormData::for(null),
         ]);
@@ -47,7 +49,14 @@ class ClientController extends Controller
 
     public function store(StoreClientRequest $request): RedirectResponse
     {
-        $this->clients->create($request->validated(), $request);
+        $data = $request->validated();
+
+        // بدون «تغيير مندوب المبيعات للعميل»: العميل الجديد باسم مندوب المبيعات الذي أضافه (أو بلا مندوب)
+        if (! $request->user()->can('clients.assign')) {
+            $data['agent_id'] = $request->user()->is_agent ? $request->user()->id : null;
+        }
+
+        $this->clients->create($data, $request);
 
         return back()->with('success', 'تم إضافة العميل بنجاح.');
     }
@@ -82,7 +91,14 @@ class ClientController extends Controller
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
-        $this->clients->update($client, $request->validated(), $request);
+        $data = $request->validated();
+
+        // بدون «تغيير مندوب المبيعات للعميل»: المندوب يبقى كما هو
+        if (! $request->user()->can('clients.assign')) {
+            unset($data['agent_id']);
+        }
+
+        $this->clients->update($client, $data, $request);
 
         return back()->with('success', 'تم تحديث بيانات العميل.');
     }

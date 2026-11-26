@@ -14,7 +14,7 @@ class NavigationAuthorizationTest extends TestCase
     public function test_sidebar_only_shows_modules_the_user_can_view(): void
     {
         $user = User::factory()->create();
-        $this->grant($user, ['dashboard.view', 'clients.view']);
+        $this->grant($user, ['dashboard.view', 'clients.view', 'clients.view_all']);
 
         $this->actingAs($user)
             ->get(route('dashboard.profile.edit'))
@@ -38,7 +38,7 @@ class NavigationAuthorizationTest extends TestCase
     public function test_create_property_links_are_hidden_without_create_permission(): void
     {
         $user = User::factory()->create();
-        $this->grant($user, ['properties.view']);
+        $this->grant($user, ['properties.view', 'properties.view_commission']);
 
         $this->actingAs($user)
             ->get(route('dashboard.properties.index'))
@@ -70,7 +70,7 @@ class NavigationAuthorizationTest extends TestCase
     public function test_dashboard_sections_require_dashboard_and_module_permissions(): void
     {
         $user = User::factory()->create();
-        $this->grant($user, ['dashboard.view', 'properties.view']);
+        $this->grant($user, ['dashboard.view', 'properties.view', 'properties.view_commission']);
 
         $this->actingAs($user)
             ->get(route('dashboard'))

@@ -98,10 +98,30 @@
             </div>
             <div>
                 <label class="{{ $label }}">مندوب المبيعات</label>
-                <select name="agent_id" class="{{ $field }}">
+                @can('clients.assign')
+                    <select name="agent_id" class="{{ $field }}">
+                        <option value="">— اختر —</option>
+                        @foreach ($agents as $user)<option value="{{ $user->id }}" @selected(old('agent_id', $client?->agent_id) == $user->id)>{{ $user->name }}</option>@endforeach
+                    </select>
+                @else
+                    {{-- بلا صلاحية «تغيير مندوب المبيعات للعميل»: للعرض فقط (العميل الجديد يُسجَّل باسم من أضافه) --}}
+                    <div class="{{ $field }} bg-gray-100 text-gray-600 cursor-not-allowed" title="لا تملك صلاحية تغيير مندوب المبيعات">
+                        {{ $client?->agent?->name ?? (auth()->user()->is_agent ? auth()->user()->name : '—') }}
+                    </div>
+                @endcan
+            </div>
+            {{-- مصدر العميل: من «مصادر التسويق»، مجمّعة حسب نوع المصدر --}}
+            <div>
+                <label class="{{ $label }}">مصدر العميل</label>
+                <select name="source_id" class="{{ $field }}">
                     <option value="">— اختر —</option>
-                    @foreach ($agents as $user)<option value="{{ $user->id }}" @selected(old('agent_id', $client?->agent_id) == $user->id)>{{ $user->name }}</option>@endforeach
+                    @foreach ($form['sources'] ?? [] as $typeName => $list)
+                        <optgroup label="{{ $typeName }}">
+                            @foreach ($list as $src)<option value="{{ $src['id'] }}" @selected(old('source_id', $client?->source_id) == $src['id'])>{{ $src['name'] }}</option>@endforeach
+                        </optgroup>
+                    @endforeach
                 </select>
+                @error('source_id')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
             </div>
             {{-- طلب مميز + ملاحظاته بجواره: يظهران في تبويب «الطلبات المميزة» بشاشة طلبات التواصل --}}
             <div class="contents" x-data="{ featured: @js((bool) old('is_featured', $client?->is_featured)) }">

@@ -86,8 +86,19 @@
                 </template>
             </x-filter-select>
         </div>
-        <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع"
-                         :options="$unitTypes->pluck('name', 'id')" :selected="$filters['unit_type_id'] ?? null" />
+        {{-- الأنواع مجمّعة حسب التصنيف (سكني/تجاري) --}}
+        <x-filter-select label="نوع الوحدة" name="unit_type_id" placeholder="كل الأنواع">
+            @foreach (\App\Models\UnitType::CATEGORIES as $catKey => $catLabel)
+                @php $group = $unitTypes->where('category', $catKey); @endphp
+                @if ($group->isNotEmpty())
+                    <optgroup label="{{ $catLabel }}">
+                        @foreach ($group as $t)
+                            <option value="{{ $t->id }}" @selected((string) ($filters['unit_type_id'] ?? '') === (string) $t->id)>{{ $t->name }}</option>
+                        @endforeach
+                    </optgroup>
+                @endif
+            @endforeach
+        </x-filter-select>
         <x-filter-select label="الغرض" name="purpose" placeholder="بيع وإيجار"
                          :options="['sale' => 'بيع', 'rent' => 'إيجار']" :selected="$filters['purpose'] ?? null" />
         <x-filter-select label="حضوري" name="in_person" placeholder="الكل"

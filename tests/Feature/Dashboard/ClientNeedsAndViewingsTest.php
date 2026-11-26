@@ -41,7 +41,7 @@ class ClientNeedsAndViewingsTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['clients.view', 'clients.create', 'clients.edit', 'clients.delete'] as $name) {
+        foreach (['clients.view', 'clients.view_all', 'clients.create', 'clients.edit', 'clients.assign', 'clients.delete'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
 

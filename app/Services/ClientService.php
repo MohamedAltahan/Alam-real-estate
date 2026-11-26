@@ -29,6 +29,7 @@ class ClientService
     public const FILTER_KEYS = [
         'search', 'stage_id', 'agent_id', 'city_id', 'area_id', 'unit_type_id', 'category', 'area_from', 'area_to', 'rooms',
         'nationality', 'social_status', 'preferred_contact', 'from', 'to', 'notes_q', 'property_q', 'price_from', 'price_to',
+        'source_id', 'in_person',
     ];
 
     /** فلاتر احتياج العقار — تُطبَّق معاً على سطر الاحتياج نفسه */
@@ -43,6 +44,8 @@ class ClientService
     private function filtered(array $filters = []): Builder
     {
         return Client::query()
+            // بدون «عرض كل العملاء»: عملاء المستخدم فقط
+            ->visibleTo(auth()->user())
             ->when($filters['search'] ?? null, fn (Builder $q, $search) => $this->applySearch($q, (string) $search))
             ->when($filters['stage_id'] ?? null, fn (Builder $q, $v) => $q->where('stage_id', $v))
             ->when($filters['agent_id'] ?? null, fn (Builder $q, $v) => $q->where('agent_id', $v))
@@ -50,6 +53,11 @@ class ClientService
             ->when($filters['nationality'] ?? null, fn (Builder $q, $v) => $q->whereRaw('LOWER(nationality) LIKE ?', ['%'.mb_strtolower(trim((string) $v)).'%']))
             ->when($filters['social_status'] ?? null, fn (Builder $q, $v) => $q->where('social_status', $v))
             ->when($filters['preferred_contact'] ?? null, fn (Builder $q, $v) => $q->where('preferred_contact', $v))
+            ->when($filters['source_id'] ?? null, fn (Builder $q, $v) => $q->where('source_id', $v))
+            // حضوري: «نعم» = للعميل معاينة حضورية واحدة على الأقل · «لا» = لا توجد له معاينة حضورية
+            ->when(in_array((string) ($filters['in_person'] ?? ''), ['0', '1'], true), fn (Builder $q) => $filters['in_person'] === '1'
+                ? $q->whereHas('viewings', fn (Builder $v) => $v->where('in_person', true))
+                : $q->whereDoesntHave('viewings', fn (Builder $v) => $v->where('in_person', true)))
             ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '>=', Carbon::parse($v)->startOfDay()))
             ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->where('created_at', '<=', Carbon::parse($v)->endOfDay()))
             ->when($this->notesTerm($filters), fn (Builder $q, $term) => $this->applyNotesSearch($q, $term))

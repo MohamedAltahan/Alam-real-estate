@@ -153,7 +153,7 @@ class WhatsAppViewingsTest extends TestCase
     {
         $this->connectedInstance();
         Http::fake(['*/messages/send' => Http::response(['id' => 123, 'status' => 'queued', 'delay_ms' => 2400], 202)]);
-        $user = $this->userWith(['clients.view', 'clients.edit']);
+        $user = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         // زر الإرسال يحمل المسؤولين المختارين (بترتيب مسؤولي المالك) ثم الحارس بصفاتهم ونص القالب معبّأً
         $payload = app(WhatsAppService::class)->sendPayload($this->viewing->load('property.responsibles', 'client.agent'), WhatsAppTemplates::KIND_OWNER);
@@ -162,18 +162,17 @@ class WhatsAppViewingsTest extends TestCase
         $this->assertSame('حارس العقار · أبو فهد', $payload['recipients'][2]['label']);
         $this->assertNotContains('96555990000', array_column($payload['recipients'], 'phone'));
         $this->assertStringNotContainsString('55990000', json_encode($payload, JSON_UNESCAPED_UNICODE));
-        $this->assertStringContainsString('السلام عليكم أبو فهد', $payload['bodies']['96555330000']);
-        $this->assertStringContainsString('السلام عليكم سالم', $payload['bodies']['96555220000']);
-        $this->assertStringContainsString('عميل المعاينة', $payload['bodies']['96555220000']);
+        $this->assertStringContainsString('عميلنا العزيز أبو فهد،', $payload['bodies']['96555330000']);
+        $this->assertStringContainsString('عميلنا العزيز سالم،', $payload['bodies']['96555220000']);
+        $this->assertStringContainsString('•اسم العميل: عميل المعاينة', $payload['bodies']['96555220000']);
         // هاتف العميل: مفتاح ملتصق بالرقم مع LRM وآخر رقمين مخفيان
         $this->assertStringContainsString("\u{200E}+965660000xx", $payload['bodies']['96555220000']);
         $this->assertStringNotContainsString('66000001', $payload['bodies']['96555220000']);
-        $this->assertStringContainsString("\u{200E}+96599000005", $payload['bodies']['96555220000']);
-        $this->assertStringContainsString('12 — شقة السالمية', $payload['bodies']['96555220000']);
-        // رابط صفحة العقار على الموقع تحت سطر اسم العقار مباشرة
+        $this->assertStringContainsString("•رقمه: \u{200E}+96599000005", $payload['bodies']['96555220000']);
+        // رابط صفحة العقار على الموقع في سطر مستقل تحت سطر «عقار» مباشرة
         $lines = explode("\n", $payload['bodies']['96555220000']);
-        $titleLine = collect($lines)->search(fn ($line) => str_contains($line, '12 — شقة السالمية'));
-        $this->assertSame('رابط العقار: '.route('site.property', $this->property), $lines[$titleLine + 1]);
+        $propertyLine = collect($lines)->search(fn ($line) => str_starts_with($line, '•عقار: '));
+        $this->assertSame(route('site.property', $this->property), $lines[$propertyLine + 1]);
 
         $this->actingAs($user)->get(route('dashboard.clients.show', $this->client))
             ->assertOk()
@@ -211,7 +210,7 @@ class WhatsAppViewingsTest extends TestCase
     public function test_targeted_properties_panel_carries_the_outcome_select_and_whatsapp_buttons(): void
     {
         $this->connectedInstance();
-        $editor = $this->userWith(['clients.view', 'clients.edit']);
+        $editor = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         // القائمة لم تعد تحمل الحمولات — النافذة تُجلب عند الفتح
         $this->actingAs($editor)->get(route('dashboard.clients.index'))
@@ -237,7 +236,7 @@ class WhatsAppViewingsTest extends TestCase
             ->assertOk()->assertDontSee('data-wa-blocked=', false);
 
         // بلا صلاحية التعديل: لا أزرار إرسال ولا تغيير للنتيجة
-        $this->actingAs($this->userWith(['clients.view']))->get(route('dashboard.clients.viewings', $this->client))
+        $this->actingAs($this->userWith(['clients.view', 'clients.view_all']))->get(route('dashboard.clients.viewings', $this->client))
             ->assertOk()
             ->assertSee('قيد الدراسة')
             ->assertDontSee('data-wa-send=', false)
@@ -250,7 +249,7 @@ class WhatsAppViewingsTest extends TestCase
     {
         $this->connectedInstance();
         Http::fake(['*/messages/send' => Http::response(['error' => 'Hourly limit reached'], 429)]);
-        $user = $this->userWith(['clients.view', 'clients.edit']);
+        $user = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
             'kind' => WhatsAppTemplates::KIND_OWNER, 'to' => '96555110000', 'body' => 'نص',
@@ -266,7 +265,7 @@ class WhatsAppViewingsTest extends TestCase
     public function test_sending_requires_a_connected_number_and_a_listed_recipient(): void
     {
         Http::fake();
-        $user = $this->userWith(['clients.view', 'clients.edit']);
+        $user = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         // رقم من خارج القائمة
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
@@ -283,7 +282,7 @@ class WhatsAppViewingsTest extends TestCase
         $this->assertStringContainsString('غير متصل', WhatsappMessage::first()->error);
 
         // بلا صلاحية تعديل العملاء
-        $this->actingAs($this->userWith(['clients.view']))->post(route('dashboard.viewings.whatsapp', $this->viewing), [
+        $this->actingAs($this->userWith(['clients.view', 'clients.view_all']))->post(route('dashboard.viewings.whatsapp', $this->viewing), [
             'kind' => WhatsAppTemplates::KIND_OWNER, 'to' => '96555110000', 'body' => 'نص',
         ])->assertForbidden();
     }
@@ -292,7 +291,7 @@ class WhatsAppViewingsTest extends TestCase
     {
         $this->connectedInstance();
         Http::fake(['*/messages/send' => Http::response(['id' => 7, 'status' => 'queued'], 202)]);
-        $user = $this->userWith(['clients.view', 'clients.edit']);
+        $user = $this->userWith(['clients.view', 'clients.view_all', 'clients.edit', 'clients.assign']);
 
         $this->actingAs($user)->post(route('dashboard.viewings.whatsapp', $this->viewing), [
             'kind' => WhatsAppTemplates::KIND_CLIENT, 'to' => '96555110000', 'body' => 'النتيجة',

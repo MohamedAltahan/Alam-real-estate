@@ -27,7 +27,7 @@ class PriceRangeFiltersTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['properties.view', 'clients.view'] as $name) {
+        foreach (['properties.view', 'properties.view_commission', 'clients.view', 'clients.view_all'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
 

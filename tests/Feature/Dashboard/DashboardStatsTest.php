@@ -30,7 +30,7 @@ class DashboardStatsTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['dashboard.view', 'properties.view', 'clients.view', 'contact_requests.view', 'notifications.view'] as $name) {
+        foreach (['dashboard.view', 'properties.view', 'properties.view_commission', 'clients.view', 'clients.view_all', 'contact_requests.view', 'notifications.view'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
 

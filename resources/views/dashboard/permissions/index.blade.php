@@ -138,6 +138,26 @@
                 </table>
             </div>
         </div>
+
+        {{-- صلاحيات تفصيلية: أجزاء داخل الوحدات يمكن سحبها من دور بعينه (مثل مندوب المبيعات) --}}
+        <div class="rounded-card bg-white border border-gray-100 shadow-sm mt-5 p-5">
+            <h3 class="font-bold text-ink">صلاحيات تفصيلية</h3>
+            <p class="text-xs text-gray-500 mb-4">تحكّم أدق داخل الوحدات — ألغِ أي منها لتقييد هذا الدور دون سحب الوحدة كلها.</p>
+            <div class="grid gap-3 md:grid-cols-2">
+                @foreach ($extras as $pkey => $extra)
+                    <label class="flex items-start gap-3 rounded-field border border-gray-100 bg-gray-50/60 hover:bg-gray-50 px-4 py-3 cursor-pointer transition">
+                        <input type="checkbox" name="permissions[]" value="{{ $pkey }}" @checked($assigned->has($pkey)) class="mt-1 shrink-0">
+                        <span class="min-w-0">
+                            <span class="block text-sm font-bold text-ink">
+                                {{ $extra['label'] }}
+                                <span class="ms-1 rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[10px] font-semibold align-middle">{{ $modules[$extra['module']] ?? $extra['module'] }}</span>
+                            </span>
+                            <span class="block text-xs text-gray-500 leading-relaxed mt-0.5">{{ $extra['hint'] }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
     @endif
 </form>
 @endsection

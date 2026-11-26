@@ -21,7 +21,7 @@ class FeaturedRequestsTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        foreach (['contact_requests.view', 'clients.view', 'clients.create', 'clients.edit'] as $name) {
+        foreach (['contact_requests.view', 'clients.view', 'clients.view_all', 'clients.create', 'clients.edit', 'clients.assign'] as $name) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));
         }
     }

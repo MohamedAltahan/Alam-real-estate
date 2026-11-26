@@ -109,7 +109,9 @@
                     <p class="{{ $groupTitle }}">{{ $t('نوع العقار', 'Category') }}</p>
                     @foreach ($categories as $cat)
                         <label class="{{ $optRow }}"><span>{{ $cat->name }}</span>
-                            <input type="radio" name="category" value="{{ $cat->id }}" @checked(($filters['category'] ?? '') == $cat->id) onchange="this.form.submit()" class="{{ $radio }}"></label>
+                            {{-- تغيير التصنيف يلغي نوع الوحدة المختار (قائمة الأنواع تتبع التصنيف) --}}
+                            <input type="radio" name="category" value="{{ $cat->id }}" @checked(($filters['category'] ?? '') == $cat->id)
+                                   onchange="this.form.querySelectorAll('input[name=unit_type]').forEach(r => r.checked = false); this.form.submit()" class="{{ $radio }}"></label>
                     @endforeach
                 </div>
 

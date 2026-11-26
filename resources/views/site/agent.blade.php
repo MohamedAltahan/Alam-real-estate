@@ -4,7 +4,6 @@
     $loc = app()->getLocale();
     $t = fn ($ar, $en) => $loc === 'ar' ? $ar : $en;
     $wa = $agent->phone ? preg_replace('/[^0-9]/', '', $agent->phone) : null;
-    $years = max(1, (int) now()->diffInYears($agent->created_at));
     $langMap = ['ar' => $t('العربية', 'Arabic'), 'en' => $t('الإنجليزية', 'English')];
 @endphp
 
@@ -78,10 +77,10 @@
             {{-- إحصائيات + تواصل --}}
             <div class="md:w-64 shrink-0">
                 <div class="rounded-card bg-white/5 border border-white/10 backdrop-blur p-5">
-                    <div class="grid grid-cols-3 divide-x divide-x-reverse divide-white/10 text-center mb-4">
-                        <div><p class="text-2xl font-bold text-accent-400 tabular-nums">{{ $listingsCount }}</p><p class="text-[11px] text-white/50">{{ $t('عقار', 'listings') }}</p></div>
-                        <div><p class="text-2xl font-bold text-accent-400 tabular-nums">{{ $clientsCount }}</p><p class="text-[11px] text-white/50">{{ $t('عميل', 'clients') }}</p></div>
-                        <div><p class="text-2xl font-bold text-accent-400 tabular-nums">{{ $years }}</p><p class="text-[11px] text-white/50">{{ $t('سنوات', 'years') }}</p></div>
+                    {{-- عدد العقارات فقط (بلا عملاء/سنوات) في المنتصف --}}
+                    <div class="text-center mb-4">
+                        <p class="text-3xl font-bold text-accent-400 tabular-nums">{{ $listingsCount }}</p>
+                        <p class="text-xs text-white/50">{{ $t('عقار', 'listings') }}</p>
                     </div>
                     @if ($wa)
                         <a href="https://wa.me/{{ $wa }}" target="_blank" class="flex items-center justify-center gap-2 w-full rounded-full bg-accent-500 hover:bg-accent-400 text-primary-900 font-semibold py-2.5 text-sm mb-2 transition">

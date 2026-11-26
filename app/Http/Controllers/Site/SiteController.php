@@ -45,10 +45,14 @@ class SiteController extends Controller
 
         return view('site.home', [
             'c' => $c,
+            // بانر «عروض مميزة» يُخفيه المدير من «إدارة الموقع»
+            'offersBannerVisible' => ! in_array('featured', $hidden, true),
             // القسمان يُخفيهما المدير من «إدارة الموقع» (قسم areas = المحافظات)
             'featuredProperties' => in_array('featured_properties', $hidden, true) ? collect() : $this->homeFeatured(),
             'governorates' => in_array('areas', $hidden, true) ? collect() : $this->homeGovernorates($c['areas'] ?? []),
             'testimonials' => Testimonial::where('is_active', true)->orderBy('sort_order')->get(),
+            // المنطقة تتبع المحافظة، ونوع الوحدة يتبع التصنيف (سكني/تجاري) داخل صندوق البحث
+            'searchCities' => City::where('is_active', true)->orderBy('sort_order')->get(),
             'searchAreas' => Area::where('is_active', true)->orderBy('sort_order')->get(),
             'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(),
@@ -111,38 +115,51 @@ class SiteController extends Controller
     /** قائمة العقارات مع الفلاتر */
     public function properties(Request $request): View
     {
+        // رقم مرجعي مطابق تماماً ⇒ هذا العقار وحده (بدون 212/215 لمن يبحث عن 12)،
+        // ولو اختلف تصنيفه عن تبويب البحث — الرقم المرجعي يحدّد عقاراً واحداً
+        $exactRef = $this->exactReference((string) $request->q);
+        if ($exactRef !== null) {
+            $request->query->remove('category');
+            $request->query->remove('unit_type');
+        }
+
         $properties = Property::query()
             ->with(['area', 'agent', 'status', 'unitType', 'media'])
-            ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
-            ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
-            ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
-            ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
-            ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
-            ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
-            // روابط قديمة بالرقم المرجعي بالضبط
-            ->when($request->reference, fn ($q, $v) => $q->where('reference_code', $v))
-            // البحث الحر: الرقم المرجعي أو اسم العقار أو اسم المبنى — والمطابقة التامة للرقم تظهر أولاً
-            ->when(trim((string) $request->q), function ($q, $v) {
-                $term = '%'.mb_strtolower($v).'%';
+            ->when($exactRef !== null, fn ($q) => $q->where('reference_code', $exactRef))
+            ->when($exactRef === null, fn ($query) => $query
+                ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
+                ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
+                ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
+                ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
+                ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
+                ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
+                // روابط قديمة بالرقم المرجعي بالضبط
+                ->when($request->reference, fn ($q, $v) => $q->where('reference_code', $v))
+                // البحث الحر: جزء من الرقم المرجعي أو اسم العقار أو اسم المبنى
+                ->when(trim((string) $request->q), function ($q, $v) {
+                    $term = '%'.mb_strtolower($v).'%';
 
-                $q->where(fn ($w) => $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
-                    ->orWhereRaw('LOWER(title) LIKE ?', [$term])
-                    ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]))
-                    ->orderByRaw('CASE WHEN reference_code = ? THEN 0 ELSE 1 END', [$v]);
-            })
-            ->when($request->price, fn ($q, $v) => $this->applyRange($q, 'price', (string) $v))
-            ->when($request->size, fn ($q, $v) => $this->applyRange($q, 'area_size', (string) $v))
+                    $q->where(fn ($w) => $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(title) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]));
+                })
+                ->when($request->price, fn ($q, $v) => $this->applyRange($q, 'price', (string) $v))
+                ->when($request->size, fn ($q, $v) => $this->applyRange($q, 'area_size', (string) $v)))
             ->when($request->sort === 'price_asc', fn ($q) => $q->orderBy('price'))
             ->when($request->sort === 'price_desc', fn ($q) => $q->orderByDesc('price'))
             ->when(! in_array($request->sort, ['price_asc', 'price_desc']), fn ($q) => $q->latest())
             ->paginate(9)
             ->withQueryString();
 
+        $categories = PropertyCategory::where('is_active', true)->get();
+        // اختيار سكني/تجاري يقصر قائمة أنواع الوحدات على أنواعه
+        $categoryKey = $request->category ? $categories->firstWhere('id', (int) $request->category)?->key : null;
+
         return view('site.properties', [
             'properties' => $properties,
             'header' => $this->pageHeader('properties'),
-            'categories' => PropertyCategory::where('is_active', true)->get(),
-            'unitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
+            'categories' => $categories,
+            'unitTypes' => UnitType::where('is_active', true)->category($categoryKey)->orderBy('sort_order')->get(),
             'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
             // اختيار محافظة يقصر قائمة المناطق على مناطقها
             'areas' => Area::where('is_active', true)
@@ -150,6 +167,14 @@ class SiteController extends Controller
                 ->orderBy('sort_order')->get(),
             'filters' => $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size'),
         ]);
+    }
+
+    /** نص البحث هو رقم مرجعي لعقار موجود بالضبط؟ — يرجع الرقم أو null */
+    private function exactReference(string $q): ?string
+    {
+        $q = trim($q);
+
+        return $q !== '' && Property::where('reference_code', $q)->exists() ? $q : null;
     }
 
     /** نطاق بصيغة «من-إلى» أو «من+» (السعر، المساحة) */
@@ -201,7 +226,6 @@ class SiteController extends Controller
             'properties' => $properties,
             'reviews' => $reviews,
             'listingsCount' => $agent->properties()->count(),
-            'clientsCount' => $agent->clients()->count(),
         ]);
     }
 

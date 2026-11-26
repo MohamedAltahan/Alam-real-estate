@@ -33,6 +33,10 @@ class PropertyController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->only(PropertyService::FILTER_KEYS);
+        // فلتر العمولة لمن يرى نسبة العمولة فقط
+        if (! $request->user()->can('properties.view_commission')) {
+            unset($filters['commission']);
+        }
 
         return view('dashboard.properties.index', [
             'properties' => $this->properties->paginate($filters),
@@ -82,6 +86,10 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.create'), 403);
 
         [$data, $responsibles] = $this->validated($request);
+        // بدون «عرض نسبة عمولة المالك» الحقل مخفي في الفورم — لا نلمس القيمة المحفوظة
+        if (! $request->user()->can('properties.view_commission')) {
+            unset($data['owner_commission_rate']);
+        }
 
         // عقار قادم من زيارة ميدانية: يُربط بالزيارة وتُنسخ صورها ويُنشأ المالك إن لزم
         $fieldOwner = $request->filled('field_owner_id') ? FieldOwner::findOrFail($request->integer('field_owner_id')) : null;
@@ -116,6 +124,10 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.edit'), 403);
 
         [$data, $responsibles] = $this->validated($request);
+        // بدون «عرض نسبة عمولة المالك» الحقل مخفي في الفورم — لا نلمس القيمة المحفوظة
+        if (! $request->user()->can('properties.view_commission')) {
+            unset($data['owner_commission_rate']);
+        }
         $this->properties->update($property, $data, $request->input('amenities', []), $responsibles);
         $this->syncImages($request, $property);
 
@@ -129,7 +141,34 @@ class PropertyController extends Controller
         abort_unless(auth()->user()->can('properties.delete'), 403);
         $this->properties->delete($property);
 
-        return redirect()->route('dashboard.properties.index')->with('success', 'تم حذف العقار.');
+        return redirect()->route('dashboard.properties.index')
+            ->with('success', 'تمت أرشفة العقار رقم '.$property->reference_code.' — مخفي من الموقع ويمكنك استرجاعه من «الأرشيف».');
+    }
+
+    /**
+     * «الأرشيف»: العقارات المؤرشفة بحالتها وقت الأرشفة (متاح/مباع...) مع زر استرجاع — لا حذف نهائي.
+     * لمن يملك صلاحية الحذف (= الأرشفة).
+     */
+    public function archive(Request $request): View
+    {
+        abort_unless($request->user()->can('properties.delete'), 403);
+
+        return view('dashboard.properties.archive', [
+            'properties' => $this->properties->paginateArchived($request->input('search')),
+            'search' => (string) $request->input('search', ''),
+        ]);
+    }
+
+    public function restore(Request $request, Property $property): RedirectResponse
+    {
+        abort_unless($request->user()->can('properties.delete'), 403);
+        abort_unless($property->trashed(), 404);
+
+        $this->properties->restore($property);
+
+        // يرجع لنفس الشاشة (الأرشيف أو صفحة العقار)
+        return back(fallback: route('dashboard.properties.archive'))
+            ->with('success', 'تم استرجاع العقار رقم '.$property->reference_code.' من الأرشيف — عاد إلى قائمة العقارات والموقع بحالته.');
     }
 
     public function addReview(Request $request, Property $property): RedirectResponse

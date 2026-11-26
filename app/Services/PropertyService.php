@@ -28,6 +28,13 @@ class PropertyService
         return Property::query()
             ->with(['area', 'city', 'category', 'unitType', 'status', 'agent', 'owner', 'channels'])
             ->when($filters['search'] ?? null, function ($query, $search) {
+                // رقم مرجعي مطابق تماماً ⇒ هذا العقار وحده (بلا 112/212 لمن يكتب 12)
+                if (Property::where('reference_code', trim($search))->exists()) {
+                    $query->where('reference_code', trim($search));
+
+                    return;
+                }
+
                 $term = '%'.mb_strtolower(trim($search)).'%';
 
                 $query->where(function ($query) use ($term) {
@@ -103,9 +110,38 @@ class PropertyService
         });
     }
 
+    /**
+     * «أرشفة» = soft delete مع تسجيل من أرشفه — يختفي من الموقع والقوائم ونتائج البحث.
+     * مستقلة عن الحالة: status_id لا يُلمس، فيبقى العقار بحالته وقت الأرشفة.
+     */
     public function delete(Property $property): void
     {
+        $property->forceFill(['deleted_by' => auth()->id()])->saveQuietly();
         $property->delete();
+    }
+
+    /** استرجاع عقار من الأرشيف — يعود كما كان بصوره وروابطه */
+    public function restore(Property $property): void
+    {
+        $property->deleted_by = null;
+        $property->restore();
+    }
+
+    /** شاشة الأرشيف: الأحدث أرشفةً أولاً، مع بحث بالرقم المرجعي أو الاسم أو المبنى */
+    public function paginateArchived(?string $search = null, int $perPage = 20): LengthAwarePaginator
+    {
+        return Property::onlyTrashed()
+            ->with(['area', 'unitType', 'owner', 'status', 'deletedBy:id,name', 'media'])
+            ->when(trim((string) $search), function ($query, $search) {
+                $term = '%'.mb_strtolower($search).'%';
+
+                $query->where(fn ($q) => $q->whereRaw('LOWER(reference_code) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]));
+            })
+            ->latest('deleted_at')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /** تغيير الحالة من الجدول — PropertyObserver يضبط/يمسح sold_at */
@@ -119,16 +155,17 @@ class PropertyService
     /** توليد رقم مرجعي فريد — أرقام فقط، يكمل من آخر رقم مستخدم */
     public function generateReferenceCode(): string
     {
-        $maxCode = Property::query()->pluck('reference_code')
+        // المؤرشفة تحتفظ بأرقامها (قد تُسترجع) — فلا يُعاد استخدامها
+        $maxCode = Property::withTrashed()->pluck('reference_code')
             ->filter(fn ($code) => is_string($code) && ctype_digit($code))
             ->map(fn ($code) => (int) $code)
             ->max() ?? 0;
 
-        $next = max((int) $maxCode, (int) (Property::max('id') ?? 0));
+        $next = max((int) $maxCode, (int) (Property::withTrashed()->max('id') ?? 0));
 
         do {
             $next++;
-        } while (Property::where('reference_code', (string) $next)->exists());
+        } while (Property::withTrashed()->where('reference_code', (string) $next)->exists());
 
         return (string) $next;
     }

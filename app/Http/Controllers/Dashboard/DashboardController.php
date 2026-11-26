@@ -49,7 +49,7 @@ class DashboardController extends Controller
 
         // ===== بطاقات المؤشرات =====
         $properties = $canProperties ? Property::get(['id', 'created_at']) : collect();
-        $clients = $canClients ? Client::get(['id', 'created_at', 'won_at', 'stage_id']) : collect();
+        $clients = $canClients ? Client::visibleTo($user)->get(['id', 'created_at', 'won_at', 'stage_id']) : collect();
         $wonClients = $wonId
             ? $clients->where('stage_id', $wonId)->map(fn (Client $c) => ['won_at' => $c->won_at ?? $c->created_at])
             : collect();
