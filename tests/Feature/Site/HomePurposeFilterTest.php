@@ -58,7 +58,7 @@ class HomePurposeFilterTest extends TestCase
             ->assertDontSee('فيلا البيع')
             ->assertSee('name="purpose" value="rent"', false);
 
-        $this->get(route('site.properties', ['purpose' => 'rent', 'q' => '20']))
+        $this->get(route('site.properties', ['home' => 1, 'purpose' => 'rent', 'q' => '20']))
             ->assertSee('فيلا البيع');
     }
 }

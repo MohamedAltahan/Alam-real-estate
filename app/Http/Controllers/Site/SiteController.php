@@ -117,37 +117,37 @@ class SiteController extends Controller
     /** قائمة العقارات مع الفلاتر */
     public function properties(Request $request): View
     {
-        // رقم مرجعي مطابق تماماً ⇒ هذا العقار وحده (بدون 212/215 لمن يبحث عن 12)،
-        // ولو اختلف تصنيفه عن تبويب البحث — الرقم المرجعي يحدّد عقاراً واحداً
+        // رقم مرجعي مطابق تماماً ⇒ هذا العقار وحده (بدون 212/215 لمن يبحث عن 12)
         $exactRef = $this->exactReference((string) $request->q);
-        if ($exactRef !== null) {
-            $request->query->remove('category');
-            $request->query->remove('unit_type');
-            $request->query->remove('purpose');
+        // من بحث الرئيسية: الرقم يحدّد عقاراً واحداً ولو خالف تبويباته وقوائمه فتُسقَط.
+        // أما فلاتر صفحة العقارات فيختارها الزائر بنفسه، فتبقى وتُطبَّق مع الرقم
+        if ($exactRef !== null && $request->boolean('home')) {
+            foreach (['category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size'] as $key) {
+                $request->query->remove($key);
+            }
         }
 
         $properties = Property::query()
             ->with(['area', 'agent', 'status', 'unitType', 'media'])
             ->when($exactRef !== null, fn ($q) => $q->where('reference_code', $exactRef))
-            ->when($exactRef === null, fn ($query) => $query
-                ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
-                ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
-                ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
-                ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
-                ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
-                ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
-                // روابط قديمة بالرقم المرجعي بالضبط
-                ->when($request->reference, fn ($q, $v) => $q->where('reference_code', $v))
-                // البحث الحر: جزء من الرقم المرجعي أو اسم العقار أو اسم المبنى
-                ->when(trim((string) $request->q), function ($q, $v) {
-                    $term = '%'.mb_strtolower($v).'%';
+            ->when($request->category, fn ($q, $v) => $q->where('category_id', $v))
+            ->when($request->unit_type, fn ($q, $v) => $q->where('unit_type_id', $v))
+            ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
+            ->when($request->area, fn ($q, $v) => $q->where('area_id', $v))
+            ->when($request->bedrooms, fn ($q, $v) => $q->where('bedrooms', '>=', (int) $v))
+            ->when($request->purpose, fn ($q, $v) => $q->where('purpose', $v))
+            // روابط قديمة بالرقم المرجعي بالضبط
+            ->when($request->reference, fn ($q, $v) => $q->where('reference_code', $v))
+            // البحث الحر: جزء من الرقم المرجعي أو اسم العقار أو اسم المبنى
+            ->when($exactRef === null ? trim((string) $request->q) : null, function ($q, $v) {
+                $term = '%'.mb_strtolower($v).'%';
 
-                    $q->where(fn ($w) => $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(title) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]));
-                })
-                ->when($request->price, fn ($q, $v) => $this->applyRange($q, 'price', (string) $v))
-                ->when($request->size, fn ($q, $v) => $this->applyRange($q, 'area_size', (string) $v)))
+                $q->where(fn ($w) => $w->whereRaw('LOWER(reference_code) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$term])
+                    ->orWhereRaw('LOWER(building_name) LIKE ?', [$term]));
+            })
+            ->when($request->price, fn ($q, $v) => $this->applyRange($q, 'price', (string) $v))
+            ->when($request->size, fn ($q, $v) => $this->applyRange($q, 'area_size', (string) $v))
             ->when($request->sort === 'price_asc', fn ($q) => $q->orderBy('price'))
             ->when($request->sort === 'price_desc', fn ($q) => $q->orderByDesc('price'))
             ->when(! in_array($request->sort, ['price_asc', 'price_desc']), fn ($q) => $q->latest())

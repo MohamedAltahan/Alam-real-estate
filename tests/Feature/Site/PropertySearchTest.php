@@ -75,9 +75,25 @@ class PropertySearchTest extends TestCase
         Property::where('reference_code', '31')->update(['category_id' => $commercial->id]);
 
         // البحث من تبويب «سكني» برقم عقار تجاري يجده
-        $this->get(route('site.properties', ['category' => $residential->id, 'q' => '31']))
+        $this->get(route('site.properties', ['home' => 1, 'category' => $residential->id, 'q' => '31']))
             ->assertOk()
             ->assertSee('شقة الرقم المطابق');
+    }
+
+    public function test_filters_chosen_on_the_properties_page_stay_with_an_exact_reference(): void
+    {
+        $commercial = \App\Models\PropertyCategory::create(['name' => ['ar' => 'تجاري', 'en' => 'Commercial'], 'key' => 'commercial', 'is_active' => true]);
+        Property::where('reference_code', '31')->update(['category_id' => $commercial->id]);
+
+        // الاختيار يبقى معلَّماً ويُطبَّق مع الرقم
+        $this->get(route('site.properties', ['q' => '31', 'category' => $commercial->id]))
+            ->assertOk()
+            ->assertSee('شقة الرقم المطابق')
+            ->assertDontSee('شقة الرقم الأطول')
+            ->assertSee('name="category" value="'.$commercial->id.'" checked', false);
+
+        $this->get(route('site.properties', ['q' => '31', 'price' => '50000+']))
+            ->assertDontSee('شقة الرقم المطابق');
     }
 
     public function test_search_term_is_kept_in_the_filters_panel(): void

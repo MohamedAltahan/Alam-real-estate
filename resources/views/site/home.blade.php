@@ -114,6 +114,7 @@
                           catKeys: @js($searchCategories->pluck('key', 'id')->map(fn($k) => (string) $k)) }"
                 @combobox-change="if ($event.detail.name === 'city') city = $event.detail.value"
                 class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
+                <input type="hidden" name="home" value="1">
                 <input type="hidden" name="category" :value="cat">
                 @if ($hasSale)
                     <input type="hidden" name="purpose" value="rent" :value="purpose">
