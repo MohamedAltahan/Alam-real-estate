@@ -62,7 +62,7 @@
     <div x-show="filtersOpen" x-cloak
          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2"
          x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 -translate-y-2">
-    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-5" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
+    <x-filter-bar id="viewings-filters" cols="xl:grid-cols-6" :reset="array_filter($filters) ? route('dashboard.viewings.index') : null">
         <x-filter-input label="من تاريخ" name="from" :value="$filters['from'] ?? ''" datepicker placeholder="من" />
         <x-filter-input label="إلى تاريخ" name="to" :value="$filters['to'] ?? ''" datepicker placeholder="إلى" />
         <x-filter-select label="مندوب المبيعات" name="agent_id" placeholder="كل مندوبي المبيعات"

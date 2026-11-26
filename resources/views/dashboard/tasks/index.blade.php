@@ -65,7 +65,7 @@
     </div>
 
     {{-- ===== الفلاتر (تُطبَّق فور التغيير) ===== --}}
-    <x-filter-bar id="tasks-filters" cols="xl:grid-cols-5">
+    <x-filter-bar id="tasks-filters" cols="xl:grid-cols-6">
         <x-filter-select label="المسند إليه" name="assignee_id" placeholder="كل الموظفين"
                          :options="$users->pluck('name', 'id')" :selected="$filters['assignee_id'] ?? null" />
         <x-filter-select label="أنشأها" name="created_by" placeholder="الكل"

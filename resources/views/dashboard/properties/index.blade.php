@@ -46,7 +46,7 @@
     </div>
 
     {{-- الفلاتر تُطبَّق فور الاختيار (البحث بالضغط على Enter) --}}
-    <x-filter-bar id="properties-filters" cols="xl:grid-cols-5"
+    <x-filter-bar id="properties-filters" cols="xl:grid-cols-6"
                   :reset="array_filter($filters) ? route('dashboard.properties.index') : null">
         <x-filter-input label="بحث" name="search" :value="$filters['search'] ?? ''" type="search" search
                         placeholder="باسم أو رقم العقار أو اسم المبنى..." span="col-span-2 md:col-span-1" />

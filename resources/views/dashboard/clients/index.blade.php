@@ -140,7 +140,7 @@
                 unitTypes: @js($unitTypes->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'category' => $t->category])->values()),
                 unitTypesFor() { return this.category ? this.unitTypes.filter(t => t.category === this.category) : this.unitTypes; }
             }">
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                 <div>
                     <label class="{{ $filterLabel }}">مندوب المبيعات</label>
                     <select name="agent_id" form="clients-filters" class="{{ $filterSelect }}">
