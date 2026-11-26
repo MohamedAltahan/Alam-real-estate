@@ -96,6 +96,18 @@ class PropertySearchTest extends TestCase
             ->assertDontSee('شقة الرقم المطابق');
     }
 
+    public function test_reference_search_preselects_the_property_category_and_unit_type(): void
+    {
+        $residential = \App\Models\PropertyCategory::create(['name' => ['ar' => 'سكني', 'en' => 'Residential'], 'key' => 'residential', 'is_active' => true]);
+        $villa = \App\Models\UnitType::create(['name' => ['ar' => 'فيلا', 'en' => 'Villa'], 'category' => 'residential', 'is_active' => true]);
+        Property::where('reference_code', '31')->update(['category_id' => $residential->id, 'unit_type_id' => $villa->id]);
+
+        $this->get(route('site.properties', ['home' => 1, 'q' => '31']))
+            ->assertOk()
+            ->assertSee('name="category" value="'.$residential->id.'" checked', false)
+            ->assertSee('name="unit_type" value="'.$villa->id.'" checked', false);
+    }
+
     public function test_search_term_is_kept_in_the_filters_panel(): void
     {
         $this->get(route('site.properties', ['q' => 'الحمرا']))

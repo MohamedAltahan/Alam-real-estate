@@ -83,7 +83,11 @@
                     <a href="{{ $p->video_url }}" target="_blank" rel="noopener"
                        @if ($p->video_id) @click.prevent="$store.video.show('{{ $p->video_id }}', @js($p->title))" @endif
                        class="inline-flex items-center gap-2 rounded-full bg-white/85 backdrop-blur-md border border-white/60 text-primary-900 text-xs font-bold px-5 py-2.5 shadow-lg shadow-primary-950/10 hover:bg-white transition">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5-11-6.5z"/></svg>
+                        {{-- أيقونة يوتيوب --}}
+                        <svg class="shrink-0" width="20" height="14" viewBox="0 0 24 17" aria-hidden="true">
+                            <path fill="#FF0000" d="M23.5 2.65A3 3 0 0 0 21.4.5C19.5 0 12 0 12 0S4.5 0 2.6.5A3 3 0 0 0 .5 2.65C0 4.55 0 8.5 0 8.5s0 3.95.5 5.85a3 3 0 0 0 2.1 2.15c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.15c.5-1.9.5-5.85.5-5.85s0-3.95-.5-5.85z"/>
+                            <path fill="#fff" d="M9.6 12.1 15.8 8.5 9.6 4.9z"/>
+                        </svg>
                         {{ $t('عرض فيديو الوحدة', 'Unit video') }}
                     </a>
                 @endif

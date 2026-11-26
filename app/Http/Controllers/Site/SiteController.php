@@ -154,9 +154,19 @@ class SiteController extends Controller
             ->paginate(9)
             ->withQueryString();
 
+        // البحث برقم عقار بلا اختيار تصنيف/نوع ⇒ نعلّم تصنيف هذا العقار ونوعه في الفلتر
+        $filters = $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size');
+        $autoSelected = false;
+        if ($exactRef !== null && ! $request->filled('category') && ! $request->filled('unit_type')
+            && $match = Property::where('reference_code', $exactRef)->first()) {
+            $filters['category'] = $match->category_id;
+            $filters['unit_type'] = $match->unit_type_id;
+            $autoSelected = true;
+        }
+
         $categories = PropertyCategory::where('is_active', true)->get();
         // اختيار سكني/تجاري يقصر قائمة أنواع الوحدات على أنواعه
-        $categoryKey = $request->category ? $categories->firstWhere('id', (int) $request->category)?->key : null;
+        $categoryKey = ! empty($filters['category']) ? $categories->firstWhere('id', (int) $filters['category'])?->key : null;
 
         return view('site.properties', [
             'properties' => $properties,
@@ -168,7 +178,8 @@ class SiteController extends Controller
             'areas' => Area::where('is_active', true)
                 ->when($request->city, fn ($q, $v) => $q->where('city_id', (int) $v))
                 ->orderBy('sort_order')->get(),
-            'filters' => $request->only('q', 'category', 'unit_type', 'city', 'area', 'bedrooms', 'purpose', 'reference', 'price', 'size'),
+            'filters' => $filters,
+            'autoSelected' => $autoSelected,
         ]);
     }
 
