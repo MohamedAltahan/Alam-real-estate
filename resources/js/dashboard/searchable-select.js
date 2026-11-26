@@ -7,12 +7,15 @@
  * input/change ليكمل كل شيء كالمعتاد (x-model · الفلاتر الحيّة · الإرسال).
  *
  * الاستثناء: data-no-search على أي قائمة نريدها أصلية.
+ * أجهزة اللمس (موبايل/تابلت) تبقى على قائمتها الأصلية دائماً: Safari على iOS
+ * لا يلتزم بمنعها، فكانت تُفتح فوق لوحتنا أو بدلاً منها.
  * حقل البحث يظهر عند 6 خيارات فأكثر (أو data-search-min="N").
  */
 
 const MIN_FOR_SEARCH = 6;
 const MIN_PANEL_WIDTH = 240;
 const GAP = 6;
+const touchDevice = window.matchMedia('(pointer: coarse)');
 
 let panel = null;
 let searchBox = null;
@@ -40,6 +43,10 @@ function normalize(text) {
 
 /** هل هذا العنصر قائمة منسدلة نتولّاها؟ */
 function candidate(target) {
+    if (touchDevice.matches) {
+        return null;
+    }
+
     const el = target instanceof Element ? target.closest('select') : null;
 
     if (! el || el.disabled || el.multiple || el.size > 1) {
