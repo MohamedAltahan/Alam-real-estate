@@ -116,16 +116,10 @@
                 class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
 
-                {{-- تبويب سكني/تجاري (الافتراضي: سكني) + شارة «للإيجار» بجواره (للعرض فقط، لا تغيّر الفلترة) --}}
+                {{-- شارة «للإيجار» (للعرض فقط) وتحتها مباشرة تبويب سكني/تجاري (الافتراضي: سكني) --}}
                 @if ($searchCategories->count())
-                    {{-- «للإيجار» أولاً ثم تبويب سكني/تجاري --}}
-                    <div class="flex flex-wrap items-center justify-start gap-2.5 mb-3">
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm font-semibold text-accent-300 whitespace-nowrap backdrop-blur-sm">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="7.5" cy="15.5" r="5.5" />
-                                <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
-                            </svg>
+                    <div class="flex flex-col items-start gap-2 mb-3">
+                        <span class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm font-semibold text-accent-300 whitespace-nowrap backdrop-blur-sm">
                             {{ $t('للإيجار', 'For rent') }}
                         </span>
                         <div class="inline-flex glass rounded-full p-1 text-sm">
