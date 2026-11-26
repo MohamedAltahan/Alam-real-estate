@@ -35,7 +35,7 @@ class ViewingService
     {
         return $this->filtered($filters)
             ->with([
-                'client:id,name,agent_id,phone_code,phone',
+                'client:id,name,agent_id,phone_code,phone,nationality,household_size,workplace',
                 'client.agent:id,name,phone',
                 'property:id,reference_code,title,agent_id,area_id,owner_id,building_name,purpose,guard_name,guard_phone_code,guard_phone',
                 'property.agent:id,name,phone',
@@ -221,7 +221,7 @@ class ViewingService
 
         $all = ClientViewing::query()
             ->with([
-                'client:id,name,agent_id,phone_code,phone', 'client.agent:id,name',
+                'client:id,name,agent_id,phone_code,phone,nationality,household_size,workplace', 'client.agent:id,name',
                 'property:id,reference_code,title,agent_id,area_id,owner_id,building_name', 'property.agent:id,name', 'property.area:id,name', 'property.owner:id,name',
             ])
             ->whereBetween('scheduled_at', [$from, $to])
