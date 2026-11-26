@@ -86,7 +86,7 @@ class RolePermissionSeeder extends Seeder
 
             $perms = $cfg['perms'];
             foreach (PermissionMatrixController::EXTRAS as $extra => $meta) {
-                if (in_array($meta['base'], $perms, true)) {
+                if ($meta['base'] === null || in_array($meta['base'], $perms, true)) {
                     $perms[] = $extra;
                 }
             }

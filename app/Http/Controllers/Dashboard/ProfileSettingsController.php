@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Support\SiteFlags;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,8 +93,10 @@ class ProfileSettingsController extends Controller
         return $this->redirectTo($this->requestedTab($request), 'تم تحديث الصورة الشخصية.');
     }
 
-    public function updatePassword(Request $request): RedirectResponse
+    public function updatePassword(Request $request, ActivityLogger $activity): RedirectResponse
     {
+        abort_unless($request->user()->can(User::CHANGE_PASSWORD), 403, 'لا تملك صلاحية تغيير كلمة المرور — تواصل مع مدير النظام.');
+
         $data = $request->validate([
             'current_password' => ['required', 'string', 'current_password:web'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -102,6 +105,8 @@ class ProfileSettingsController extends Controller
         $request->user()->forceFill([
             'password' => Hash::make($data['password']),
         ])->save();
+
+        $activity->passwordChanged($request->user(), 'من إعدادات الحساب');
 
         return $this->redirectTo('security', 'تم تحديث كلمة المرور بنجاح.');
     }

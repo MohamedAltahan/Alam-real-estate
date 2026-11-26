@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
@@ -36,6 +38,9 @@ class RoleController extends Controller
             'description' => $data['description'],
             'status' => $data['status'],
         ]);
+
+        // الدور الجديد يبدأ مسموحاً له بتغيير كلمة مروره (تُسحب من مصفوفة الصلاحيات)
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => User::CHANGE_PASSWORD, 'guard_name' => 'web']));
 
         $this->activity->created($role);
 

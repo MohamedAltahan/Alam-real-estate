@@ -165,7 +165,11 @@ class ActivityLogTest extends TestCase
         $changes = $updates->first()->changes;
         $this->assertSame(['old' => 'موظف جديد', 'new' => 'موظف معدّل'], $changes['name']);
         $this->assertSame(['old' => 'مندوب مبيعات', 'new' => 'مدير عقارات'], $changes['role']);
-        $this->assertSame(['old' => null, 'new' => 'تم التغيير'], $changes['password']);
+        // كلمة المرور سطر مستقل «تغيير كلمة المرور» لا ضمن سطر التعديل
+        $this->assertArrayNotHasKey('password', $changes);
+        $passwordLog = ActivityLog::where('module', 'supervisors')->where('event', 'password_changed')->sole();
+        $this->assertSame('تم التغيير بواسطة المدير من شاشة المشرفين', $passwordLog->changes['password']['new']);
+        $this->assertStringNotContainsString('An0therPass', json_encode($passwordLog->changes));
         $this->assertSame('suspended', $changes['status']['new']);
         $this->assertStringNotContainsString('An0therPass', json_encode($changes));
         $this->assertStringNotContainsString($staff->fresh()->password, json_encode($changes));

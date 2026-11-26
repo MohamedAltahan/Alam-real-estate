@@ -55,6 +55,7 @@ class ProfileSettingsTest extends TestCase
     public function test_user_can_update_password_with_current_password(): void
     {
         $user = User::factory()->create(['password' => 'old-password']);
+        $user->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => User::CHANGE_PASSWORD, 'guard_name' => 'web']));
 
         $this->actingAs($user)->put(route('dashboard.profile.password'), [
             'current_password' => 'old-password',

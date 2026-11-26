@@ -21,6 +21,9 @@ class User extends Authenticatable implements HasMedia
 
     use InteractsWithWebImages;
 
+    /** صلاحية تغيير المستخدم لكلمة مروره (تفصيلية — تُدار من مصفوفة الصلاحيات) */
+    public const CHANGE_PASSWORD = 'account.change_password';
+
     protected $fillable = [
         'name', 'email', 'password',
         'phone', 'civil_id', 'job_title', 'status',

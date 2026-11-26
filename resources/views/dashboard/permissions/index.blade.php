@@ -150,7 +150,7 @@
                         <span class="min-w-0">
                             <span class="block text-sm font-bold text-ink">
                                 {{ $extra['label'] }}
-                                <span class="ms-1 rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[10px] font-semibold align-middle">{{ $modules[$extra['module']] ?? $extra['module'] }}</span>
+                                <span class="ms-1 rounded-full bg-primary-50 text-primary-700 px-2 py-0.5 text-[10px] font-semibold align-middle">{{ $modules[$extra['module']] ?? \App\Http\Controllers\Dashboard\PermissionMatrixController::EXTRA_GROUPS[$extra['module']] ?? $extra['module'] }}</span>
                             </span>
                             <span class="block text-xs text-gray-500 leading-relaxed mt-0.5">{{ $extra['hint'] }}</span>
                         </span>

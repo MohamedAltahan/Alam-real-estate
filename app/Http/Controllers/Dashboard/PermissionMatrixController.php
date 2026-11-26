@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,6 +77,13 @@ class PermissionMatrixController extends Controller
      * base: الصلاحية التي كانت تكفي قبل إضافتها، فتُمنح تلقائياً لمن يملكها (لا يتغيّر السلوك حتى تُلغى).
      */
     public const EXTRAS = [
+        User::CHANGE_PASSWORD => [
+            'module' => 'account',
+            'label' => 'تغيير كلمة المرور',
+            'hint' => 'بدونها لا يستطيع المستخدم تغيير كلمة مروره: لا من إعدادات الحساب ولا عبر «نسيت كلمة المرور» — يغيّرها له المدير من شاشة المشرفين.',
+            // null: تُمنح لكل الأدوار — كان متاحاً للجميع قبل إضافتها
+            'base' => null,
+        ],
         'clients.view_all' => [
             'module' => 'clients',
             'label' => 'عرض كل العملاء',
@@ -96,12 +104,17 @@ class PermissionMatrixController extends Controller
         ],
     ];
 
+    /** مجموعات الصلاحيات التفصيلية التي ليست وحدة في المصفوفة */
+    public const EXTRA_GROUPS = ['account' => 'الحساب'];
+
     /** «العقارات: تعديل · العملاء: حذف» — لسجل النشاط */
     public static function describePermissions(array $names): string
     {
         return collect($names)->map(function (string $name) {
             if (isset(self::EXTRAS[$name])) {
-                return (self::MODULES[self::EXTRAS[$name]['module']] ?? '').': '.self::EXTRAS[$name]['label'];
+                $group = self::EXTRAS[$name]['module'];
+
+                return (self::MODULES[$group] ?? self::EXTRA_GROUPS[$group] ?? $group).': '.self::EXTRAS[$name]['label'];
             }
 
             [$module, $action] = array_pad(explode('.', $name, 2), 2, '');

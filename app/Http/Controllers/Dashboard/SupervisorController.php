@@ -10,6 +10,7 @@ use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
@@ -71,6 +72,11 @@ class SupervisorController extends Controller
             ...$this->sharedRules(),
         ], self::MESSAGES);
 
+        // من لا يملك صلاحية تغيير كلمة المرور لا يغيّر كلمته هو من هذه الشاشة أيضاً
+        if (($data['password'] ?? null) && $supervisor->is($request->user()) && ! $request->user()->can(User::CHANGE_PASSWORD)) {
+            throw ValidationException::withMessages(['password' => 'لا تملك صلاحية تغيير كلمة المرور الخاصة بك.']);
+        }
+
         $previousRole = $supervisor->roles->first()?->name;
 
         $supervisor->fill([
@@ -94,11 +100,12 @@ class SupervisorController extends Controller
             $changes['role'] = ['old' => $this->roleLabel($previousRole), 'new' => $this->roleLabel($data['role'])];
         }
 
-        if ($data['password'] ?? null) {
-            $changes['password'] = ['old' => null, 'new' => 'تم التغيير'];
-        }
-
         $this->activity->updated($supervisor, [], $changes);
+
+        // تغيير كلمة المرور سطر مستقل في سجل النشاط
+        if ($data['password'] ?? null) {
+            $this->activity->passwordChanged($supervisor, $supervisor->is($request->user()) ? 'من شاشة المشرفين' : 'بواسطة المدير من شاشة المشرفين');
+        }
 
         return back()->with('success', 'تم تحديث بيانات المشرف.');
     }

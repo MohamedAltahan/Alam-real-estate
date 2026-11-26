@@ -25,6 +25,7 @@ final class ActivitySubjects
         'deleted' => 'حذف',
         'archived' => 'أرشفة',
         'restored' => 'استرجاع',
+        'password_changed' => 'تغيير كلمة المرور',
     ];
 
     /** ألوان شارة العملية (Tailwind) */
@@ -34,6 +35,7 @@ final class ActivitySubjects
         'deleted' => 'bg-danger/10 text-danger',
         'archived' => 'bg-warning-soft text-warning',
         'restored' => 'bg-success-soft text-success',
+        'password_changed' => 'bg-warning-soft text-warning',
     ];
 
     public const MODULES = [

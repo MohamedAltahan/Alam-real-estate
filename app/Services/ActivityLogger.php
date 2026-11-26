@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use App\Models\User;
 use App\Support\ActivitySubjects;
 use App\Support\AuditDiff;
 use Illuminate\Database\Eloquent\Model;
@@ -34,7 +35,7 @@ class ActivityLogger
     /**
      * @param  array<string, array{old:mixed,new:mixed}>  $changes
      */
-    public function record(string $event, Model $subject, array $changes = []): ?ActivityLog
+    public function record(string $event, Model $subject, array $changes = [], ?int $actorId = null): ?ActivityLog
     {
         $config = ActivitySubjects::for($subject);
 
@@ -43,7 +44,7 @@ class ActivityLogger
         }
 
         return ActivityLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => $actorId ?? auth()->id(),
             'event' => $event,
             'module' => $config['module'],
             'subject_type' => $subject->getMorphClass(),
@@ -69,6 +70,17 @@ class ActivityLogger
     public function deleted(Model $subject, array $extra = []): ?ActivityLog
     {
         return $this->record('deleted', $subject, $this->snapshot($subject, removed: true) + $extra);
+    }
+
+    /**
+     * تغيير كلمة المرور: تُسجَّل الواقعة وطريقتها فقط — لا القيمة ولا الـ hash.
+     * عبر «نسيت كلمة المرور» لا يوجد مستخدم مسجَّل دخوله، فالفاعل هو صاحب الحساب.
+     */
+    public function passwordChanged(User $user, string $how): ?ActivityLog
+    {
+        return $this->record('password_changed', $user, [
+            'password' => ['old' => null, 'new' => 'تم التغيير '.$how],
+        ], (int) (auth()->id() ?? $user->getKey()));
     }
 
     /**
