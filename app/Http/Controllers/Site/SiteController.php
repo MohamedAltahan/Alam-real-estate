@@ -57,6 +57,8 @@ class SiteController extends Controller
             'searchUnitTypes' => UnitType::where('is_active', true)->orderBy('sort_order')->get(),
             'searchCategories' => PropertyCategory::where('is_active', true)->orderBy('sort_order')->get(),
             'videoProperties' => $this->homeVideos($c['videos'] ?? []),
+            // خيار «للبيع» في البحث لا يظهر إلا عند وجود عقار للبيع
+            'hasSale' => Property::where('purpose', 'sale')->exists(),
         ]);
     }
 
@@ -121,6 +123,7 @@ class SiteController extends Controller
         if ($exactRef !== null) {
             $request->query->remove('category');
             $request->query->remove('unit_type');
+            $request->query->remove('purpose');
         }
 
         $properties = Property::query()

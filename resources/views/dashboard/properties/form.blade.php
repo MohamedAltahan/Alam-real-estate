@@ -10,7 +10,7 @@
     $labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
     $formState = [
-        'purpose' => old('purpose', $property->purpose ?? 'sale'),
+        'purpose' => old('purpose', $property->purpose ?? 'rent'),
         'category' => (string) old('category_id', $property->category_id ?? ''),
         'unitType' => (string) old('unit_type_id', $property->unit_type_id ?? ''),
         'city' => (string) old('city_id', $property->city_id ?? ''),

@@ -93,6 +93,9 @@
                     <a href="{{ route('site.properties') }}" class="text-xs font-bold text-accent-600 hover:text-accent-700">{{ $t('مسح الكل', 'Clear all') }}</a>
                 </div>
 
+                {{-- اختيار للإيجار/للبيع القادم من بحث الرئيسية يبقى مع تغيير الفلاتر --}}
+                @if (! empty($filters['purpose']))<input type="hidden" name="purpose" value="{{ $filters['purpose'] }}">@endif
+
                 {{-- بحث بالاسم أو الرقم المرجعي أو اسم المبنى (يبقى مع باقي الفلاتر) --}}
                 <div class="pb-3">
                     <label class="relative block">

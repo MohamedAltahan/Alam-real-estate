@@ -110,18 +110,33 @@
                     ->values()->all();
             @endphp
             <form action="{{ route('site.properties') }}" method="GET"
-                x-data="{ cat: '{{ $defaultCat }}', commercial: '{{ $commercialCat }}', city: '',
+                x-data="{ purpose: 'rent', cat: '{{ $defaultCat }}', commercial: '{{ $commercialCat }}', city: '',
                           catKeys: @js($searchCategories->pluck('key', 'id')->map(fn($k) => (string) $k)) }"
                 @combobox-change="if ($event.detail.name === 'city') city = $event.detail.value"
                 class="glass relative z-20 rounded-[2rem] p-4 sm:p-5 max-w-7xl mx-auto shadow-2xl text-start">
                 <input type="hidden" name="category" :value="cat">
+                @if ($hasSale)
+                    <input type="hidden" name="purpose" value="rent" :value="purpose">
+                @endif
 
-                {{-- شارة «للإيجار» (للعرض فقط) وتحتها مباشرة تبويب سكني/تجاري (الافتراضي: سكني) --}}
+                {{-- «للإيجار» (ومعه «للبيع» عند وجود عقار للبيع) وتحته مباشرة تبويب سكني/تجاري — الافتراضي: للإيجار · سكني --}}
                 @if ($searchCategories->count())
                     <div class="flex flex-col items-start gap-2 mb-3">
-                        <span class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm font-semibold text-accent-300 whitespace-nowrap backdrop-blur-sm">
-                            {{ $t('للإيجار', 'For rent') }}
-                        </span>
+                        @if ($hasSale)
+                            <div class="inline-flex glass rounded-full p-1 text-sm">
+                                @foreach (['rent' => $t('للإيجار', 'For rent'), 'sale' => $t('للبيع', 'For sale')] as $key => $label)
+                                    <button type="button" @click="purpose = '{{ $key }}'" :aria-pressed="purpose === '{{ $key }}'"
+                                        class="px-4 py-1.5 rounded-full border font-semibold whitespace-nowrap transition"
+                                        :class="purpose === '{{ $key }}' ?
+                                            'border-accent-500/40 bg-accent-500/10 text-accent-300' :
+                                            'border-transparent text-white/80 hover:text-white'">{{ $label }}</button>
+                                @endforeach
+                            </div>
+                        @else
+                            <span class="inline-flex items-center rounded-full border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm font-semibold text-accent-300 whitespace-nowrap backdrop-blur-sm">
+                                {{ $t('للإيجار', 'For rent') }}
+                            </span>
+                        @endif
                         <div class="inline-flex glass rounded-full p-1 text-sm">
                             @foreach ($searchCategories as $sc)
                                 <button type="button" @click="cat = '{{ $sc->id }}'"
