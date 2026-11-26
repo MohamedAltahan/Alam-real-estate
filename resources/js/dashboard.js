@@ -20,3 +20,4 @@ import './dashboard/task-board';
 import './dashboard/whatsapp';
 import './dashboard/viewing-notes';
 import './dashboard/property-status';
+import './dashboard/watermark';

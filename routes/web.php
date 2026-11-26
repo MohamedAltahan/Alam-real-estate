@@ -20,6 +20,7 @@ use App\Http\Controllers\Dashboard\SupervisorController;
 use App\Http\Controllers\Dashboard\TaskController;
 use App\Http\Controllers\Dashboard\UnitTypeController;
 use App\Http\Controllers\Dashboard\ViewingController;
+use App\Http\Controllers\Dashboard\WatermarkController;
 use App\Http\Controllers\Dashboard\WebsiteController;
 use App\Http\Controllers\Dashboard\WhatsAppController;
 use App\Http\Controllers\Site\SiteController;
@@ -268,6 +269,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('testimonials', [WebsiteController::class, 'storeTestimonial'])->name('testimonials.store');
             Route::put('testimonials/{testimonial}', [WebsiteController::class, 'updateTestimonial'])->name('testimonials.update');
             Route::delete('testimonials/{testimonial}', [WebsiteController::class, 'destroyTestimonial'])->name('testimonials.destroy');
+        });
+
+        // ===== العلامة المائية على صور العقارات =====
+        Route::middleware('can:watermark.view')->prefix('watermark')->name('watermark.')->group(function () {
+            Route::get('/', [WatermarkController::class, 'index'])->name('index');
+            Route::put('/', [WatermarkController::class, 'update'])->name('update');
+            Route::post('apply', [WatermarkController::class, 'apply'])->name('apply');
         });
     });
 });

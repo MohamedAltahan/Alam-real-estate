@@ -8,6 +8,7 @@ use App\Observers\PropertyObserver;
 use App\Support\PhoneNumber;
 use App\Support\SiteFlags;
 use App\Support\Video;
+use App\Support\Watermark;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Translatable\HasTranslations;
 
 #[ObservedBy([PropertyObserver::class, ActivityObserver::class])]
@@ -157,6 +159,12 @@ class Property extends Model implements HasMedia
     public function getVideoIdAttribute(): ?string
     {
         return Video::youtubeId($this->video_url);
+    }
+
+    /** العلامة المائية على الغلاف والمعرض فقط — تُدار من تبويب «واتر مارك» */
+    protected function shouldWatermark(?Media $media): bool
+    {
+        return in_array($media?->collection_name, Watermark::COLLECTIONS, true);
     }
 
     /** غلاف العقار (media library) */

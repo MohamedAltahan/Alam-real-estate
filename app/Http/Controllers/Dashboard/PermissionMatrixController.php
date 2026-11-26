@@ -36,6 +36,7 @@ class PermissionMatrixController extends Controller
         'supervisors' => 'المشرفين',
         'reports' => 'التقارير',
         'activity' => 'سجل النشاط',
+        'watermark' => 'واتر مارك',
     ];
 
     public const ACTIONS = [
@@ -67,6 +68,7 @@ class PermissionMatrixController extends Controller
         'supervisors' => ['view', 'create', 'edit', 'delete'],
         'reports' => ['view'],
         'activity' => ['view'],
+        'watermark' => ['view', 'edit'],
     ];
 
     /** «العقارات: تعديل · العملاء: حذف» — لسجل النشاط */

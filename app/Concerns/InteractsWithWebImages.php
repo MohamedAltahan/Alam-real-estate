@@ -2,6 +2,7 @@
 
 namespace App\Concerns;
 
+use App\Support\Watermark;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -39,12 +40,23 @@ trait InteractsWithWebImages
 
     public function registerMediaConversions(?Media $media = null): void
     {
-        $this->addMediaConversion(self::WEB_CONVERSION)
+        $conversion = $this->addMediaConversion(self::WEB_CONVERSION)
             // Fit::Max = لا يتجاوز الارتفاع 1080 ولا يقصّ الصورة — النسبة محفوظة
             ->fit(Fit::Max, 4096, 1080)
             ->keepOriginalImageFormat()
             ->quality(100)
             ->nonQueued();
+
+        // بعد التصغير: العلامة تُحسب على المقاس النهائي (الأصل يبقى بلا علامة)
+        if ($this->shouldWatermark($media)) {
+            Watermark::apply($conversion);
+        }
+    }
+
+    /** الموديلات التي تريد العلامة المائية تعيد تعريفها (العقارات فقط حالياً) */
+    protected function shouldWatermark(?Media $media): bool
+    {
+        return false;
     }
 
     /** رابط الصورة المحوَّلة مع رجوع آمن للأصل */
